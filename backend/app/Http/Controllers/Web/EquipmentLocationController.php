@@ -45,9 +45,11 @@ class EquipmentLocationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:equipment_locations,code',
+            'code' => ['required', 'string', 'max:50', 'unique:equipment_locations,code'],
             'building' => 'nullable|string|max:255',
             'floor' => 'nullable|string|max:100',
             'zone' => 'nullable|string|max:100',
@@ -57,7 +59,7 @@ class EquipmentLocationController extends Controller
 
         EquipmentLocation::create([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'building' => $validated['building'] ?? null,
             'floor' => $validated['floor'] ?? null,
             'zone' => $validated['zone'] ?? null,
@@ -75,9 +77,11 @@ class EquipmentLocationController extends Controller
 
     public function update(Request $request, EquipmentLocation $equipmentLocation): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => "required|string|max:50|unique:equipment_locations,code,{$equipmentLocation->id}",
+            'code' => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('equipment_locations', 'code')->ignore($equipmentLocation->id)],
             'building' => 'nullable|string|max:255',
             'floor' => 'nullable|string|max:100',
             'zone' => 'nullable|string|max:100',
@@ -87,7 +91,7 @@ class EquipmentLocationController extends Controller
 
         $equipmentLocation->update([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'building' => $validated['building'] ?? null,
             'floor' => $validated['floor'] ?? null,
             'zone' => $validated['zone'] ?? null,
@@ -108,5 +112,10 @@ class EquipmentLocationController extends Controller
         $equipmentLocation->delete();
 
         return redirect()->route('settings.equipment-locations.index')->with('success', __('common.deleted'));
+    }
+
+    private function normalizeCode(mixed $raw): string
+    {
+        return strtoupper(trim((string) $raw));
     }
 }

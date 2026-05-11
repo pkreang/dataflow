@@ -25,16 +25,18 @@ class PositionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:100|unique:positions,code',
+            'code' => ['required', 'string', 'max:100', 'unique:positions,code'],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         Position::create([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -51,16 +53,18 @@ class PositionController extends Controller
 
     public function update(Request $request, Position $position): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => "required|string|max:100|unique:positions,code,{$position->id}",
+            'code' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('positions', 'code')->ignore($position->id)],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         $position->update([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -80,5 +84,10 @@ class PositionController extends Controller
         $position->delete();
 
         return redirect()->route('settings.positions.index')->with('success', __('common.deleted'));
+    }
+
+    private function normalizeCode(mixed $raw): string
+    {
+        return strtoupper(trim((string) $raw));
     }
 }
