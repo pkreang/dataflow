@@ -52,17 +52,10 @@
                     </label>
                     <input name="code" value="{{ old('code', $documentType->code ?? '') }}" required maxlength="100"
                            class="form-input @error('code') form-input-error @enderror" />
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('common.code_snake_case_hint') }}</p>
                     @error('code')
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                     @enderror
-                </div>
-                <div>
-                    <label class="form-label">
-                        {{ __('common.icon') }}
-                    </label>
-                    <input name="icon" value="{{ old('icon', $documentType->icon ?? '') }}" maxlength="50"
-                           placeholder="e.g. wrench, cube, clipboard-document-check"
-                           class="form-input" />
                 </div>
                 <div>
                     <label class="form-label">
@@ -94,6 +87,29 @@
                         name="is_active"
                         :checked="old('is_active', $documentType->is_active ?? true)"
                         label-class="form-label" />
+                </div>
+                <div class="md:col-span-2" x-data="{ icon: @js(old('icon', $documentType->icon ?? '')) }">
+                    <label class="form-label">{{ __('common.icon') }}</label>
+                    <input type="hidden" name="icon" :value="icon">
+                    <div class="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/40 @error('icon') border-red-400 dark:border-red-500 @enderror">
+                        <button type="button" @click="icon = ''"
+                                :class="icon === '' ? 'ring-2 ring-blue-500 bg-white dark:bg-slate-700' : ''"
+                                title="{{ __('common.none') }}"
+                                class="aspect-square flex items-center justify-center text-slate-400 hover:bg-white dark:hover:bg-slate-700 rounded">
+                            <span class="text-lg leading-none">&mdash;</span>
+                        </button>
+                        @foreach(\App\Support\IconCatalog::names() as $iconName)
+                            <button type="button" @click="icon = @js($iconName)"
+                                    :class="icon === @js($iconName) ? 'ring-2 ring-blue-500 bg-white dark:bg-slate-700' : ''"
+                                    title="{{ $iconName }}"
+                                    class="aspect-square flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded">
+                                <x-nav-icon :name="$iconName" class="w-5 h-5" />
+                            </button>
+                        @endforeach
+                    </div>
+                    @error('icon')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div class="md:col-span-2">
                     <label class="form-label">{{ __('common.description') }}</label>
