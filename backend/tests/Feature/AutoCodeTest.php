@@ -174,6 +174,66 @@ class AutoCodeTest extends TestCase
         $this->assertSame('DEPT-001', $created->auto_code);
     }
 
+    public function test_auto_code_request_override_ignored_for_document_type(): void
+    {
+        $this->seedBase();
+        $admin = $this->makeSuperAdmin();
+
+        $resp = $this->actingAsWebSession($admin)->post(route('settings.document-types.store'), [
+            'code' => 'maintenance_request',
+            'label_en' => 'Maintenance',
+            'label_th' => 'ซ่อม',
+            'is_active' => 1,
+            'auto_code' => 'DOCTYPE-999', // attacker-supplied — should be ignored
+        ]);
+
+        $resp->assertSessionHasNoErrors();
+        $created = DocumentType::where('code', 'maintenance_request')->first();
+        $this->assertNotNull($created);
+        $this->assertSame('DOCTYPE-001', $created->auto_code);
+    }
+
+    public function test_auto_code_request_override_ignored_for_lookup_list(): void
+    {
+        $this->seedBase();
+        $admin = $this->makeSuperAdmin();
+
+        $resp = $this->actingAsWebSession($admin)->post(route('settings.lookups.store'), [
+            'key' => 'colors',
+            'label_en' => 'Colors',
+            'label_th' => 'สี',
+            'is_active' => 1,
+            'auto_code' => 'LKLIST-999', // attacker-supplied — should be ignored
+        ]);
+
+        $resp->assertSessionHasNoErrors();
+        $created = LookupList::where('key', 'colors')->first();
+        $this->assertNotNull($created);
+        $this->assertSame('LKLIST-001', $created->auto_code);
+    }
+
+    /**
+     * Documents the trait's behaviour: direct mass-assignment via Model::create()
+     * with a non-empty auto_code DOES overwrite — the `creating` event's
+     * `if (empty($model->auto_code))` guard passes through and the supplied
+     * value wins. This is intentional (lets data-import flows pin specific
+     * codes), but means request safety relies on controllers NOT exposing
+     * `auto_code` in validation rules — confirmed by static audit. Treat
+     * this test as a tripwire: if it fails (i.e. trait starts forcing
+     * overwrites), audit every controller that creates one of the 13
+     * entities again before letting the change land.
+     */
+    public function test_direct_mass_assignment_with_auto_code_does_overwrite_trait(): void
+    {
+        $dept = Department::create([
+            'name' => 'Import',
+            'code' => 'IMP',
+            'auto_code' => 'DEPT-IMPORTED',
+        ]);
+
+        $this->assertSame('DEPT-IMPORTED', $dept->auto_code);
+    }
+
     // ── Helpers ─────────────────────────────────────────────
 
     private function seedBase(): void
