@@ -20,7 +20,7 @@
         <input type="text"
                x-model="{{ $name }}"
                placeholder="{{ $placeholder }}"
-               class="form-input pl-10">
+               class="form-input !pl-10">
         <div x-show="loading" class="absolute inset-y-0 right-0 flex items-center pr-3">
             <svg class="w-4 h-4 text-slate-400 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -40,6 +40,6 @@
                name="{{ $name }}"
                value="{{ $value }}"
                placeholder="{{ $placeholder }}"
-               class="form-input pl-10">
+               class="form-input !pl-10">
     </div>
 @endif

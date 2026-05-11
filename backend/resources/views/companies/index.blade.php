@@ -21,7 +21,7 @@
         </div>
         @can('manage profile')
             <div class="flex items-center gap-2">
-                <a href="{{ route('companies.create') }}" class="btn-primary">
+                <a href="{{ route('companies.create') }}" class="btn-primary inline-flex items-center">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     {{ __('company.add_company') }}
                 </a>

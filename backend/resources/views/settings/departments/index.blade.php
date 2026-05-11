@@ -12,8 +12,9 @@
 @section('content')
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ __('common.department_list') }}</h2>
-        <a href="{{ route('settings.departments.create') }}" class="btn-primary">
-            {{ __('common.add') }} {{ __('common.departments') }}
+        <a href="{{ route('settings.departments.create') }}" class="btn-primary inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ __('common.add_department') }}
         </a>
     </div>
 
@@ -23,6 +24,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'code', 'label' => __('common.code')],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'remark', 'label' => __('common.remark')],
@@ -32,9 +34,11 @@
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.departments.create')"
         :empty-cta-label="__('common.add') . ' ' . __('common.departments')"
+        :disable-pagination="true"
     >
         @foreach ($departments as $department)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <td class="px-4 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">{{ $department->auto_code }}</td>
                 <td class="table-primary">{{ $department->code }}</td>
                 <td class="table-primary">{{ $department->name }}</td>
                 <td class="table-sub">{{ $department->description ?: '-' }}</td>
@@ -47,4 +51,6 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$departments" :perPage="$perPage" id="departments-pagination" />
 @endsection

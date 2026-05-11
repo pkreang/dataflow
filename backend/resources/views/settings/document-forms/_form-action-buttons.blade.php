@@ -15,16 +15,27 @@
         <a href="{{ route('settings.document-forms.policy.edit', $documentForm) }}"
            class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-purple-700">{{ __('common.workflow_policy') }}</a>
     </div>
-    {{-- Create report: one-click dashboard with default widgets pointing to this form --}}
+    {{-- Create report: build + submit a one-off form via JS instead of nesting a
+         <form> in the toolbar. The nested-form pattern silently broke saving
+         the parent document-form-builder — browsers close the outer <form> as
+         soon as they hit the inner <form>, orphaning every later input so the
+         POST body arrives empty and the server returns "required" on every
+         basic field. JS-built form is appended to <body>, so no nesting. --}}
     <div class="flex items-center px-2">
-        <form method="POST" action="{{ route('settings.document-forms.create-report', $documentForm) }}"
-              onsubmit="return confirm('{{ __('common.form_report_create_confirm') }}')">
-            @csrf
-            <button type="submit"
-                    class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700">
-                {{ __('common.form_report_create_button') }}
-            </button>
-        </form>
+        <button type="button"
+                onclick="if (confirm('{{ __('common.form_report_create_confirm') }}')) {
+                    const f = document.createElement('form');
+                    f.method = 'POST';
+                    f.action = '{{ route('settings.document-forms.create-report', $documentForm) }}';
+                    const t = document.createElement('input');
+                    t.type = 'hidden'; t.name = '_token'; t.value = '{{ csrf_token() }}';
+                    f.appendChild(t);
+                    document.body.appendChild(f);
+                    f.submit();
+                }"
+                class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700">
+            {{ __('common.form_report_create_button') }}
+        </button>
     </div>
 @endif
 {{-- Cancel: outlined pill --}}

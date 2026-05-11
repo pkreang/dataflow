@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Models\Position;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -11,11 +12,17 @@ use Illuminate\View\View;
 
 class PositionController extends Controller
 {
-    public function index(): View
-    {
-        $positions = Position::query()->orderBy('name')->get();
+    use HasPerPage;
 
-        return view('settings.positions.index', compact('positions'));
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'positions_per_page');
+        $positions = Position::query()
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('settings.positions.index', compact('positions', 'perPage'));
     }
 
     public function create(): View
