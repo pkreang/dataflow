@@ -309,6 +309,7 @@ return [
     'routing_mode_organization_wide' => 'Organization-wide',
     'routing_mode_organization_wide_desc' => 'Same approval workflow for every department.',
     'workflow_routing_banner' => 'Configure how workflows are selected (by department vs organization-wide):',
+    'branch' => 'Branch',
     'branch_scoping_title' => 'Branch scoping',
     'branch_scoping_page_subtitle' => 'Control branch records on the Organizations page and optional filtering of equipment and spare parts by branch.',
     'branch_scoping_subtitle' => 'Limit equipment and spare-parts lists by the user\'s branch when enabled.',

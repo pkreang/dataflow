@@ -9,6 +9,7 @@ use App\Models\Equipment;
 use App\Models\EquipmentCategory;
 use App\Models\EquipmentLocation;
 use App\Services\BranchScopeService;
+use App\Support\BranchesSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,8 +58,9 @@ class EquipmentRegistryController extends Controller
         $categories = EquipmentCategory::where('is_active', true)->orderBy('name')->get();
         $locations = EquipmentLocation::where('is_active', true)->orderBy('name')->get();
         $companies = Company::where('is_active', true)->with('branches')->orderBy('name')->get();
+        $branchesManagementEnabled = BranchesSetting::managementEnabled();
 
-        return view('equipment-registry.create', compact('categories', 'locations', 'companies'));
+        return view('equipment-registry.create', compact('categories', 'locations', 'companies', 'branchesManagementEnabled'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -85,10 +87,18 @@ class EquipmentRegistryController extends Controller
         ]);
 
         $user = Auth::user();
-        if (! BranchScopeService::submittedBranchIdValid($user, BranchScopeService::MODULE_EQUIPMENT, $validated['branch_id'] ?? null)) {
+        $branchesManagementEnabled = BranchesSetting::managementEnabled();
+        if ($branchesManagementEnabled
+            && ! BranchScopeService::submittedBranchIdValid($user, BranchScopeService::MODULE_EQUIPMENT, $validated['branch_id'] ?? null)) {
             return back()->withErrors(['branch_id' => __('validation.in', ['attribute' => 'branch'])])->withInput();
         }
-        $branchId = $validated['branch_id'] ?? null;
+        if ($branchesManagementEnabled) {
+            $companyId = $validated['company_id'] ?? null;
+            $branchId = $validated['branch_id'] ?? null;
+        } else {
+            $companyId = $user->company_id;
+            $branchId = $user->branch_id;
+        }
         if ($branchId === null) {
             $branchId = BranchScopeService::defaultBranchIdForUser($user, BranchScopeService::MODULE_EQUIPMENT);
         }
@@ -101,7 +111,7 @@ class EquipmentRegistryController extends Controller
             'model' => $validated['model'] ?? null,
             'equipment_category_id' => $validated['equipment_category_id'],
             'equipment_location_id' => $validated['equipment_location_id'],
-            'company_id' => $validated['company_id'] ?? null,
+            'company_id' => $companyId,
             'branch_id' => $branchId,
             'status' => $validated['status'],
             'criticality' => $validated['criticality'] ?? null,
@@ -124,8 +134,9 @@ class EquipmentRegistryController extends Controller
         $categories = EquipmentCategory::where('is_active', true)->orderBy('name')->get();
         $locations = EquipmentLocation::where('is_active', true)->orderBy('name')->get();
         $companies = Company::where('is_active', true)->with('branches')->orderBy('name')->get();
+        $branchesManagementEnabled = BranchesSetting::managementEnabled();
 
-        return view('equipment-registry.edit', compact('equipment', 'categories', 'locations', 'companies'));
+        return view('equipment-registry.edit', compact('equipment', 'categories', 'locations', 'companies', 'branchesManagementEnabled'));
     }
 
     public function update(Request $request, Equipment $equipment): RedirectResponse
@@ -154,12 +165,20 @@ class EquipmentRegistryController extends Controller
         ]);
 
         $user = Auth::user();
-        if (! BranchScopeService::submittedBranchIdValid($user, BranchScopeService::MODULE_EQUIPMENT, $validated['branch_id'] ?? null)) {
+        $branchesManagementEnabled = BranchesSetting::managementEnabled();
+        if ($branchesManagementEnabled
+            && ! BranchScopeService::submittedBranchIdValid($user, BranchScopeService::MODULE_EQUIPMENT, $validated['branch_id'] ?? null)) {
             return back()->withErrors(['branch_id' => __('validation.in', ['attribute' => 'branch'])])->withInput();
         }
-        $branchId = $validated['branch_id'] ?? null;
-        if ($branchId === null) {
-            $branchId = BranchScopeService::defaultBranchIdForUser($user, BranchScopeService::MODULE_EQUIPMENT);
+        if ($branchesManagementEnabled) {
+            $companyId = $validated['company_id'] ?? null;
+            $branchId = $validated['branch_id'] ?? null;
+            if ($branchId === null) {
+                $branchId = BranchScopeService::defaultBranchIdForUser($user, BranchScopeService::MODULE_EQUIPMENT);
+            }
+        } else {
+            $companyId = $equipment->company_id;
+            $branchId = $equipment->branch_id;
         }
 
         $equipment->update([
@@ -170,7 +189,7 @@ class EquipmentRegistryController extends Controller
             'model' => $validated['model'] ?? null,
             'equipment_category_id' => $validated['equipment_category_id'],
             'equipment_location_id' => $validated['equipment_location_id'],
-            'company_id' => $validated['company_id'] ?? null,
+            'company_id' => $companyId,
             'branch_id' => $branchId,
             'status' => $validated['status'],
             'criticality' => $validated['criticality'] ?? null,

@@ -309,6 +309,7 @@ return [
     'routing_mode_organization_wide' => 'ทั้งองค์กร',
     'routing_mode_organization_wide_desc' => 'ทุกแผนกใช้ workflow เดียวกัน',
     'workflow_routing_banner' => 'กำหนดวิธีเลือกเวิร์กโฟลว์ (แยกตามแผนกหรือทั้งองค์กร):',
+    'branch' => 'สาขา',
     'branch_scoping_title' => 'สาขา',
     'branch_scoping_page_subtitle' => 'ควบคุมการจัดการสาขาในหน้าแก้ไของค์กร และตัวเลือกกรองรายการอุปกรณ์/อะไหล่ตามสาขา',
     'branch_scoping_subtitle' => 'จำกัดรายการทะเบียนอุปกรณ์และอะไหล่ตามสาขาของผู้ใช้เมื่อเปิดใช้',
