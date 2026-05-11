@@ -29,7 +29,8 @@ class DocumentTypeSeeder extends Seeder
             );
         }
 
-        $keep = array_column($types, 'code');
-        DocumentType::query()->whereNotIn('code', $keep)->delete();
+        // Add-only: never wipe doc types we don't own. Factory verticals
+        // (NTEQ) seed `maintenance_request` independently and used to lose it
+        // here whenever this seeder ran out of order.
     }
 }

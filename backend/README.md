@@ -63,8 +63,8 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 | `PermissionSeeder` / `RolePermissionSeeder` | สิทธิ์ + บทบาท + `admin@example.com` |
 | `SettingSeeder` / `NavigationMenuSeeder` | การตั้งค่า + เมนู |
 | `DocumentTypeSeeder` | ประเภทเอกสารจัดซื้อ (เบิกอะไหล่, PR, PO) |
-| `PositionDemoSeeder` | ตำแหน่งโรงเรียนเท่านั้น (SCH\_TEACHER, SCH\_ACAD\_HEAD, …); ลบแถวตำแหน่ง CMMS เก่า (MAINT_SUP, …) เมื่อไม่มีผู้ใช้และไม่ถูก workflow อ้างอิง |
-| `FactoryPositionSeeder` | (ไม่รันจาก `db:seed` หลัก) ตำแหน่ง CMMS สำหรับ `FactoryCmmsTemplateSeeder` / `PurchaseWorkflowSeeder` / `ApprovalWorkflowDemoSeeder` |
+| `PositionDemoSeeder` | (ไม่รันจาก `db:seed` หลัก — ย้ายไปอยู่ใน `IndustryTemplateSeeder` เท่านั้น) ตำแหน่งโรงเรียน (SCH\_TEACHER, SCH\_ACAD\_HEAD, SCH\_VICE\_PRINCIPAL, SCH\_ADMIN\_OFFICER, SCH\_FIN\_OFFICER) — โดน seed เมื่อ run `composer setup` หรือ `composer switch:school` เพราะ flow เหล่านั้นเรียก `IndustryTemplateSeeder` |
+| `FactoryPositionSeeder` | (ไม่รันจาก `db:seed` หลัก) ตำแหน่ง CMMS สำหรับ `FactoryCmmsTemplateSeeder` / `PurchaseWorkflowSeeder` / `ApprovalWorkflowDemoSeeder` / `NteqPolymerDemoSeeder` |
 | `IndustryTemplateSeeder` | **เทมเพลตสองกลุ่มลูกค้า:** โรงงาน (`FactoryCmmsTemplateSeeder`: แจ้งซ่อม + PM/AM, ฟอร์ม, workflow, policy) และโรงเรียน (`SchoolEFormTemplateSeeder`: แผนก SCH\_\*, ประเภท eForm ลา/ขอซื้อ/กิจกรรม, ฟอร์ม, workflow, policy) |
 | `DashboardSeeder` | แดชบอร์ดตัวอย่าง |
 | `PurchaseWorkflowSeeder` | workflow ใบขอซื้อ/สั่งซื้อ (ต้องมีฟอร์ม `purchase_request_default` / `purchase_order_default` ใน DB — สร้างจาก UI หรือ seeder แยก) |
