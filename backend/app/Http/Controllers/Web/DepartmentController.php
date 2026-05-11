@@ -79,16 +79,18 @@ class DepartmentController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:100|unique:departments,code',
+            'code' => ['required', 'string', 'max:100', 'unique:departments,code'],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         $department = Department::create([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -100,16 +102,18 @@ class DepartmentController extends Controller
 
     public function update(Request $request, Department $department): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => "required|string|max:100|unique:departments,code,{$department->id}",
+            'code' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('departments', 'code')->ignore($department->id)],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         $department->update([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -200,5 +204,10 @@ class DepartmentController extends Controller
         return redirect()
             ->route('settings.departments.edit', $department)
             ->with('success', __('common.saved'));
+    }
+
+    private function normalizeCode(mixed $raw): string
+    {
+        return strtoupper(trim((string) $raw));
     }
 }
