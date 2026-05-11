@@ -328,6 +328,32 @@
         @endif
     </div>
 
+    {{-- Home dashboard preference --}}
+    <div class="card p-6">
+        <h3 class="font-semibold text-slate-900 dark:text-slate-100">{{ __('common.home_dashboard') }}</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">{{ __('common.home_dashboard_desc') }}</p>
+        <form method="POST" action="{{ route('profile.home-dashboard.update') }}" class="flex flex-wrap items-end gap-3">
+            @csrf
+            @method('PATCH')
+            <div class="flex-1 min-w-[240px]">
+                <label for="home_dashboard_id" class="form-label">{{ __('common.dashboard') }}</label>
+                <select name="home_dashboard_id" id="home_dashboard_id" class="form-input mt-1">
+                    <option value="">{{ __('common.use_system_default') }}</option>
+                    @foreach($availableHomeDashboards as $dashboardOption)
+                        <option value="{{ $dashboardOption->id }}"
+                            @selected(old('home_dashboard_id', $user->home_dashboard_id) == $dashboardOption->id)>
+                            {{ $dashboardOption->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('home_dashboard_id')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+            <button type="submit" class="btn-primary">{{ __('common.save') }}</button>
+        </form>
+    </div>
+
     {{-- Notification preferences --}}
     <div class="card p-6">
         <h3 class="font-semibold text-slate-900 dark:text-slate-100">{{ __('common.notification_prefs') }}</h3>

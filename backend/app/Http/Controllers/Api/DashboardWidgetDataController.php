@@ -152,13 +152,120 @@ class DashboardWidgetDataController extends Controller
             if ($dateTo) {
                 $query->whereDate($dateField, '<=', $dateTo);
             }
+
+            // Built-in date presets ("this month", "last 30 days") let seeded
+            // widgets bake in a window without requiring the user to pick dates.
+            // Skipped when the request supplies an explicit date range — the
+            // dashboard's date picker always wins so power users can override.
+            if (! $dateFrom && ! $dateTo && ! empty($config['date_preset'])) {
+                $this->applyDatePreset($query, $dateField, $config['date_preset']);
+            }
         }
 
         if ($departmentId && isset($source['filter_fields']['department_id'])) {
             $query->where('department_id', $departmentId);
         }
 
+        // Static filters captured at design-time (e.g. status=draft, requester
+        // ={current_user}) — applied AFTER the request-driven filters so they
+        // act as a baseline scope the user can't escape from the dashboard UI.
+        $this->applyConfiguredFilters($query, $config, $source, $request);
+
         return [$query, $config, $source];
+    }
+
+    /**
+     * Apply config['filters'] to the query, whitelisted against the source's
+     * filter_fields. Supports the {current_user} token which resolves to the
+     * authenticated user's id at request time so a single seeded dashboard can
+     * scope KPIs ("งานของฉัน") per viewer instead of needing one per user.
+     *
+     * Tokens that can't be resolved (e.g. {current_user} on a request with no
+     * authenticated user) skip the filter rather than produce a 500 — keeps
+     * widget render resilient when a guest endpoint slips through.
+     */
+    private function applyConfiguredFilters($query, array $config, array $source, Request $request): void
+    {
+        $filters = $config['filters'] ?? [];
+        if (! is_array($filters) || empty($filters)) {
+            return;
+        }
+
+        $allowed = $source['filter_fields'] ?? [];
+
+        foreach ($filters as $field => $rawValue) {
+            if (! isset($allowed[$field])) {
+                continue;
+            }
+
+            $value = $this->resolveFilterValue($rawValue, $request);
+            if ($value === null) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $query->whereIn($field, $value);
+            } else {
+                $query->where($field, $value);
+            }
+        }
+    }
+
+    /**
+     * Resolve a filter value, expanding runtime tokens. Currently only
+     * {current_user} → authenticated user id; null when unresolvable so the
+     * caller can drop the clause entirely.
+     */
+    private function resolveFilterValue($value, Request $request)
+    {
+        if ($value === '{current_user}') {
+            return $request->user()?->id;
+        }
+        if (is_array($value)) {
+            $resolved = [];
+            foreach ($value as $v) {
+                $r = $this->resolveFilterValue($v, $request);
+                if ($r !== null) {
+                    $resolved[] = $r;
+                }
+            }
+
+            return $resolved ?: null;
+        }
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Apply a fixed-window date preset relative to "now". Unknown presets are
+     * a no-op so renaming/removing a preset doesn't break stored widgets.
+     */
+    private function applyDatePreset($query, string $dateField, string $preset): void
+    {
+        $now = \Illuminate\Support\Carbon::now();
+
+        switch ($preset) {
+            case 'today':
+                $query->whereDate($dateField, $now->toDateString());
+                break;
+            case 'this_week':
+                $query->whereBetween($dateField, [
+                    $now->copy()->startOfWeek()->toDateTimeString(),
+                    $now->copy()->endOfWeek()->toDateTimeString(),
+                ]);
+                break;
+            case 'this_month':
+                $query->whereYear($dateField, $now->year)
+                    ->whereMonth($dateField, $now->month);
+                break;
+            case 'last_30_days':
+                $query->whereDate($dateField, '>=', $now->copy()->subDays(30)->toDateString());
+                break;
+            case 'this_year':
+                $query->whereYear($dateField, $now->year);
+                break;
+            // unknown preset → silently ignored
+        }
     }
 
     private function buildWidgetCsv($query, array $config, array $source, ReportDashboardWidget $widget): string

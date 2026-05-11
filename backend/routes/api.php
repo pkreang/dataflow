@@ -4,7 +4,6 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DashboardWidgetDataController;
 use App\Http\Controllers\Api\DepartmentController;
-use App\Http\Controllers\Api\HomeDashboardKpiController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
@@ -68,10 +67,5 @@ Route::prefix('v1')->group(function () {
         Route::get('/dashboards/{dashboard}/export',
             [DashboardWidgetDataController::class, 'exportDashboard']
         );
-
-        // Home dashboard KPI
-        Route::get('/dashboard/kpi/{card}', [HomeDashboardKpiController::class, 'show']);
-        Route::post('/dashboard/kpi-config', [HomeDashboardKpiController::class, 'saveConfig'])
-            ->middleware('permission:manage_own_dashboard');
     });
 });

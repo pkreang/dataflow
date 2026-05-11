@@ -3,35 +3,89 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
+use App\Models\ReportDashboard;
+use App\Models\Setting;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    private const ADMIN_CARDS = [
-        'school_pending_approvals',
-        'school_submissions_this_month',
-        'active_users',
-    ];
-
-    private const DEFAULT_CARDS = [
-        'school_my_pending_requests',
-        'school_draft_forms',
-        'school_my_submissions_this_month',
-    ];
-
-    public function index(): View
+    /**
+     * Resolve and render the user's home dashboard. The page is now backed by
+     * a `ReportDashboard` (admin-built via `/settings/dashboards`) instead of
+     * the previous hardcoded KPI grid — so adding/changing cards only needs
+     * widget edits, no code change.
+     *
+     * Resolution order: per-user pick (`users.home_dashboard_id`) → global
+     * default (`settings.default_home_dashboard_id`) → first
+     * accessible-and-active dashboard. When no dashboard matches the user (no
+     * accessible dashboards exist at all) we render a friendly empty state.
+     */
+    public function index(Request $request): View
     {
         $user = Auth::user();
-        $roleNames = $user->roles->pluck('name');
-        $isManager = $roleNames->intersect(['super-admin', 'admin'])->isNotEmpty();
-        $defaultCards = $isManager ? self::ADMIN_CARDS : self::DEFAULT_CARDS;
+        $dashboard = $this->resolveHomeDashboard($user);
+        $availableDashboards = $this->accessibleDashboards($user);
 
-        $savedConfig = $user->dashboard_config;
-        $enabledCards = $savedConfig['cards'] ?? $defaultCards;
+        if (! $dashboard) {
+            return view('dashboard-empty', [
+                'user' => $user,
+                'availableDashboards' => $availableDashboards,
+            ]);
+        }
 
-        $canCustomize = $user->can('manage_own_dashboard');
+        $dashboard->load('widgets');
+        $apiToken = session('api_token');
+        $departments = Department::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        return view('dashboard', compact('enabledCards', 'defaultCards', 'canCustomize'));
+        return view('dashboard', compact(
+            'dashboard',
+            'apiToken',
+            'departments',
+            'availableDashboards',
+            'user'
+        ));
+    }
+
+    private function resolveHomeDashboard(?User $user): ?ReportDashboard
+    {
+        if ($user?->home_dashboard_id) {
+            $picked = ReportDashboard::find($user->home_dashboard_id);
+            if ($picked && $picked->canBeAccessedBy($user)) {
+                return $picked;
+            }
+        }
+
+        $defaultId = Setting::get('default_home_dashboard_id');
+        if ($defaultId) {
+            $default = ReportDashboard::find((int) $defaultId);
+            if ($default && $default->canBeAccessedBy($user)) {
+                return $default;
+            }
+        }
+
+        return ReportDashboard::query()
+            ->where('is_active', true)
+            ->accessibleTo($user)
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, ReportDashboard>
+     */
+    private function accessibleDashboards(?User $user)
+    {
+        return ReportDashboard::query()
+            ->where('is_active', true)
+            ->accessibleTo($user)
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 }
