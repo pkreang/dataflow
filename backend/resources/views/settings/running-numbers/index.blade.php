@@ -25,6 +25,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'prefix', 'label' => __('common.running_number_prefix')],
             ['key' => 'preview', 'label' => __('common.running_number_preview')],
@@ -47,6 +48,7 @@
                 $preview .= '-' . str_pad($config->last_number + 1, $config->digit_count, '0', STR_PAD_LEFT);
             @endphp
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
+                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $config->auto_code }}</td>
                 <td class="table-primary">{{ $config->document_type }}</td>
                 <td class="table-sub">{{ $config->prefix }}</td>
                 <td class="px-4 py-3 text-sm font-mono text-blue-600 dark:text-blue-400">{{ $preview }}</td>

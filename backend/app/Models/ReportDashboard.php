@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ReportDashboard extends Model
 {
+    use HasAutoCode;
     use HasFactory;
 
     protected $fillable = [
+        'auto_code',
         'name',
         'description',
         'layout_columns',
@@ -35,5 +38,10 @@ class ReportDashboard extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'DASH';
     }
 }

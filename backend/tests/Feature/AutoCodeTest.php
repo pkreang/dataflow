@@ -2,10 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApprovalWorkflow;
+use App\Models\Branch;
+use App\Models\Company;
 use App\Models\Department;
+use App\Models\DocumentForm;
+use App\Models\DocumentType;
+use App\Models\Equipment;
 use App\Models\EquipmentCategory;
 use App\Models\EquipmentLocation;
+use App\Models\LookupList;
+use App\Models\NavigationMenu;
+use App\Models\PmPlan;
 use App\Models\Position;
+use App\Models\ReportDashboard;
+use App\Models\RunningNumberConfig;
+use App\Models\SparePart;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -27,6 +39,79 @@ class AutoCodeTest extends TestCase
         $this->assertSame('POS-001', $pos->auto_code);
         $this->assertSame('EQCAT-001', $cat->auto_code);
         $this->assertSame('EQLOC-001', $loc->auto_code);
+    }
+
+    public function test_auto_code_generated_on_create_for_extended_entities(): void
+    {
+        // User, Company, Branch — org chain
+        $user = User::create([
+            'first_name' => 'Auto', 'last_name' => 'Coded',
+            'email' => 'autocoded@test.local',
+            'password' => 'password', 'is_active' => true,
+        ]);
+        $company = Company::create(['name' => 'Acme', 'code' => 'ACME']);
+        $branch = Branch::create(['company_id' => $company->id, 'name' => 'HQ', 'code' => 'HQ']);
+
+        // Document machinery
+        $docType = DocumentType::create([
+            'code' => 'leave', 'label_en' => 'Leave', 'label_th' => 'ลา', 'is_active' => true,
+        ]);
+        $form = DocumentForm::create([
+            'form_key' => 'leave_form', 'name' => 'Leave Form',
+            'document_type' => 'leave', 'is_active' => true, 'layout_columns' => 1,
+        ]);
+
+        // Equipment + spare parts
+        $cat = EquipmentCategory::create(['name' => 'Pump', 'code' => 'PUMP']);
+        $loc = EquipmentLocation::create(['name' => 'A', 'code' => 'A']);
+        $equip = Equipment::create([
+            'name' => 'Pump-1', 'code' => 'P1',
+            'equipment_category_id' => $cat->id,
+            'equipment_location_id' => $loc->id,
+        ]);
+        $sp = SparePart::create([
+            'code' => 'SP1', 'name' => 'Bearing', 'unit' => 'pcs',
+            'equipment_category_id' => $cat->id,
+        ]);
+
+        // Lookup, workflow, running-number, dashboard, navigation, pm-plan
+        $lookup = LookupList::create([
+            'key' => 'colors', 'label_en' => 'Colors', 'label_th' => 'สี', 'is_active' => true,
+        ]);
+        $wf = ApprovalWorkflow::create([
+            'name' => 'Standard', 'document_type' => 'leave', 'is_active' => true,
+        ]);
+        $rnc = RunningNumberConfig::create([
+            'document_type' => 'leave', 'prefix' => 'LV', 'digit_count' => 4,
+            'reset_mode' => 'yearly', 'is_active' => true,
+        ]);
+        $dash = ReportDashboard::create([
+            'name' => 'Test Dashboard', 'layout_columns' => 2,
+            'visibility' => 'all', 'is_active' => true,
+        ]);
+        $nav = NavigationMenu::create([
+            'label' => 'Test', 'icon' => 'home', 'route' => '/test', 'is_active' => true,
+        ]);
+        $pm = PmPlan::create([
+            'equipment_id' => $equip->id, 'name' => 'Daily check',
+            'frequency_type' => 'date', 'interval_days' => 1, 'is_active' => true,
+        ]);
+
+        $this->assertSame('USER-001', $user->auto_code);
+        $this->assertSame('COMP-001', $company->auto_code);
+        $this->assertSame('BR-001', $branch->auto_code);
+        $this->assertSame('DOCTYPE-001', $docType->auto_code);
+        $this->assertSame('FORM-001', $form->auto_code);
+        $this->assertSame('EQ-001', $equip->auto_code);
+        $this->assertSame('SP-001', $sp->auto_code);
+        $this->assertSame('LKLIST-001', $lookup->auto_code);
+        $this->assertSame('WF-001', $wf->auto_code);
+        $this->assertSame('RNC-001', $rnc->auto_code);
+        $this->assertSame('DASH-001', $dash->auto_code);
+        // NavigationMenu may already have NAV-001 from the seeder run by RefreshDatabase
+        // if there are any cached seeders — assert prefix only.
+        $this->assertMatchesRegularExpression('/^NAV-\d{3}$/', $nav->auto_code);
+        $this->assertSame('PMPLAN-001', $pm->auto_code);
     }
 
     public function test_auto_code_increments_per_entity_independently(): void

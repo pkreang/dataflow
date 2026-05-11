@@ -39,6 +39,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'equipment', 'label' => __('common.equipment')],
             ['key' => 'name', 'label' => __('common.pm_plan_name')],
             ['key' => 'frequency', 'label' => __('common.pm_frequency')],
@@ -55,6 +56,7 @@
     >
         @foreach($plans as $plan)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
+                <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $plan->auto_code }}</td>
                 <td class="px-4 py-2 whitespace-nowrap">
                     <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $plan->equipment?->code ?? '—' }}</p>
                     <p class="text-xs text-slate-400 dark:text-slate-500">{{ $plan->equipment?->name }}</p>

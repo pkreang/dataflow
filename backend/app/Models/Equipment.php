@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Equipment extends Model
 {
+    use HasAutoCode;
     use HasFactory;
 
     protected $table = 'equipment';
@@ -14,6 +16,7 @@ class Equipment extends Model
     public const CRITICALITY_LEVELS = ['A', 'B', 'C'];
 
     protected $fillable = [
+        'auto_code',
         'name',
         'code',
         'serial_number',
@@ -74,5 +77,10 @@ class Equipment extends Model
     public function pmWorkOrders()
     {
         return $this->hasMany(PmWorkOrder::class);
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'EQ';
     }
 }

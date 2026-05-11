@@ -2,16 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use App\Models\Concerns\HasStructuredAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
 {
+    use HasAutoCode;
     use HasFactory;
     use HasStructuredAddress;
 
     protected $fillable = [
+        'auto_code',
         'name',
         'code',
         'tax_id',
@@ -49,5 +52,10 @@ class Company extends Model
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'COMP';
     }
 }

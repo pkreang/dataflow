@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,10 @@ use Illuminate\Support\Facades\Cache;
 
 class NavigationMenu extends Model
 {
+    use HasAutoCode;
+
     protected $fillable = [
+        'auto_code',
         'parent_id', 'label', 'label_en', 'label_th', 'icon', 'route',
         'permission', 'document_form_id', 'sort_order', 'is_active',
     ];
@@ -157,5 +161,10 @@ class NavigationMenu extends Model
 
         static::saved($clear);
         static::deleted($clear);
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'NAV';
     }
 }

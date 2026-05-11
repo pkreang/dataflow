@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,9 +17,10 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use HasApiTokens, HasAutoCode, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     protected $fillable = [
+        'auto_code',
         'first_name',
         'last_name',
         'email',
@@ -127,5 +129,10 @@ class User extends Authenticatable implements HasLocalePreference
         $fallback = (string) config('app.locale', 'th');
 
         return in_array($fallback, ['th', 'en'], true) ? $fallback : 'th';
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'USER';
     }
 }

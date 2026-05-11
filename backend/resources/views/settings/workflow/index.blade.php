@@ -30,6 +30,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'name', 'label' => __('common.workflow_col_name')],
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'stages', 'label' => __('common.workflow_col_stages')],
@@ -42,6 +43,7 @@
     >
         @foreach ($workflows as $workflow)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $workflow->auto_code }}</td>
                 <td class="table-primary">{{ $workflow->name }}</td>
                 <td class="table-sub">{{ strtoupper($workflow->document_type) }}</td>
                 <td class="table-sub">{{ $workflow->stages_count }}</td>

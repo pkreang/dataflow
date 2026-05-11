@@ -60,6 +60,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'name_code', 'label' => __('common.name') . ' / ' . __('common.code')],
             ['key' => 'serial', 'label' => __('common.serial_number')],
             ['key' => 'category', 'label' => __('common.category')],
@@ -76,6 +77,7 @@
     >
         @foreach ($equipment as $item)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
+                <td class="px-4 py-2 text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $item->auto_code }}</td>
                 <td class="px-4 py-2 whitespace-nowrap">
                     <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $item->name }}</p>
                     <p class="text-xs text-slate-400 dark:text-slate-500">{{ $item->code }}</p>

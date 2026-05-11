@@ -50,6 +50,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'fields', 'label' => __('common.fields')],
@@ -72,6 +73,7 @@
                 data-search="{{ e($searchBlob) }}"
                 x-show="!search.trim() || ($el.dataset.search || '').includes(search.toLowerCase())"
             >
+                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $form->auto_code }}</td>
                 <td class="px-4 py-3 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-violet-500 flex items-center justify-center shrink-0">
