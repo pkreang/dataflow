@@ -2,15 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PmPlan extends Model
 {
+    use HasAutoCode;
+
     public const FREQUENCY_TYPES = ['date', 'runtime'];
 
     protected $fillable = [
+        'auto_code',
         'equipment_id',
         'name',
         'description',
@@ -56,5 +60,10 @@ class PmPlan extends Model
     public function assignedPosition(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'assigned_to_position_id');
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'PMPLAN';
     }
 }

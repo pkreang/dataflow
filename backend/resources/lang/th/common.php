@@ -49,6 +49,8 @@ return [
     'equipment_list_placeholder' => 'รายชื่ออุปกรณ์/เครื่องจักรจะพัฒนาต่อในส่วนนี้',
     'remark' => 'หมายเหตุ',
     'code' => 'รหัส',
+    'system_code' => 'รหัสระบบ',
+    'system_code_immutable_hint' => 'สร้างโดยระบบ แก้ไขไม่ได้',
     'workflow_binding' => 'การผูก Workflow',
     'department_workflow_bindings' => 'แผนก ↔ Workflow',
     'department_workflow_bindings_intro' => 'กำหนด Workflow ให้แต่ละแผนก ตามประเภทเอกสาร',

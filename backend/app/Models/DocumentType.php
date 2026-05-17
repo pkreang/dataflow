@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class DocumentType extends Model
 {
+    use HasAutoCode;
+
     protected $fillable = [
+        'auto_code',
         'code',
         'label_en',
         'label_th',
@@ -55,5 +59,10 @@ class DocumentType extends Model
     {
         static::saved(fn () => Cache::forget('document_types_active'));
         static::deleted(fn () => Cache::forget('document_types_active'));
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'DOCTYPE';
     }
 }

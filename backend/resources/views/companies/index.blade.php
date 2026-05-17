@@ -51,6 +51,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'company', 'label' => __('company.company')],
             ['key' => 'email', 'label' => __('company.email')],
             ['key' => 'phone', 'label' => __('company.phone')],
@@ -65,6 +66,7 @@
     >
         @foreach ($companies as $company)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
+                <td class="px-4 py-2 align-top text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $company->auto_code }}</td>
                 <td class="px-4 py-2 align-top whitespace-nowrap">
                     <div class="flex items-start gap-2.5">
                         @if ($company->logo)

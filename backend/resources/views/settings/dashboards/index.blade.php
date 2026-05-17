@@ -55,6 +55,7 @@
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead class="bg-slate-50 dark:bg-slate-800/60">
                 <tr>
+                    <th class="table-header">{{ __('common.system_code') }}</th>
                     <th class="table-header">{{ __('common.name') }}</th>
                     <th class="table-header">Visibility</th>
                     <th class="table-header">Widgets</th>
@@ -73,6 +74,7 @@
                         data-search="{{ e($searchBlob) }}"
                         x-show="!search.trim() || ($el.dataset.search || '').includes(search.toLowerCase())"
                     >
+                        <td class="px-6 py-3 text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $dashboard->auto_code }}</td>
                         <td class="px-6 py-3 whitespace-nowrap">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
@@ -146,7 +148,7 @@
                         </td>
                     </tr>
                 @empty
-                    <x-table-empty-state :colspan="6" :message="__('common.no_data')"
+                    <x-table-empty-state :colspan="7" :message="__('common.no_data')"
                         :cta-href="route('settings.dashboards.create')" :cta-label="__('common.add')" />
                 @endforelse
             </tbody>

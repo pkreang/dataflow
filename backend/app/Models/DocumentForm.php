@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,9 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class DocumentForm extends Model
 {
+    use HasAutoCode;
     use HasFactory;
 
     protected $fillable = [
+        'auto_code',
         'form_key',
         'name',
         'document_type',
@@ -111,5 +114,10 @@ class DocumentForm extends Model
             'permission' => null,
             'is_active' => (bool) $form->is_active,
         ]);
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'FORM';
     }
 }

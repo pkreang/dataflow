@@ -26,6 +26,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'code', 'label' => __('common.code')],
             ['key' => 'label_en', 'label' => __('common.label') . ' (EN)'],
             ['key' => 'label_th', 'label' => __('common.label') . ' (TH)'],
@@ -40,6 +41,7 @@
     >
         @foreach ($documentTypes as $type)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
+                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $type->auto_code }}</td>
                 <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $type->code }}</td>
                 <td class="table-sub">{{ $type->label_en }}</td>
                 <td class="table-sub">{{ $type->label_th }}</td>

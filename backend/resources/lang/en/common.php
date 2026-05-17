@@ -66,6 +66,8 @@ return [
     'equipment_list_placeholder' => 'Equipment list will be implemented here.',
     'remark' => 'Remark',
     'code' => 'Code',
+    'system_code' => 'System Code',
+    'system_code_immutable_hint' => 'Auto-generated and cannot be changed.',
     'workflow_binding' => 'Workflow binding',
     'department_workflow_bindings' => 'Department ↔ Workflow Bindings',
     'department_workflow_bindings_intro' => 'Assign a workflow to each department per document type.',

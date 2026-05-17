@@ -12,6 +12,10 @@
         <div class="space-y-6 mb-8">
             @foreach ($company->branches as $branch)
                 <div class="card p-4">
+                    <div class="flex items-center gap-2 mb-3 text-xs">
+                        <span class="text-slate-500 dark:text-slate-400">{{ __('common.system_code') }}:</span>
+                        <span class="font-mono text-slate-900 dark:text-slate-100">{{ $branch->auto_code }}</span>
+                    </div>
                     <form method="POST" action="{{ route('companies.branches.update', [$company, $branch]) }}" class="space-y-3" novalidate>
                         @csrf
                         @method('PUT')

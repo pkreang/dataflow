@@ -26,6 +26,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'code', 'label' => __('common.code')],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'remark', 'label' => __('common.remark')],
@@ -39,6 +40,7 @@
     >
         @foreach ($positions as $position)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $position->auto_code }}</td>
                 <td class="table-primary">{{ $position->code }}</td>
                 <td class="table-primary">{{ $position->name }}</td>
                 <td class="table-sub">{{ $position->description ?: '-' }}</td>

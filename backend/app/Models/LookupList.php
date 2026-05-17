@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,7 +10,10 @@ use Illuminate\Support\Facades\Cache;
 
 class LookupList extends Model
 {
+    use HasAutoCode;
+
     protected $fillable = [
+        'auto_code',
         'key',
         'label_en',
         'label_th',
@@ -46,5 +50,10 @@ class LookupList extends Model
         $clear = fn () => Cache::forget('lookup_registry_sources');
         static::saved($clear);
         static::deleted($clear);
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'LKLIST';
     }
 }
