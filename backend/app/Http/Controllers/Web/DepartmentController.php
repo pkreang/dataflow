@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Concerns\HasPerPage;
+use App\Http\Controllers\Controller;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
 use App\Models\DepartmentWorkflowBinding;

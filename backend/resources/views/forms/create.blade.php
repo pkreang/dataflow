@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends($layout ?? 'layouts.app')
 
 @section('title', $form->name)
 
@@ -116,8 +116,8 @@
                 @endforeach
             </x-document-form-fields-grid>
 
-            <div class="mt-6 flex justify-end">
-                <button type="submit" class="btn-primary">
+            <div class="mt-6 sm:flex sm:justify-end">
+                <button type="submit" class="btn-primary justify-center w-full sm:w-auto py-3 sm:py-2 text-base sm:text-sm">
                     {{ __('common.save_draft') }}
                 </button>
             </div>

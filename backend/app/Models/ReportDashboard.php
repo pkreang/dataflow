@@ -52,8 +52,10 @@ class ReportDashboard extends Model
      * the home-dashboard picker, and the single-dashboard guard agree.
      *
      * Rule: super-admin sees everything; everyone else sees `visibility=all` +
-     * `visibility=permission` rows whose `required_permission` they hold.
-     * Guests (`$user === null`) only see `visibility=all`.
+     * `visibility=permission` rows whose `required_permission` they hold +
+     * any dashboard they created. Guests (`$user === null`) only see
+     * `visibility=all`. The `__owner_only__` permission is a sentinel — it is
+     * never a real Spatie permission, so such rows match only via `created_by`.
      */
     public function scopeAccessibleTo(Builder $query, ?User $user): Builder
     {
@@ -64,13 +66,18 @@ class ReportDashboard extends Model
         $permissions = $user
             ? $user->getAllPermissions()->pluck('name')->all()
             : [];
+        $userId = $user?->id;
 
-        return $query->where(function ($q) use ($permissions) {
+        return $query->where(function ($q) use ($permissions, $userId) {
             $q->where('visibility', 'all')
                 ->orWhere(function ($q2) use ($permissions) {
                     $q2->where('visibility', 'permission')
                         ->whereIn('required_permission', $permissions);
                 });
+
+            if ($userId !== null) {
+                $q->orWhere('created_by', $userId);
+            }
         });
     }
 
@@ -97,7 +104,18 @@ class ReportDashboard extends Model
             return true;
         }
 
+        // The dashboard creator can always view their own dashboard.
+        if ($this->created_by !== null && (int) $this->created_by === (int) $user->id) {
+            return true;
+        }
+
         if ($this->visibility === 'permission' && $this->required_permission) {
+            // '__owner_only__' is a sentinel, not a real Spatie permission —
+            // only the owner (handled above) and super-admins may view.
+            if ($this->required_permission === '__owner_only__') {
+                return false;
+            }
+
             return $user->hasPermissionTo($this->required_permission);
         }
 

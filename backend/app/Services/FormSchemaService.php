@@ -18,7 +18,7 @@ class FormSchemaService
     ];
 
     /** Field types that do not store data — skip when creating columns. */
-    private const SKIP_TYPES = ['section', 'auto_number', 'page_break', 'qr_code'];
+    public const SKIP_TYPES = ['section', 'auto_number', 'page_break', 'qr_code'];
 
     public function getTableName(string $formKey): string
     {

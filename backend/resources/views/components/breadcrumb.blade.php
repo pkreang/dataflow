@@ -1,25 +1,10 @@
 @props(['items' => []])
 
 @php
-    $rawItems = collect($items)->filter(fn ($i) => ! empty($i['label']))->values();
-
-    $homeUrl = null;
-    foreach (['dashboard', 'home'] as $candidate) {
-        try { $homeUrl = route($candidate); break; } catch (\Throwable $e) { /* fall through */ }
-    }
-    $homeUrl = $homeUrl ?? url('/');
-
-    $startsWithHome = $rawItems->isNotEmpty() && ($rawItems->first()['url'] ?? null) === $homeUrl;
-    // Auto-prepend Home only when the caller built a trail of 3+ items.
-    // Top-level (1) and section-level (2) trails render their own intermediate
-    // as the visible root — Dashboard is already reachable from the sidebar
-    // and the page <h1>, so an extra "Dashboard /" prefix is just noise.
-    $shouldPrepend = $rawItems->count() >= 3 && ! $startsWithHome;
-
-    $trail = $shouldPrepend
-        ? $rawItems->prepend(['label' => __('common.dashboard'), 'url' => $homeUrl])
-        : $rawItems;
-
+    // Render exactly what the caller passed — no Dashboard auto-prepend.
+    // Dashboard is always one click away in the sidebar; an extra "Dashboard /"
+    // prefix at every page just adds noise to deeper trails.
+    $trail = collect($items)->filter(fn ($i) => ! empty($i['label']))->values();
     $last = $trail->count() - 1;
 @endphp
 

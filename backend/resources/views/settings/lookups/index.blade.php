@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto">
+<div>
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.lookups') }}</h2>

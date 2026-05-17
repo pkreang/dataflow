@@ -493,9 +493,13 @@ class DataSourceRegistry
     }
 
     /**
-     * Returns a base Eloquent Builder for the given source.
+     * Returns a base query builder for the given source. Most sources return
+     * an Eloquent Builder; form sources backed by a dedicated fdata_* table
+     * return a Query\Builder (column names align with field keys directly).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder
      */
-    public static function query(string $source): \Illuminate\Database\Eloquent\Builder
+    public static function query(string $source)
     {
         $config = static::sources()[$source] ?? null;
 

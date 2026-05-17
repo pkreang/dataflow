@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Concerns\HasPerPage;
+use App\Http\Controllers\Controller;
 use App\Models\DocumentForm;
 use App\Models\LookupList;
 use App\Models\LookupListItem;

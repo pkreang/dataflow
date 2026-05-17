@@ -2,16 +2,8 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="min-h-full">
 <head>
     <script>
-        (function () {
-            try {
-                var t = localStorage.getItem('theme');
-                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-            } catch (e) {}
-        })();
+        // Light-only — never apply `dark` class.
+        try { document.documentElement.classList.remove('dark'); } catch (e) {}
     </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -41,7 +33,7 @@
         $loginBgColor = $rawLoginBg;
     }
 @endphp
-    {{-- All background on body via normal flow — no fixed layers / z-index stacking (avoids “dead” hit targets in Chrome). --}}
+    {{-- All background on body via normal flow — no fixed layers / z-index stacking (avoids "dead" hit targets in Chrome). --}}
     <style>
         .auth-guest-body {
             min-height: 100dvh;

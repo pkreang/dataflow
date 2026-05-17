@@ -25,7 +25,7 @@
             <p class="text-slate-500 dark:text-slate-400 text-sm">{{ __('common.no_forms_available') }}</p>
         </div>
     @else
-        <div class="space-y-8">
+        <div class="space-y-6">
             @foreach($forms as $docType => $group)
                 @php($docTypeModel = \App\Models\DocumentType::resolveByCode($docType))
                 <div>
@@ -35,22 +35,31 @@
                         @endif
                         <span>{{ $docTypeModel?->label() ?? $docType }}</span>
                     </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <x-data-table
+                        :columns="[
+                            ['key' => 'name', 'label' => __('common.name')],
+                            ['key' => 'actions', 'label' => __('common.actions'), 'class' => 'text-right'],
+                        ]"
+                        :rows="$group"
+                        :empty-message="__('common.no_forms_available')"
+                    >
                         @foreach($group as $form)
-                            <div class="card p-5 flex flex-col gap-3">
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-slate-900 dark:text-slate-100">{{ $form->name }}</h4>
+                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                <td class="px-[var(--cell-pad-x)] py-[var(--cell-pad-y)]">
+                                    <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $form->name }}</p>
                                     @if($form->description)
-                                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ $form->description }}</p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ $form->description }}</p>
                                     @endif
-                                </div>
-                                <a href="{{ route('forms.create', $form->form_key) }}"
-                                   class="btn-primary text-center">
-                                    {{ __('common.fill_form') }}
-                                </a>
-                            </div>
+                                </td>
+                                <td class="px-[var(--cell-pad-x)] py-[var(--cell-pad-y)] text-right">
+                                    <x-row-actions :items="[
+                                        ['label' => __('common.fill_form'), 'href' => route('forms.create', $form->form_key), 'icon' => 'edit'],
+                                        ['label' => __('common.view_submissions'), 'href' => route('forms.list-by-form', $form->form_key), 'icon' => 'view'],
+                                    ]" />
+                                </td>
+                            </tr>
                         @endforeach
-                    </div>
+                    </x-data-table>
                 </div>
             @endforeach
         </div>

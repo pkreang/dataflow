@@ -11,7 +11,7 @@
 
 @section('content')
 @php
-    $totalDashboards = $dashboards->count();
+    $totalDashboards = $dashboards->total();
 @endphp
 <div x-data="{ search: '' }">
     <div class="flex items-center justify-between mb-2">
@@ -35,7 +35,7 @@
                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
             <input type="text" x-model="search" placeholder="{{ __('common.search') }}..."
-                   class="form-input pl-10">
+                   class="form-input" style="padding-left: 2.5rem;">
         </div>
     </div>
 
@@ -51,6 +51,9 @@
         </div>
     @endif
 
+    @if ($dashboards->isEmpty())
+        <x-table-empty-state card :message="__('common.no_data')" />
+    @else
     <div class="table-wrapper">
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead class="bg-slate-50 dark:bg-slate-800/60">
@@ -154,5 +157,8 @@
             </tbody>
         </table>
     </div>
+
+    <x-per-page-footer :paginator="$dashboards" :perPage="$perPage" id="dashboards-pagination" />
+    @endif
 </div>
 @endsection

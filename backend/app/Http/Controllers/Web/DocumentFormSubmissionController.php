@@ -33,6 +33,7 @@ class DocumentFormSubmissionController extends Controller
 
         $forms = DocumentForm::query()
             ->where('is_active', true)
+            ->where('document_type', '!=', 'evaluation') // eval forms triggered via parent submission only
             ->visibleToUser($userDeptId)
             ->orderBy('name')
             ->get()
@@ -103,8 +104,12 @@ class DocumentFormSubmissionController extends Controller
         $this->applyFieldFilters($query, $documentForm, $searchable, $filters);
 
         $perPage = $this->resolvePerPage($request, 'list_by_form_per_page');
+        $with = ['instance', 'latestActivity.user', 'submittedActivity'];
+        if ($documentForm->document_type === 'evaluation') {
+            $with[] = 'originalSubmission.form';
+        }
         $submissions = $query->select('document_form_submissions.*')
-            ->with(['instance', 'latestActivity.user', 'submittedActivity'])
+            ->with($with)
             ->latest('document_form_submissions.id')
             ->paginate($perPage)
             ->withQueryString();
@@ -214,6 +219,10 @@ class DocumentFormSubmissionController extends Controller
     public function create(DocumentForm $documentForm): View
     {
         abort_if(! $documentForm->is_active, 404);
+        // Evaluation forms must be filled via the "Evaluate" button on an approved
+        // parent submission — not by directly navigating to forms.create.
+        abort_if($documentForm->document_type === 'evaluation', 403,
+            'Evaluation forms can only be filled via the "Evaluate" button on an approved submission.');
         $documentForm->load('fields');
 
         return view('forms.create', ['form' => $documentForm]);
@@ -222,6 +231,8 @@ class DocumentFormSubmissionController extends Controller
     public function storeDraft(Request $request, DocumentForm $documentForm): RedirectResponse
     {
         abort_if(! $documentForm->is_active, 404);
+        abort_if($documentForm->document_type === 'evaluation', 403,
+            'Evaluation forms must be submitted through the "Evaluate" button on a parent submission.');
         $documentForm->load('fields');
 
         $spec = $this->buildPayloadRules($documentForm, (array) $request->input('fields', []));
@@ -831,7 +842,7 @@ class DocumentFormSubmissionController extends Controller
     /**
      * @return array{rules: array, attributes: array}
      */
-    private function buildPayloadRules(DocumentForm $form, array $submittedPayload = []): array
+    public function buildPayloadRules(DocumentForm $form, array $submittedPayload = []): array
     {
         $rules = [];
         $attributes = [];

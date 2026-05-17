@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Concerns\HasPerPage;
+use App\Http\Controllers\Controller;
 use App\Models\DocumentForm;
 use App\Models\DocumentType;
 use App\Models\RunningNumberConfig;
@@ -18,7 +18,8 @@ class RunningNumberController extends Controller
     public function index(Request $request): View
     {
         $perPage = $this->resolvePerPage($request, 'running_numbers_per_page');
-        $configs = RunningNumberConfig::orderBy('document_type')
+        $configs = RunningNumberConfig::query()
+            ->orderBy('document_type')
             ->paginate($perPage)
             ->withQueryString();
 
