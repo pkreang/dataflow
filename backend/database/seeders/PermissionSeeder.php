@@ -48,7 +48,6 @@ class PermissionSeeder extends Seeder
             ['name' => 'spare_parts.view', 'module' => 'spare_parts', 'action' => 'read'],
             ['name' => 'spare_parts.requisition', 'module' => 'spare_parts', 'action' => 'requisition'],
             ['name' => 'manage dashboards', 'module' => 'dashboard', 'action' => 'manage'],
-            ['name' => 'manage_own_dashboard', 'module' => 'dashboard', 'action' => 'manage_own'],
             ['name' => 'view_purchase_requests', 'module' => 'purchase_requests', 'action' => 'read'],
             ['name' => 'view_purchase_orders',   'module' => 'purchase_orders',   'action' => 'read'],
             ['name' => 'purchase_order.create',  'module' => 'purchase_orders',   'action' => 'create'],

@@ -4,13 +4,20 @@ namespace Database\Seeders;
 
 use App\Models\ReportDashboard;
 use App\Models\ReportDashboardWidget;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
- * Factory (CMMS-flavored) demo dashboard. Mirrors DashboardSeeder's shape but uses
- * repair_requests and equipment data sources so a fresh `composer switch:factory`
- * shows populated reports out-of-box.
+ * Factory (CMMS-flavored) demo dashboards. Seeds two:
+ *   - "CMMS — Repair Requests Overview" (full overview report; opt-in via /reports)
+ *   - "Home (Factory)" (per-user landing page, set as default home so NTEQ users
+ *     never land on the school-flavoured Home (Default) that ships from the
+ *     base HomeDashboardSeeder)
+ *
+ * Both data sources point at repair_requests/equipment/spare_parts so a fresh
+ * `composer switch:factory` lands the user on a populated home — not the
+ * school KPI grid that returns zero for everything in factory deployments.
  */
 class FactoryDashboardSeeder extends Seeder
 {
@@ -75,5 +82,70 @@ class FactoryDashboardSeeder extends Seeder
         foreach ($widgets as $w) {
             ReportDashboardWidget::create(array_merge($w, ['dashboard_id' => $dashboard->id]));
         }
+
+        // ── Home (Factory) ─────────────────────────────────────
+        // Per-user home page tailored for CMMS users. Replaces the
+        // base HomeDashboardSeeder's school-flavoured "Home (Default)"
+        // as the system-wide default for factory deployments.
+        $homeFactory = ReportDashboard::updateOrCreate(
+            ['name' => 'Home (Factory)'],
+            [
+                'description' => 'งานของฉัน — แดชบอร์ดเริ่มต้นสำหรับโรงงาน',
+                'layout_columns' => 3,
+                'visibility' => 'all',
+                'required_permission' => null,
+                'is_active' => true,
+                'created_by' => $adminId,
+            ]
+        );
+        $homeFactory->widgets()->delete();
+
+        $homeWidgets = [
+            [
+                'title' => 'ใบแจ้งซ่อมที่ฉันยื่น',
+                'widget_type' => 'metric',
+                'data_source' => 'repair_requests',
+                'config' => [
+                    'aggregation' => 'count',
+                    'field' => 'id',
+                    'filters' => ['requester_user_id' => '{current_user}'],
+                ],
+                'col_span' => 1,
+                'sort_order' => 1,
+            ],
+            [
+                'title' => 'รออนุมัติ (ใบแจ้งซ่อม)',
+                'widget_type' => 'metric',
+                'data_source' => 'repair_requests',
+                'config' => [
+                    'aggregation' => 'count',
+                    'field' => 'id',
+                    'filters' => ['status' => 'pending'],
+                ],
+                'col_span' => 1,
+                'sort_order' => 2,
+            ],
+            [
+                'title' => 'อุปกรณ์ทั้งหมด',
+                'widget_type' => 'metric',
+                'data_source' => 'equipment',
+                'config' => [
+                    'aggregation' => 'count',
+                    'field' => 'id',
+                    'filters' => ['is_active' => 1],
+                ],
+                'col_span' => 1,
+                'sort_order' => 3,
+            ],
+        ];
+
+        foreach ($homeWidgets as $w) {
+            ReportDashboardWidget::create(array_merge($w, ['dashboard_id' => $homeFactory->id]));
+        }
+
+        // Override default home: HomeDashboardSeeder (if it ran via the school
+        // flow on the same install) sets this to "Home (Default)". For factory
+        // installs that pointer should land on the factory home instead.
+        Setting::set('default_home_dashboard_id', (string) $homeFactory->id);
     }
 }

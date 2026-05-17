@@ -53,6 +53,26 @@ class DocumentType extends Model
     }
 
     /**
+     * Look up an active document type by code (cached via allActive()).
+     */
+    public static function resolveByCode(?string $code): ?self
+    {
+        if ($code === null || $code === '') {
+            return null;
+        }
+
+        return self::allActive()->firstWhere('code', $code);
+    }
+
+    /**
+     * Icon name for a document type code, or null if not found / unset.
+     */
+    public static function iconFor(?string $code): ?string
+    {
+        return self::resolveByCode($code)?->icon;
+    }
+
+    /**
      * Flush cached types when saving/deleting.
      */
     protected static function booted(): void

@@ -168,6 +168,7 @@ Route::middleware(['auth.web', 'password.enforced'])->group(function () {
     Route::get('/myprofile/login-history', [ProfileController::class, 'loginHistory'])->name('profile.login-history');
     Route::get('/myprofile/activity', [ProfileController::class, 'activity'])->name('profile.activity');
     Route::post('/myprofile/pinned-menus/toggle', [UserPinnedMenuController::class, 'toggle'])->name('profile.pinned-menus.toggle');
+    Route::patch('/myprofile/home-dashboard', [ProfileController::class, 'updateHomeDashboard'])->name('profile.home-dashboard.update');
     Route::get('/myprofile/sessions', [ProfileController::class, 'activeSessions'])->name('profile.sessions');
     Route::delete('/myprofile/sessions/{tokenId}', [ProfileController::class, 'revokeSession'])->name('profile.sessions.revoke');
     Route::delete('/myprofile/sessions-others', [ProfileController::class, 'revokeOtherSessions'])->name('profile.sessions.revoke-others');

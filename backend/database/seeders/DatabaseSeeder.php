@@ -28,10 +28,15 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             SettingSeeder::class,
             NavigationMenuSeeder::class,
-            DocumentTypeSeeder::class,
-            PositionDemoSeeder::class,
-            DocumentFormSeeder::class,
-            // DashboardSeeder is vertical-specific — invoked from per-vertical demo seeders
+            // Vertical-specific seeders are NOT in this base — they leak across
+            // verticals and force factory deployments to ship with school KPIs,
+            // school doc types, school demo forms, etc. Per-vertical owners:
+            //   school   → IndustryTemplateSeeder
+            //              (DocumentTypeSeeder, DocumentFormSeeder,
+            //               HomeDashboardSeeder, PositionDemoSeeder,
+            //               SchoolEFormTemplateSeeder)
+            //   factory  → NteqPolymerDemoSeeder
+            //              (FactoryPositionSeeder, FactoryDashboardSeeder)
         ]);
     }
 }

@@ -36,6 +36,7 @@
         :empty-message="__('common.no_roles_found')"
         :empty-cta-href="route('roles.create')"
         :empty-cta-label="__('common.add_role')"
+        :disable-pagination="true"
     >
         @foreach ($roles as $role)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
@@ -87,6 +88,8 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$roles" :perPage="$perPage" id="roles-pagination" />
 
     {{-- Delete Confirm Modal --}}
     <div x-data="{ show: false, id: null, name: '' }"

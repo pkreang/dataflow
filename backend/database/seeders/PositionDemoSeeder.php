@@ -4,13 +4,19 @@ namespace Database\Seeders;
 
 use App\Models\Position;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
+/**
+ * Seeds the school-vertical positions (SCH_*). Invoked from school flows only
+ * (`IndustryTemplateSeeder`, `DevelopmentDemoSeeder`, `SchoolWorkflowTestUsersCommand`)
+ * — never from `DatabaseSeeder`, so factory deployments don't end up with school
+ * positions sitting alongside their factory positions (MAINT_SUP, PLANT_MGR, etc.).
+ *
+ * Idempotent (updateOrCreate by code). The previous version also deleted
+ * legacy CMMS rows; that cleanup is gone because each vertical now seeds its
+ * own positions explicitly and they no longer collide.
+ */
 class PositionDemoSeeder extends Seeder
 {
-    /** @var list<string> */
-    private const FACTORY_CODES = ['MAINT_SUP', 'DEPT_MGR', 'PLANT_MGR', 'WH_KEEPER', 'TECH'];
-
     public function run(): void
     {
         $positions = [
@@ -27,27 +33,6 @@ class PositionDemoSeeder extends Seeder
                 ['name' => $pos['name'], 'description' => $pos['description'], 'is_active' => true]
             );
         }
-
-        // Drop legacy CMMS rows when no user and no workflow stage references the position id.
-        $positionIdsUsedInStages = DB::table('approval_workflow_stages')
-            ->where('approver_type', 'position')
-            ->whereNotNull('approver_ref')
-            ->where('approver_ref', '!=', '')
-            ->pluck('approver_ref')
-            ->map(fn (mixed $ref) => (int) $ref)
-            ->unique()
-            ->values()
-            ->all();
-
-        $q = Position::query()
-            ->whereIn('code', self::FACTORY_CODES)
-            ->whereDoesntHave('users');
-
-        if ($positionIdsUsedInStages !== []) {
-            $q->whereNotIn('id', $positionIdsUsedInStages);
-        }
-
-        $q->delete();
 
         $this->command?->info('PositionDemoSeeder: '.count($positions).' school positions.');
     }

@@ -27,9 +27,13 @@
     @else
         <div class="space-y-8">
             @foreach($forms as $docType => $group)
+                @php($docTypeModel = \App\Models\DocumentType::resolveByCode($docType))
                 <div>
-                    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-                        {{ $docType }}
+                    <h3 class="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
+                        @if ($docTypeModel?->icon)
+                            <x-nav-icon :name="$docTypeModel->icon" class="w-5 h-5" />
+                        @endif
+                        <span>{{ $docTypeModel?->label() ?? $docType }}</span>
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($group as $form)

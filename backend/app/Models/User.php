@@ -45,7 +45,7 @@ class User extends Authenticatable implements HasLocalePreference
         'is_active',
         'is_super_admin',
         'last_active_at',
-        'dashboard_config',
+        'home_dashboard_id',
     ];
 
     protected $hidden = [
@@ -66,7 +66,6 @@ class User extends Authenticatable implements HasLocalePreference
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
-            'dashboard_config' => 'array',
         ];
     }
 
@@ -104,6 +103,11 @@ class User extends Authenticatable implements HasLocalePreference
     public function jobPosition(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'position_id');
+    }
+
+    public function homeDashboard(): BelongsTo
+    {
+        return $this->belongsTo(ReportDashboard::class, 'home_dashboard_id');
     }
 
     public function passwordHistories(): HasMany

@@ -9,6 +9,7 @@ use App\Models\LoginHistory;
 use App\Models\SubmissionActivityLog;
 use App\Models\NotificationPreference;
 use App\Models\Position;
+use App\Models\ReportDashboard;
 use App\Models\Setting;
 use App\Models\User;
 use App\Rules\PasswordNotReused;
@@ -68,6 +69,12 @@ class ProfileController extends Controller
 
         $loginHistory = $this->loadLoginHistorySummary($user);
 
+        $availableHomeDashboards = ReportDashboard::query()
+            ->where('is_active', true)
+            ->accessibleTo($user)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return view('profile.edit', [
             'user' => $user,
             'positions' => $positions,
@@ -82,7 +89,41 @@ class ProfileController extends Controller
             'quickStats' => $this->quickStatsFor($user),
             'lastPriorLogin' => $loginHistory['last'],
             'recentFailedLogins' => $loginHistory['recent_failures'],
+            'availableHomeDashboards' => $availableHomeDashboards,
         ]);
+    }
+
+    /**
+     * Set the user's preferred home dashboard. Validates that the dashboard
+     * exists *and* is visible to the user, so a non-admin can't pin a
+     * permission-gated dashboard they couldn't actually open. Passing a null
+     * value clears the override and falls back to the global default.
+     */
+    public function updateHomeDashboard(Request $request): RedirectResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        $validated = $request->validate([
+            'home_dashboard_id' => 'nullable|integer|exists:report_dashboards,id',
+        ]);
+
+        $dashboardId = $validated['home_dashboard_id'] ?? null;
+
+        if ($dashboardId) {
+            $dashboard = ReportDashboard::find($dashboardId);
+            if (! $dashboard || ! $dashboard->canBeAccessedBy($user)) {
+                return back()->withErrors([
+                    'home_dashboard_id' => __('common.dashboard_not_accessible'),
+                ]);
+            }
+        }
+
+        $user->update(['home_dashboard_id' => $dashboardId]);
+
+        return back()->with('success', __('common.saved'));
     }
 
     public function activeSessions(): View|RedirectResponse

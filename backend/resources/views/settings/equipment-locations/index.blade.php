@@ -52,10 +52,11 @@
         :empty-message="__('common.no_equipment_locations')"
         :empty-cta-href="route('settings.equipment-locations.create')"
         :empty-cta-label="__('common.add_equipment_location')"
+        :disable-pagination="true"
     >
         @foreach ($locations as $location)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
-                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $location->auto_code }}</td>
+                <td class="px-4 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">{{ $location->auto_code }}</td>
                 <td class="table-primary">{{ $location->name }}</td>
                 <td class="table-sub">{{ $location->code }}</td>
                 <td class="table-sub">{{ $location->building ?? '—' }}</td>
@@ -73,5 +74,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$locations" :perPage="$perPage" id="equipment-locations-pagination" />
 </div>
 @endsection

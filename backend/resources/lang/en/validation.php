@@ -161,6 +161,8 @@ return [
 
     'document_form' => [
         'duplicate_field_key' => 'Each field key must be unique within this form.',
+        'field_key_reserved' => 'This field key is reserved by the system (id, status, user_id, etc.) — pick another name.',
+        'table_name_conflicts_system' => 'This table name conflicts with an existing system table — pick another.',
         'lookup_source_required' => 'Choose a lookup source for lookup fields.',
         'depends_on_invalid' => 'Depends on must reference another lookup field in this form.',
         'foreign_key_required' => 'Enter a foreign key when this lookup depends on another lookup.',

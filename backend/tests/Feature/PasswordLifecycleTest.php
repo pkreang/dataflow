@@ -22,7 +22,7 @@ class PasswordLifecycleTest extends TestCase
         $token = $user->createToken('test')->plainTextToken;
 
         $this->withToken($token)
-            ->getJson('/api/v1/dashboard/kpi/school_pending_approvals')
+            ->getJson('/api/v1/users')
             ->assertStatus(403)
             ->assertJson([
                 'success' => false,
@@ -64,7 +64,7 @@ class PasswordLifecycleTest extends TestCase
         $this->assertFalse((bool) $user->password_must_change);
 
         $this->withToken($token)
-            ->getJson('/api/v1/dashboard/kpi/school_pending_approvals')
+            ->getJson('/api/v1/users')
             ->assertOk();
     }
 

@@ -50,10 +50,11 @@
         :empty-message="__('common.no_equipment_categories')"
         :empty-cta-href="route('settings.equipment.create')"
         :empty-cta-label="__('common.add_equipment_category')"
+        :disable-pagination="true"
     >
         @foreach ($categories as $category)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
-                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $category->auto_code }}</td>
+                <td class="px-4 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">{{ $category->auto_code }}</td>
                 <td class="table-primary">{{ $category->name }}</td>
                 <td class="table-sub">{{ $category->code }}</td>
                 <td class="table-sub max-w-xs truncate">{{ $category->description ?? '—' }}</td>
@@ -69,5 +70,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$categories" :perPage="$perPage" id="equipment-categories-pagination" />
 </div>
 @endsection

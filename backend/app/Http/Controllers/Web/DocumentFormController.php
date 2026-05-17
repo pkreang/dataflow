@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
@@ -22,6 +23,8 @@ use Illuminate\View\View;
 
 class DocumentFormController extends Controller
 {
+    use HasPerPage;
+
     public function __construct(private readonly FormSchemaService $schemaService) {}
 
     private const TABLE_COLUMN_TYPES = ['text', 'number', 'select', 'checkbox', 'date', 'lookup'];
@@ -54,15 +57,29 @@ class DocumentFormController extends Controller
         'email', 'phone', 'select', 'multi_select', 'radio', 'checkbox', 'lookup',
     ];
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $forms = DocumentForm::query()
+        $perPage = $this->resolvePerPage($request, 'document_forms_per_page');
+        $search = trim((string) $request->input('search', ''));
+
+        $query = DocumentForm::query()
             ->withCount('fields')
             ->with(['workflowPolicies.workflow', 'workflowPolicies.ranges'])
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
 
-        return view('settings.document-forms.index', compact('forms'));
+        if ($search !== '') {
+            $needle = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
+            $query->where(function ($q) use ($needle) {
+                $q->where('name', 'like', $needle)
+                    ->orWhere('form_key', 'like', $needle)
+                    ->orWhere('document_type', 'like', $needle);
+            });
+        }
+
+        $forms = $query->paginate($perPage)->withQueryString();
+        $totalForms = $forms->total();
+
+        return view('settings.document-forms.index', compact('forms', 'perPage', 'search', 'totalForms'));
     }
 
     public function create(): View
@@ -71,8 +88,9 @@ class DocumentFormController extends Controller
         $workflowStepsByDocType = $this->workflowStepsByDocType();
         $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
+        $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
 
-        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers'));
+        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs'));
     }
 
     public function edit(DocumentForm $documentForm): View
@@ -82,8 +100,44 @@ class DocumentFormController extends Controller
         $workflowStepsByDocType = $this->workflowStepsByDocType();
         $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
+        $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
 
-        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers'));
+        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs'));
+    }
+
+    /**
+     * Map of `document_type` → running-number config snapshot used by the form
+     * builder to surface (a) the live next-number preview beside the document
+     * type picker and (b) a per-field preview next to any `auto_number` field.
+     * Returning a flat array keyed by document_type lets the Alpine state look
+     * up `runningNumberConfigs[currentDocumentType]` in O(1) on every change.
+     *
+     * @return array<string, array{prefix:string,digit_count:int,include_year:bool,include_month:bool,reset_mode:string,last_number:int,is_active:bool,preview:string}>
+     */
+    private function runningNumberConfigsForBuilder(): array
+    {
+        $now = now();
+        $out = [];
+
+        foreach (\App\Models\RunningNumberConfig::all() as $config) {
+            $preview = $config->prefix
+                .($config->include_year ? $now->format('Y') : '')
+                .($config->include_month ? $now->format('m') : '')
+                .'-'.str_pad((string) ($config->last_number + 1), $config->digit_count, '0', STR_PAD_LEFT);
+
+            $out[$config->document_type] = [
+                'prefix' => (string) $config->prefix,
+                'digit_count' => (int) $config->digit_count,
+                'include_year' => (bool) $config->include_year,
+                'include_month' => (bool) $config->include_month,
+                'reset_mode' => (string) $config->reset_mode,
+                'last_number' => (int) $config->last_number,
+                'is_active' => (bool) $config->is_active,
+                'preview' => $preview,
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -196,7 +250,7 @@ class DocumentFormController extends Controller
             'fields.*.visible_to_departments' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $validator->after(function (\Illuminate\Validation\Validator $v) use ($request, $sourceKeys): void {
+        $validator->after(function (\Illuminate\Validation\Validator $v) use ($request, $sourceKeys, $existing): void {
             $fields = $request->input('fields');
             if (! is_array($fields)) {
                 return;
@@ -217,7 +271,14 @@ class DocumentFormController extends Controller
 
                     continue;
                 }
-                if (in_array($key, FormSchemaService::RESERVED_COLUMNS, true)) {
+                // Reserved-column rule applies only to fields that actually claim a
+                // fdata column. Display-only types (section, page_break, qr_code) and
+                // auto_number (computed at write time, never user-assigned) are exempt
+                // — without this exemption a seeded form using `reference_no` as an
+                // auto_number field can't be re-saved without renaming.
+                $type = isset($field['field_type']) ? (string) $field['field_type'] : '';
+                $exemptFromReserved = in_array($type, ['section', 'page_break', 'qr_code', 'auto_number'], true);
+                if (! $exemptFromReserved && in_array($key, FormSchemaService::RESERVED_COLUMNS, true)) {
                     $v->errors()->add("fields.{$i}.field_key", __('validation.document_form.field_key_reserved'));
 
                     continue;

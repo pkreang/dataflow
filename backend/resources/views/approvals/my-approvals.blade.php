@@ -33,8 +33,8 @@
                     $daysPending >= 1 => 'border-l-amber-400',
                     default => 'border-l-blue-400',
                 };
-                $docTypeLabel = \App\Models\DocumentType::allActive()->firstWhere('code', $instance->document_type)?->label()
-                    ?? str_replace('_', ' ', $instance->document_type);
+                $docTypeModel = \App\Models\DocumentType::resolveByCode($instance->document_type);
+                $docTypeLabel = $docTypeModel?->label() ?? str_replace('_', ' ', $instance->document_type);
             @endphp
             <div class="card border-l-4 {{ $borderColor }}">
                 {{-- Header --}}
@@ -45,7 +45,12 @@
                                 <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 font-mono">
                                     {{ $instance->reference_no ?: ('#' . $instance->id) }}
                                 </h3>
-                                <span class="badge-blue">{{ $docTypeLabel }}</span>
+                                <span class="badge-blue inline-flex items-center gap-1">
+                                    @if ($docTypeModel?->icon)
+                                        <x-nav-icon :name="$docTypeModel->icon" class="w-3.5 h-3.5" />
+                                    @endif
+                                    <span>{{ $docTypeLabel }}</span>
+                                </span>
                                 @if($daysPending >= 3)
                                     <span class="badge-red">{{ $daysPending }} {{ __('common.days_pending') }}</span>
                                 @elseif($daysPending >= 1)

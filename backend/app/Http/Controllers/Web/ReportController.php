@@ -12,19 +12,10 @@ class ReportController extends Controller
     public function index(): View
     {
         $user = request()->user();
-        $isSuperAdmin = $user?->is_super_admin ?? false;
 
         $dashboards = ReportDashboard::withCount('widgets')
             ->where('is_active', true)
-            ->when(! $isSuperAdmin, function ($query) use ($user) {
-                $query->where(function ($q) use ($user) {
-                    $q->where('visibility', 'all')
-                        ->orWhere(function ($q2) use ($user) {
-                            $q2->where('visibility', 'permission')
-                                ->whereIn('required_permission', $user?->getAllPermissions()->pluck('name') ?? []);
-                        });
-                });
-            })
+            ->accessibleTo($user)
             ->orderBy('created_at')
             ->get();
 
@@ -33,21 +24,16 @@ class ReportController extends Controller
 
     public function showDashboard(ReportDashboard $dashboard, Request $request): View|\Illuminate\Http\RedirectResponse
     {
-        if (! $dashboard->is_active) {
-            abort(404);
-        }
+        $user = $request->user();
 
-        // Permission check: if visibility=permission, user must have required_permission
-        if ($dashboard->visibility === 'permission' && $dashboard->required_permission) {
-            $user = $request->user();
+        if (! $dashboard->canBeAccessedBy($user)) {
+            if (! $dashboard->is_active) {
+                abort(404);
+            }
             if (! $user) {
                 return redirect()->route('login');
             }
-
-            $isSuperAdmin = $user->is_super_admin ?? false;
-            if (! $isSuperAdmin && ! $user->hasPermissionTo($dashboard->required_permission)) {
-                abort(403);
-            }
+            abort(403);
         }
 
         $dashboard->load('widgets');

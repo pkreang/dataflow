@@ -12,8 +12,9 @@
 @section('content')
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ __('common.document_types') }}</h2>
-        <a href="{{ route('settings.document-types.create') }}" class="btn-primary">
-            {{ __('common.add') }} {{ __('common.document_types') }}
+        <a href="{{ route('settings.document-types.create') }}" class="btn-primary inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ __('common.add_document_type') }}
         </a>
     </div>
 
@@ -38,6 +39,7 @@
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.document-types.create')"
         :empty-cta-label="__('common.add') . ' ' . __('common.document_types')"
+        :disable-pagination="true"
     >
         @foreach ($documentTypes as $type)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
@@ -45,7 +47,16 @@
                 <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $type->code }}</td>
                 <td class="table-sub">{{ $type->label_en }}</td>
                 <td class="table-sub">{{ $type->label_th }}</td>
-                <td class="table-sub">{{ $type->icon ?: '-' }}</td>
+                <td class="table-sub">
+                    @if ($type->icon)
+                        <span class="inline-flex items-center gap-2">
+                            <x-nav-icon :name="$type->icon" class="w-5 h-5 text-slate-700 dark:text-slate-200" />
+                            <span class="text-xs text-slate-400 dark:text-slate-500 font-mono">{{ $type->icon }}</span>
+                        </span>
+                    @else
+                        <span class="text-slate-400">—</span>
+                    @endif
+                </td>
                 <td class="px-4 py-3 text-sm">
                     @if ($type->is_active)
                         <span class="badge-green">{{ __('common.active') }}</span>
@@ -62,4 +73,6 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$documentTypes" :perPage="$perPage" id="document-types-pagination" />
 @endsection

@@ -46,7 +46,6 @@ return [
         'spare_parts.view' => 'ดูอะไหล่',
         'spare_parts.requisition' => 'เบิกอะไหล่',
         'manage dashboards' => 'จัดการแดชบอร์ด',
-        'manage_own_dashboard' => 'จัดการแดชบอร์ดของตนเอง',
         'view_purchase_requests' => 'ดูคำขอจัดซื้อ',
         'view_purchase_orders' => 'ดูใบสั่งซื้อ',
         'purchase_order.create' => 'สร้างใบสั่งซื้อ',

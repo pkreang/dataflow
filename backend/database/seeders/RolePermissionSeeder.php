@@ -15,12 +15,6 @@ class RolePermissionSeeder extends Seeder
     {
         $guard = 'web';
 
-        // Ensure manage_own_dashboard permission exists and is granted to all roles
-        $manageDashboardPerm = \Spatie\Permission\Models\Permission::firstOrCreate(
-            ['name' => 'manage_own_dashboard', 'guard_name' => $guard],
-            ['module' => 'dashboard', 'action' => 'manage_own']
-        );
-
         // Super Admin - bypass all, no permissions needed
         $superAdmin = Role::firstOrCreate(
             ['name' => 'super-admin', 'guard_name' => $guard],
@@ -54,7 +48,6 @@ class RolePermissionSeeder extends Seeder
         $viewer->syncPermissions(
             \Spatie\Permission\Models\Permission::whereIn('action', ['read', 'export'])
                 ->pluck('name')
-                ->push('manage_own_dashboard')
         );
 
         // Approver — grants approval UI (approval.approve); workflow steps use position/user assignment, not this role name
@@ -69,7 +62,6 @@ class RolePermissionSeeder extends Seeder
         $approver->syncPermissions(
             \Spatie\Permission\Models\Permission::whereIn('name', [
                 'approval.approve',
-                'manage_own_dashboard',
                 'view_purchase_requests',
                 'view_purchase_orders',
             ])->pluck('name')
@@ -94,14 +86,6 @@ class RolePermissionSeeder extends Seeder
         );
         if (! $user->hasRole('super-admin')) {
             $user->assignRole('super-admin');
-        }
-
-        // Grant manage_own_dashboard to admin and viewer roles by default
-        foreach (['admin', 'viewer', 'approver'] as $roleName) {
-            $role = Role::where('name', $roleName)->where('guard_name', $guard)->first();
-            if ($role) {
-                $role->givePermissionTo($manageDashboardPerm);
-            }
         }
 
         // Assign manage profile (org / companies UI) to super-admin

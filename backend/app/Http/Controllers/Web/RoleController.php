@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasPerPage;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
@@ -10,15 +11,25 @@ use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-    public function index(): View
+    use HasPerPage;
+
+    public function index(Request $request): View
     {
-        $roles = Role::withCount('permissions')->get()->map(function ($role) {
-            $role->users_count = $role->users()->count();
+        $perPage = $this->resolvePerPage($request, 'roles_per_page');
+        $roles = Role::withCount('permissions')
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(fn ($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'display_name' => $role->display_name ?? $role->name,
+                'permissions_count' => $role->permissions_count,
+                'users_count' => $role->users()->count(),
+                'created_at' => $role->created_at,
+            ]);
 
-            return $role;
-        })->toArray();
-
-        return view('roles.index', compact('roles'));
+        return view('roles.index', compact('roles', 'perPage'));
     }
 
     public function show(int $id): View

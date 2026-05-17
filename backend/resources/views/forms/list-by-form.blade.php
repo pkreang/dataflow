@@ -85,8 +85,9 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ $form->description }}</p>
             @endif
         </div>
-        <a href="{{ route('forms.create', $form->form_key) }}" class="btn-primary">
-            {{ __('common.create') }}
+        <a href="{{ route('forms.create', $form->form_key) }}" class="btn-primary inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ __('common.add') }}
         </a>
     </div>
 
