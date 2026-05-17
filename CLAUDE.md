@@ -129,6 +129,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 | `doc/uat-rbac-permissions.md` | ทดสอบ RBAC อย่างปลอดภัย |
 | `doc/backlog.md` | งาน Phase 2+ / out-of-scope ที่คุยแล้วแต่ยังไม่ได้ลุย |
 | `doc/example-maintenance-request-form.md` | Playbook ฟอร์มแจ้งซ่อม enterprise-grade (36 fields, 7 sections) — ใช้เป็น reference สำหรับสร้างฟอร์มแจ้งซ่อมใหม่ |
+| `doc/system-test-playbook.md` | ขั้นตอนทดสอบทั้งระบบก่อน merge — automated (`composer test`) + static (`composer analyse`/`lint`) + UAT 2 vertical |
 | `backend/README.md` | Seed, demo user, SSO |
 
 **มาตรฐานทีม (เมนู + list + CRUD + audit):** เมื่อตกลงแล้ว ให้สรุปเป็น playbook ไฟล์เดียวใต้ `doc/` (เช่น `doc/menu-permissions-and-forms.md`) แล้วเพิ่ม **หนึ่งแถว** ในตารางนี้ — อย่าให้ไฟล์นี้ยาวเกินจำเป็น
