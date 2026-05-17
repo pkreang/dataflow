@@ -55,6 +55,24 @@ parameters:
 			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
 
 		-
+			message: '#^Offset ''date_preset'' does not exist on array\{\}\|string\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Offset ''date_preset'' on array\{\}\|string in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
 			message: '#^Relation ''category'' is not found in App\\Models\\Equipment model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
@@ -73,10 +91,22 @@ parameters:
 			path: app/Http/Controllers/Api/EquipmentRegistryController.php
 
 		-
-			message: '#^Relation ''form'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Api/HomeDashboardKpiController.php
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/InboundController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:fields\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Api/InboundController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Api/InboundController.php
 
 		-
 			message: '#^Access to an undefined property Spatie\\Permission\\Models\\Permission\:\:\$module\.$#'
@@ -187,12 +217,6 @@ parameters:
 			path: app/Http/Controllers/Web/Cmms/PmWorkOrderController.php
 
 		-
-			message: '#^Offset ''cards'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Http/Controllers/Web/DashboardController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Department\:\:\$workflowBindings\.$#'
 			identifier: property.notFound
 			count: 1
@@ -238,12 +262,6 @@ parameters:
 			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
-			path: app/Http/Controllers/Web/DocumentFormController.php
-
-		-
-			message: '#^Undefined variable\: \$existing$#'
-			identifier: variable.undefined
-			count: 3
 			path: app/Http/Controllers/Web/DocumentFormController.php
 
 		-
@@ -341,6 +359,42 @@ parameters:
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/Web/EquipmentRegistryController.php
+
+		-
+			message: '#^Offset ''overall_rating'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Relation ''form'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Relation ''instance'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Relation ''originalSubmission'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:fields\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/IncomingWebhookController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$extra\.$#'
@@ -443,6 +497,48 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Relation ''form'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''formSubmission'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''instance'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''requester'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 4
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ReportDashboard\:\:\$widgets\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/MyReportController.php
 
 		-
 			message: '#^Access to an undefined property Spatie\\Permission\\Models\\Permission\:\:\$module\.$#'
@@ -697,12 +793,6 @@ parameters:
 			path: app/Http/Controllers/Web/RepairRequestController.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>is_super_admin" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Http/Controllers/Web/ReportController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\ReportDashboard\:\:\$widgets\.$#'
 			identifier: property.notFound
 			count: 1
@@ -723,7 +813,7 @@ parameters:
 		-
 			message: '#^Property Spatie\\Permission\\Models\\Role\:\:\$users_count is not writable\.$#'
 			identifier: assign.propertyReadOnly
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Web/RoleController.php
 
 		-
@@ -835,6 +925,30 @@ parameters:
 			path: app/Http/Controllers/Web/UserController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>payload" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>reference_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\ApprovalWorkflow\:\:\$stages\.$#'
 			identifier: property.notFound
 			count: 1
@@ -877,10 +991,28 @@ parameters:
 			path: app/Models/DocumentFormSubmission.php
 
 		-
+			message: '#^Using nullsafe property access "\?\-\>evaluation_enabled" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/DocumentFormSubmission.php
+
+		-
 			message: '#^Using nullsafe property access "\?\-\>status" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Models/DocumentFormSubmission.php
+
+		-
+			message: '#^Method App\\Models\\DocumentType\:\:resolveByCode\(\) should return App\\Models\\DocumentType\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/DocumentType.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between ''permission'' and ''permission'' will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: app/Models/ReportDashboard.php
 
 		-
 			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
@@ -1061,6 +1193,12 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/EvaluationFormResolver.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
