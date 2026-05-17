@@ -39,29 +39,30 @@
             <div class="card border-l-4 {{ $borderColor }}">
                 {{-- Header --}}
                 <div class="p-4 sm:p-5">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-3 mb-1">
-                                <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 class="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 font-mono break-all">
                                     {{ $instance->reference_no ?: ('#' . $instance->id) }}
                                 </h3>
-                                <span class="badge-blue">{{ $docTypeLabel }}</span>
+                                <span class="badge-blue text-[11px]">{{ $docTypeLabel }}</span>
                                 @if($daysPending >= 3)
-                                    <span class="badge-red">{{ $daysPending }} {{ __('common.days_pending') }}</span>
+                                    <span class="badge-red text-[11px]">{{ $daysPending }} {{ __('common.days_pending') }}</span>
                                 @elseif($daysPending >= 1)
-                                    <span class="badge-yellow">{{ $daysPending }} {{ __('common.days_pending') }}</span>
+                                    <span class="badge-yellow text-[11px]">{{ $daysPending }} {{ __('common.days_pending') }}</span>
                                 @endif
                             </div>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">
+                            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                                 {{ __('common.requester') }}: <span class="font-medium text-slate-700 dark:text-slate-300">{{ optional($instance->requester)->full_name ?? '—' }}</span>
                                 · {{ $instance->created_at?->format('d M Y H:i') }}
                             </p>
                         </div>
                         @if($instance->formSubmission)
                             <a href="{{ route('forms.submission.show', $instance->formSubmission) }}"
-                               class="btn-secondary text-xs shrink-0">
+                               class="btn-secondary text-xs shrink-0 self-start sm:self-auto">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                {{ __('common.view_full_detail') }}
+                                <span class="hidden sm:inline">{{ __('common.view_full_detail') }}</span>
+                                <span class="sm:hidden">{{ __('common.detail') }}</span>
                             </a>
                         @endif
                     </div>
@@ -97,17 +98,57 @@
                     @endif
                 </div>
 
-                {{-- Action form --}}
+                {{-- Action form — mobile-first: stacked, big touch buttons --}}
                 @php $stepRequiresSig = (bool) ($current?->require_signature ?? false); @endphp
                 <form method="POST" action="{{ route('approvals.act', $instance) }}"
-                      class="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-end gap-3" novalidate>
+                      class="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-slate-100 dark:border-slate-700 space-y-3" novalidate>
                     @csrf
-                    <div class="flex-1 min-w-[200px]">
-                        <textarea name="comment" rows="1" placeholder="{{ __('common.approval_comment_placeholder') }}"
-                                  class="form-input text-sm resize-y"></textarea>
-                    </div>
+
+                    @php
+                        $priorApprovedSteps = $instance->steps
+                            ->where('step_no', '<', $instance->current_step_no)
+                            ->where('action', 'approved')
+                            ->sortBy('step_no');
+                    @endphp
+                    @if($priorApprovedSteps->isNotEmpty())
+                        <details class="rounded-lg border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-900/10">
+                            <summary class="cursor-pointer px-3 py-2 text-xs font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                {{ __('common.prior_approvals') }} ({{ $priorApprovedSteps->count() }})
+                            </summary>
+                            <div class="px-3 pb-3 pt-1 space-y-2">
+                                @foreach($priorApprovedSteps as $prior)
+                                    <div class="rounded-md bg-white dark:bg-slate-900/50 border border-emerald-200 dark:border-emerald-900/40 p-2">
+                                        <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mb-1">
+                                            ✓ {{ __('common.step_short') }} {{ $prior->step_no }}: {{ $prior->stage_name }}
+                                        </p>
+                                        @foreach($prior->approved_by ?? [] as $entry)
+                                            <div class="flex items-center gap-3 mt-1">
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-xs text-slate-700 dark:text-slate-300 truncate">{{ $entry['name'] ?? '—' }}</p>
+                                                    @if(! empty($entry['comment']))
+                                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{{ $entry['comment'] }}</p>
+                                                    @endif
+                                                    @if(! empty($entry['at']))
+                                                        <p class="text-[10px] text-slate-400">{{ \Illuminate\Support\Carbon::parse($entry['at'])->format('d/m/Y H:i') }}</p>
+                                                    @endif
+                                                </div>
+                                                @if(! empty($entry['signature']))
+                                                    <img src="{{ $entry['signature'] }}" alt="signature"
+                                                         class="h-10 max-w-[80px] object-contain bg-white rounded border border-slate-200">
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endforeach
+                            </div>
+                        </details>
+                    @endif
+
+                    <textarea name="comment" rows="2" placeholder="{{ __('common.approval_comment_placeholder') }}"
+                              class="form-input text-sm resize-y w-full"></textarea>
                     @if($stepRequiresSig)
-                        <div class="basis-full">
+                        <div>
                             <p class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                 {{ __('common.approval_signature_required_label') }}
                                 <span class="text-red-500">*</span>
@@ -115,14 +156,16 @@
                             <x-signature-pad name="signature_image" :saved-data-url="$mySignatureDataUrl ?? null" :required="true" />
                         </div>
                     @endif
-                    <div class="flex gap-2 shrink-0">
-                        <button type="submit" name="action" value="approved" class="btn-primary">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            {{ __('common.approve') }}
-                        </button>
-                        <button type="submit" name="action" value="rejected" class="btn-danger">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-2 sm:items-center">
+                        <button type="submit" name="action" value="rejected"
+                                class="btn-danger justify-center py-3 sm:py-2 sm:order-1 w-full sm:w-auto">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             {{ __('common.reject') }}
+                        </button>
+                        <button type="submit" name="action" value="approved"
+                                class="btn-primary justify-center py-3 sm:py-2 sm:order-2 w-full sm:w-auto">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            {{ __('common.approve') }}
                         </button>
                     </div>
                 </form>

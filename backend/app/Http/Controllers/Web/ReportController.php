@@ -13,16 +13,18 @@ class ReportController extends Controller
     {
         $user = request()->user();
         $isSuperAdmin = $user?->is_super_admin ?? false;
+        $userId = (int) ($user?->id ?? 0);
 
         $dashboards = ReportDashboard::withCount('widgets')
             ->where('is_active', true)
-            ->when(! $isSuperAdmin, function ($query) use ($user) {
-                $query->where(function ($q) use ($user) {
+            ->when(! $isSuperAdmin, function ($query) use ($user, $userId) {
+                $query->where(function ($q) use ($user, $userId) {
                     $q->where('visibility', 'all')
                         ->orWhere(function ($q2) use ($user) {
                             $q2->where('visibility', 'permission')
                                 ->whereIn('required_permission', $user?->getAllPermissions()->pluck('name') ?? []);
-                        });
+                        })
+                        ->orWhere('created_by', $userId);
                 });
             })
             ->orderBy('created_at')
@@ -38,6 +40,7 @@ class ReportController extends Controller
         }
 
         // Permission check: if visibility=permission, user must have required_permission
+        // — exception: dashboard creator can always view their own dashboards.
         if ($dashboard->visibility === 'permission' && $dashboard->required_permission) {
             $user = $request->user();
             if (! $user) {
@@ -45,8 +48,16 @@ class ReportController extends Controller
             }
 
             $isSuperAdmin = $user->is_super_admin ?? false;
-            if (! $isSuperAdmin && ! $user->hasPermissionTo($dashboard->required_permission)) {
-                abort(403);
+            $isOwner = (int) $dashboard->created_by === (int) $user->id;
+
+            if (! $isSuperAdmin && ! $isOwner) {
+                // Owner-only sentinel — non-owner non-super-admin cannot view.
+                if ($dashboard->required_permission === '__owner_only__') {
+                    abort(403);
+                }
+                if (! $user->hasPermissionTo($dashboard->required_permission)) {
+                    abort(403);
+                }
             }
         }
 

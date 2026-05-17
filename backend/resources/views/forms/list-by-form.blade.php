@@ -58,9 +58,12 @@
         'cancelled' => 'badge-gray',
     ];
 
+    $isEvalList = $form->document_type === 'evaluation';
+
     $tableColumns = array_merge(
         [['key' => 'seq', 'label' => '#', 'class' => 'text-right w-12']],
         [['key' => 'reference_no', 'label' => __('common.reference_no')]],
+        $isEvalList ? [['key' => 'parent', 'label' => __('common.evaluation_source_doc')]] : [],
         collect($searchable)->map(fn ($f) => ['key' => 'f_'.$f->field_key, 'label' => $f->localized_label])->all(),
         [
             ['key' => 'status', 'label' => __('common.status')],
@@ -85,9 +88,11 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ $form->description }}</p>
             @endif
         </div>
-        <a href="{{ route('forms.create', $form->form_key) }}" class="btn-primary">
-            {{ __('common.create') }}
-        </a>
+        @unless($isEvalList)
+            <a href="{{ route('forms.create', $form->form_key) }}" class="btn-primary">
+                {{ __('common.create') }}
+            </a>
+        @endunless
     </div>
 
     @if (session('success'))
@@ -131,7 +136,7 @@
         </div>
 
         <x-data-table :columns="$tableColumns" :rows="$submissions" :disable-pagination="true"
-                      :empty-message="__('common.no_submissions_yet')">
+                      :empty-message="$isEvalList ? __('common.evaluation_list_empty') : __('common.no_submissions_yet')">
             @foreach($submissions as $submission)
                 @php
                     $plan = $submission->actionPlan($viewer);
@@ -166,6 +171,19 @@
                             </span>
                         @endif
                     </td>
+                    @if($isEvalList)
+                        <td class="table-sub">
+                            @if($submission->originalSubmission)
+                                <a href="{{ route('forms.submission.show', $submission->originalSubmission) }}"
+                                   class="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
+                                    {{ $submission->originalSubmission->reference_no ?: '#'.$submission->originalSubmission->id }}
+                                </a>
+                                <p class="text-xs text-slate-400 mt-0.5">{{ $submission->originalSubmission->form?->name }}</p>
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                    @endif
                     @foreach($searchable as $field)
                         <td class="table-sub">{{ $renderCell($submission, $field) }}</td>
                     @endforeach

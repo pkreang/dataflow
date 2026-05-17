@@ -17,6 +17,9 @@
         </a>
     </div>
 
+    @if (session('success'))
+        <div class="alert-success mb-4"><p class="text-sm">{{ session('success') }}</p></div>
+    @endif
     @if (session('error'))
         <div class="alert-error mb-4"><p class="text-sm">{{ session('error') }}</p></div>
     @endif
@@ -26,18 +29,23 @@
             ['key' => 'code', 'label' => __('common.code')],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'remark', 'label' => __('common.remark')],
+            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'actions', 'label' => __('common.actions'), 'class' => 'text-right'],
         ]"
         :rows="$departments"
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.departments.create')"
         :empty-cta-label="__('common.add') . ' ' . __('common.departments')"
+        :disable-pagination="true"
     >
         @foreach ($departments as $department)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                 <td class="table-primary">{{ $department->code }}</td>
                 <td class="table-primary">{{ $department->name }}</td>
                 <td class="table-sub">{{ $department->description ?: '-' }}</td>
+                <td class="px-4 py-3 text-sm">
+                    <x-status-badge :status="$department->is_active ? 'active' : 'inactive'" />
+                </td>
                 <td class="px-4 py-3 text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.departments.edit', $department), 'icon' => 'edit'],
@@ -47,4 +55,6 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$departments" :perPage="$perPage" id="departments-pagination" />
 @endsection

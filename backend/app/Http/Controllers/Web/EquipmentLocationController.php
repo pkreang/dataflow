@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\EquipmentLocation;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +11,8 @@ use Illuminate\View\View;
 
 class EquipmentLocationController extends Controller
 {
+    use HasPerPage;
+
     public function browse(): View
     {
         $locations = EquipmentLocation::query()
@@ -23,6 +26,8 @@ class EquipmentLocationController extends Controller
 
     public function index(Request $request): View
     {
+        $perPage = $this->resolvePerPage($request, 'equipment_locations_per_page');
+
         $query = EquipmentLocation::query()->orderBy('name');
 
         if ($search = $request->input('search')) {
@@ -33,9 +38,9 @@ class EquipmentLocationController extends Controller
             });
         }
 
-        $locations = $query->paginate(15)->withQueryString();
+        $locations = $query->paginate($perPage)->withQueryString();
 
-        return view('settings.equipment-locations.index', compact('locations'));
+        return view('settings.equipment-locations.index', compact('locations', 'perPage'));
     }
 
     public function create(): View

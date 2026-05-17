@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
@@ -18,11 +19,19 @@ use Spatie\Permission\Models\Role;
 
 class WorkflowController extends Controller
 {
-    public function index(): View
-    {
-        $workflows = ApprovalWorkflow::query()->withCount('stages')->orderBy('name')->get();
+    use HasPerPage;
 
-        return view('settings.workflow.index', compact('workflows'));
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'workflow_per_page');
+
+        $workflows = ApprovalWorkflow::query()
+            ->withCount('stages')
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('settings.workflow.index', compact('workflows', 'perPage'));
     }
 
     public function create(): View

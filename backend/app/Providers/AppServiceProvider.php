@@ -21,6 +21,7 @@ use App\Observers\SettingObserver;
 use App\Observers\WorkflowStageObserver;
 use App\Policies\RolePolicy;
 use App\Services\Auth\PasswordCapabilityService;
+use App\Services\EvaluationFormResolver;
 use App\Services\Mail\ApplyDatabaseMailConfig;
 use App\Services\NavigationService;
 use App\Support\OrganizationTranslations;
@@ -38,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(NavigationService::class);
+        $this->app->singleton(EvaluationFormResolver::class);
     }
 
     public function boot(): void

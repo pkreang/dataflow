@@ -7,8 +7,14 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\HomeDashboardKpiController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\InboundController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Inbound webhooks — public endpoint (auth via X-Webhook-Token header, throttle per IP)
+Route::post('/inbound/{slug}', [InboundController::class, 'receive'])
+    ->name('api.inbound.receive')
+    ->middleware('throttle:60,1');
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);

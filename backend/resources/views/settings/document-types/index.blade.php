@@ -37,6 +37,7 @@
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.document-types.create')"
         :empty-cta-label="__('common.add') . ' ' . __('common.document_types')"
+        :disable-pagination="true"
     >
         @foreach ($documentTypes as $type)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
@@ -60,4 +61,6 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$documentTypes" :perPage="$perPage" id="document-types-pagination" />
 @endsection

@@ -11,7 +11,7 @@
 
 @section('content')
 @php
-    $totalForms = $forms->count();
+    $totalForms = $forms->total();
 @endphp
 <div x-data="{ search: '' }" class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-2">
@@ -62,6 +62,7 @@
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.document-forms.create')"
         :empty-cta-label="__('common.add')"
+        :disable-pagination="true"
     >
         @foreach ($forms as $form)
             @php
@@ -122,5 +123,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$forms" :perPage="$perPage" id="document-forms-pagination" />
 </div>
 @endsection

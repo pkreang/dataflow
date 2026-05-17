@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentForm;
 use App\Models\LookupList;
@@ -17,15 +18,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LookupListController extends Controller
 {
-    public function index(): View
+    use HasPerPage;
+
+    public function index(Request $request): View
     {
+        $perPage = $this->resolvePerPage($request, 'lookups_per_page');
+
         $lists = LookupList::query()
             ->withCount('items')
             ->orderBy('sort_order')
             ->orderBy('label_en')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
-        return view('settings.lookups.index', compact('lists'));
+        return view('settings.lookups.index', compact('lists', 'perPage'));
     }
 
     public function create(): View

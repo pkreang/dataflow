@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalWorkflow;
 use App\Models\DocumentForm;
@@ -12,11 +13,19 @@ use Illuminate\View\View;
 
 class DocumentTypeController extends Controller
 {
-    public function index(): View
-    {
-        $documentTypes = DocumentType::query()->orderBy('sort_order')->orderBy('code')->get();
+    use HasPerPage;
 
-        return view('settings.document-types.index', compact('documentTypes'));
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'document_types_per_page');
+
+        $documentTypes = DocumentType::query()
+            ->orderBy('sort_order')
+            ->orderBy('code')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('settings.document-types.index', compact('documentTypes', 'perPage'));
     }
 
     public function create(): View

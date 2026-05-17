@@ -345,7 +345,9 @@ class DataSourceRegistry
             return [];
         }
 
-        return Cache::remember('datasource_registry_form_sources', 300, function () {
+        // Cache only the data — Closures can't be serialized, so base_query is
+        // attached after the cached array is restored.
+        $cached = Cache::remember('datasource_registry_form_sources', 300, function () {
             $sources = [];
             $forms = DocumentForm::query()
                 ->where('is_active', true)
@@ -375,8 +377,6 @@ class DataSourceRegistry
                     'updated_at' => 'Updated At',
                 ];
 
-                // fdata_* columns live alongside submission — only fields there are
-                // directly query-able via SQL (without json_extract).
                 $hasFdata = $form->hasDedicatedTable();
                 if ($hasFdata) {
                     foreach ($form->fields as $f) {
@@ -405,12 +405,9 @@ class DataSourceRegistry
                     'model' => null,
                     'source_type' => 'form',
                     'form_id' => $form->id,
+                    'form_key' => $form->form_key,
+                    'submission_table' => $form->submission_table,
                     'has_fdata' => $hasFdata,
-                    'base_query' => $hasFdata
-                        // Query the dedicated fdata_* table directly — columns align
-                        // with field keys for group_by/aggregate/filter to work without JSON paths.
-                        ? fn () => \Illuminate\Support\Facades\DB::table($form->submission_table)->toBase()
-                        : fn () => DocumentFormSubmission::where('form_id', $form->id),
                     'aggregate_fields' => $aggregate,
                     'group_by_fields' => $groupBy,
                     'filter_fields' => $filter,
@@ -421,6 +418,20 @@ class DataSourceRegistry
 
             return $sources;
         });
+
+        // Attach the base_query Closure after read — closures aren't serializable.
+        $sources = [];
+        foreach ($cached as $key => $config) {
+            $hasFdata = $config['has_fdata'] ?? false;
+            $submissionTable = $config['submission_table'] ?? null;
+            $formId = $config['form_id'] ?? null;
+            $config['base_query'] = $hasFdata && $submissionTable
+                ? fn () => \Illuminate\Support\Facades\DB::table($submissionTable)
+                : fn () => DocumentFormSubmission::where('form_id', $formId);
+            $sources[$key] = $config;
+        }
+
+        return $sources;
     }
 
     /**
@@ -441,9 +452,13 @@ class DataSourceRegistry
     }
 
     /**
-     * Returns a base Eloquent Builder for the given source.
+     * Returns a base query builder for the given source. Most sources return
+     * an Eloquent Builder; form sources backed by a dedicated fdata_* table
+     * return a Query\Builder (column names align with field keys directly).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder
      */
-    public static function query(string $source): \Illuminate\Database\Eloquent\Builder
+    public static function query(string $source)
     {
         $config = static::sources()[$source] ?? null;
 

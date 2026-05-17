@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
@@ -15,11 +16,18 @@ use Illuminate\View\View;
 
 class DepartmentController extends Controller
 {
-    public function index(): View
-    {
-        $departments = Department::query()->orderBy('name')->get();
+    use HasPerPage;
 
-        return view('settings.departments.index', compact('departments'));
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'departments_per_page');
+
+        $departments = Department::query()
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('settings.departments.index', compact('departments', 'perPage'));
     }
 
     public function create(): View

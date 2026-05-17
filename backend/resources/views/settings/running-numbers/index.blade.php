@@ -37,6 +37,7 @@
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.running-numbers.create')"
         :empty-cta-label="__('common.add') . ' ' . __('common.running_numbers')"
+        :disable-pagination="true"
     >
         @foreach ($configs as $config)
             @php
@@ -69,4 +70,6 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$configs" :perPage="$perPage" id="running-numbers-pagination" />
 @endsection

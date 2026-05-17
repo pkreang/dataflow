@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\EquipmentCategory;
 use Illuminate\Http\RedirectResponse;
@@ -10,8 +11,12 @@ use Illuminate\View\View;
 
 class EquipmentController extends Controller
 {
+    use HasPerPage;
+
     public function index(Request $request): View
     {
+        $perPage = $this->resolvePerPage($request, 'equipment_categories_per_page');
+
         $query = EquipmentCategory::query()->orderBy('name');
 
         if ($search = $request->input('search')) {
@@ -21,9 +26,9 @@ class EquipmentController extends Controller
             });
         }
 
-        $categories = $query->paginate(15)->withQueryString();
+        $categories = $query->paginate($perPage)->withQueryString();
 
-        return view('settings.equipment.index', compact('categories'));
+        return view('settings.equipment.index', compact('categories', 'perPage'));
     }
 
     public function create(): View

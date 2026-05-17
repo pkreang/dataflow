@@ -36,6 +36,7 @@
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.positions.create')"
         :empty-cta-label="__('common.add') . ' ' . __('common.positions')"
+        :disable-pagination="true"
     >
         @foreach ($positions as $position)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
@@ -54,4 +55,6 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$positions" :perPage="$perPage" id="positions-pagination" />
 @endsection

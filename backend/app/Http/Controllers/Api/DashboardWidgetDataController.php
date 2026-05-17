@@ -340,13 +340,56 @@ class DashboardWidgetDataController extends Controller
             ->limit(20)
             ->get();
 
-        $labels = $results->pluck($groupBy)->map(fn ($v) => (string) ($v ?? 'N/A'))->toArray();
+        $rawLabels = $results->pluck($groupBy)->map(fn ($v) => $v ?? null)->toArray();
+        $labels = $this->resolveLabels($groupBy, $rawLabels);
         $data = $results->pluck('agg_value')->map(fn ($v) => (float) $v)->toArray();
 
         return response()->json([
             'labels' => $labels,
             'datasets' => [['data' => $data]],
         ]);
+    }
+
+    /**
+     * Resolve raw FK values (e.g. department_id=3) to human-readable labels
+     * (e.g. "ฝ่ายควบคุมคุณภาพ") for chart axis/legend display. Falls back to the
+     * raw value if no mapping is found.
+     */
+    private function resolveLabels(string $groupBy, array $rawLabels): array
+    {
+        $map = $this->labelMapFor($groupBy);
+
+        if ($map === null) {
+            return array_map(fn ($v) => (string) ($v ?? 'N/A'), $rawLabels);
+        }
+
+        return array_map(function ($v) use ($map) {
+            if ($v === null) return 'N/A';
+            return (string) ($map[$v] ?? $v);
+        }, $rawLabels);
+    }
+
+    private function labelMapFor(string $column): ?array
+    {
+        return match ($column) {
+            'department_id' => $this->lookupTable('departments', 'name'),
+            'user_id', 'requester_user_id', 'assignee_user_id' => $this->userNameLookup(),
+            'workflow_id' => $this->lookupTable('approval_workflows', 'name'),
+            default => null,
+        };
+    }
+
+    private function lookupTable(string $table, string $labelCol): array
+    {
+        return DB::table($table)->pluck($labelCol, 'id')->toArray();
+    }
+
+    private function userNameLookup(): array
+    {
+        return DB::table('users')
+            ->select('id', DB::raw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,''))) as full_name"))
+            ->pluck('full_name', 'id')
+            ->toArray();
     }
 
     private function tableData($query, array $config, array $source, Request $request): JsonResponse
@@ -377,8 +420,34 @@ class DashboardWidgetDataController extends Controller
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
             ->get()
-            ->map(fn ($row) => $row->only($selectColumns))
+            ->map(function ($row) use ($selectColumns) {
+                // Eloquent Models expose only(); stdClass rows from DB::table() do not.
+                $arr = is_object($row) && method_exists($row, 'only')
+                    ? $row->only($selectColumns)
+                    : array_intersect_key((array) $row, array_flip($selectColumns));
+                return $arr;
+            })
             ->toArray();
+
+        // Resolve FK columns (department_id → name, user_id → full name, etc.)
+        // so the table shows human-readable values instead of raw integer IDs.
+        $maps = [];
+        foreach ($selectColumns as $col) {
+            $m = $this->labelMapFor($col);
+            if ($m !== null) {
+                $maps[$col] = $m;
+            }
+        }
+        if (! empty($maps)) {
+            foreach ($rows as &$row) {
+                foreach ($maps as $col => $map) {
+                    if (isset($row[$col])) {
+                        $row[$col] = $map[$row[$col]] ?? $row[$col];
+                    }
+                }
+            }
+            unset($row);
+        }
 
         return response()->json([
             'columns' => $selectColumns,

@@ -17,6 +17,7 @@ class DocumentFormSubmission extends Model
         'payload',
         'status',
         'approval_instance_id',
+        'parent_submission_id',
         'reference_no',
         'fdata_row_id',
         'deleted_by',
@@ -91,6 +92,24 @@ class DocumentFormSubmission extends Model
     public function instance()
     {
         return $this->belongsTo(ApprovalInstance::class, 'approval_instance_id');
+    }
+
+    /**
+     * Parent submission — set when this row is an evaluation/feedback for
+     * another submission. NULL for normal first-class submissions.
+     */
+    public function originalSubmission()
+    {
+        return $this->belongsTo(self::class, 'parent_submission_id');
+    }
+
+    /**
+     * Child submissions that reference this one as their parent.
+     * For approved work items, this surfaces the requester's evaluation.
+     */
+    public function evaluations()
+    {
+        return $this->hasMany(self::class, 'parent_submission_id');
     }
 
     /**
@@ -259,6 +278,21 @@ class DocumentFormSubmission extends Model
                 'action' => $duplicateUrl,
                 'method' => 'POST',
                 'icon' => 'duplicate',
+            ];
+        }
+        // Post-action evaluation — owner of an approved submission rates the work.
+        // Hide for evaluation submissions themselves (avoid evaluate-the-evaluation)
+        // and only when the form has evaluation_enabled=true (admin opt-in per form).
+        if ($status === 'approved' && $isOwner && $this->parent_submission_id === null
+            && (bool) ($this->form?->evaluation_enabled ?? false)
+            && app(\App\Services\EvaluationFormResolver::class)->hasFormFor($this)) {
+            $existingEval = $this->evaluations()->first();
+            $menu[] = [
+                'label' => $existingEval ? __('common.view_evaluation') : __('common.action_evaluate'),
+                'href' => $existingEval
+                    ? route('forms.submission.show', $existingEval)
+                    : route('forms.submission.evaluate', $this),
+                'icon' => 'view',
             ];
         }
         if ($canDeleteDraft) {

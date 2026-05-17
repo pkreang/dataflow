@@ -39,6 +39,7 @@
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.workflow.create')"
         :empty-cta-label="__('common.add') . ' ' . __('common.workflow')"
+        :disable-pagination="true"
     >
         @foreach ($workflows as $workflow)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
@@ -54,4 +55,6 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$workflows" :perPage="$perPage" id="workflows-pagination" />
 @endsection

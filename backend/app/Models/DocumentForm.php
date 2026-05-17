@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Cache;
 
 class DocumentForm extends Model
 {
@@ -17,6 +18,8 @@ class DocumentForm extends Model
         'document_type',
         'description',
         'is_active',
+        'evaluation_enabled',
+        'target_document_types',
         'layout_columns',
         'submission_table',
     ];
@@ -25,6 +28,8 @@ class DocumentForm extends Model
     {
         return [
             'is_active' => 'boolean',
+            'evaluation_enabled' => 'boolean',
+            'target_document_types' => 'array',
         ];
     }
 
@@ -67,10 +72,13 @@ class DocumentForm extends Model
         static::saved(function (DocumentForm $form) {
             \App\Support\DataSourceRegistry::flushFormSourcesCache();
             static::syncNavigationMenu($form);
+            Cache::forget('navigation_menus_tree');
         });
         static::deleted(function () {
             \App\Support\DataSourceRegistry::flushFormSourcesCache();
-            // navigation_menus rows are removed automatically by the FK cascade.
+            // FK cascade removes navigation_menus rows but does not fire their
+            // model events — refresh sidebar tree cache directly.
+            Cache::forget('navigation_menus_tree');
         });
     }
 

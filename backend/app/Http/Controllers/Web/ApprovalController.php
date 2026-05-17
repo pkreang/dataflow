@@ -121,8 +121,13 @@ class ApprovalController extends Controller
             $message = __('common.approval_approved_success');
         }
 
-        return $this->redirectForDynamicForm($fresh, $message)
-            ?? redirect()->route('approvals.my')->with('success', $message);
+        // Detect mobile referrer → redirect back to /m/approvals instead of desktop
+        $fromMobile = str_contains((string) $request->header('Referer', ''), '/m/');
+        $fallback = $fromMobile
+            ? redirect()->route('mobile.approvals')->with('success', $message)
+            : redirect()->route('approvals.my')->with('success', $message);
+
+        return $this->redirectForDynamicForm($fresh, $message) ?? $fallback;
     }
 
     public function updateFields(Request $request, ApprovalInstance $instance): RedirectResponse

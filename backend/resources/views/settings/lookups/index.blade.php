@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto">
+<div>
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.lookups') }}</h2>
@@ -41,6 +41,7 @@
         :empty-message="__('common.lookups_empty')"
         :empty-cta-href="route('settings.lookups.create')"
         :empty-cta-label="__('common.add')"
+        :disable-pagination="true"
     >
         @foreach ($lists as $list)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors duration-150">
@@ -85,5 +86,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$lists" :perPage="$perPage" id="lookups-pagination" />
 </div>
 @endsection

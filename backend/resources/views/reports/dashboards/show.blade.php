@@ -117,10 +117,19 @@
             </div>
 
             {{-- Chart widget --}}
-            <div x-show="!loading && !error && widgetType === 'chart'" style="position: relative; height: 200px;">
-                <canvas :id="`chart-${widgetId}`"
-                        data-chart-type="{{ $widget->config['chart_type'] ?? 'bar' }}"
-                        height="200"></canvas>
+            <div x-show="!loading && !error && widgetType === 'chart'">
+                <div x-show="(data.labels || []).length > 0" style="position: relative; height: 200px;">
+                    <canvas :id="`chart-${widgetId}`"
+                            data-chart-type="{{ $widget->config['chart_type'] ?? 'bar' }}"
+                            height="200"></canvas>
+                </div>
+                <div x-show="(data.labels || []).length === 0" x-cloak
+                     class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-12 gap-2">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <p class="text-sm">{{ __('common.no_data') }}</p>
+                </div>
             </div>
 
             {{-- Table widget --}}

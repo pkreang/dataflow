@@ -365,6 +365,66 @@ class NavigationMenuSeeder extends Seeder
                 'sort_order' => 20,
                 'is_active' => true,
             ],
+            [
+                'id' => 53,
+                'parent_id' => null,
+                'label' => 'My Reports',
+                'label_en' => 'My Reports',
+                'label_th' => 'รายงานของฉัน',
+                'icon' => 'chart-bar',
+                'route' => '/my-reports',
+                'permission' => null,
+                'sort_order' => 3,
+                'is_active' => true,
+            ],
+            [
+                'id' => 54,
+                'parent_id' => 2,
+                'label' => 'Outgoing Webhooks',
+                'label_en' => 'Outgoing Webhooks',
+                'label_th' => 'Webhook ขาออก',
+                'icon' => 'link',
+                'route' => '/settings/integrations',
+                'permission' => 'manage_settings',
+                'sort_order' => 21,
+                'is_active' => true,
+            ],
+            [
+                'id' => 61,
+                'parent_id' => 2,
+                'label' => 'Incoming Webhooks',
+                'label_en' => 'Incoming Webhooks',
+                'label_th' => 'Webhook ขาเข้า',
+                'icon' => 'link',
+                'route' => '/settings/inbound-webhooks',
+                'permission' => 'manage_settings',
+                'sort_order' => 22,
+                'is_active' => true,
+            ],
+            [
+                'id' => 62,
+                'parent_id' => 2,
+                'label' => 'Evaluation Form Settings',
+                'label_en' => 'Evaluation Form Settings',
+                'label_th' => 'ตั้งค่าฟอร์มประเมิน',
+                'icon' => 'star',
+                'route' => '/settings/evaluation-form',
+                'permission' => 'manage_settings',
+                'sort_order' => 23,
+                'is_active' => true,
+            ],
+            [
+                'id' => 63,
+                'parent_id' => null,
+                'label' => 'Evaluation Report',
+                'label_en' => 'Evaluation Report',
+                'label_th' => 'รายงานประเมิน',
+                'icon' => 'chart-bar',
+                'route' => '/reports/evaluations',
+                'permission' => 'manage_settings',
+                'sort_order' => 4,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($menus as &$row) {
@@ -374,6 +434,14 @@ class NavigationMenuSeeder extends Seeder
         unset($row);
 
         NavigationMenu::insert($menus);
+
+        // Re-create form-linked child rows under the Documents (id=48) parent.
+        // The wipe above removed any auto-created rows; DocumentForm::saved
+        // observer only fires when a form is saved, so backfill explicitly here
+        // for every active form (idempotent — syncNavigationMenu upserts).
+        \App\Models\DocumentForm::query()
+            ->where('is_active', true)
+            ->each(fn ($form) => \App\Models\DocumentForm::syncNavigationMenu($form));
 
         // bulk insert/delete does not fire model events — sidebar cache must refresh
         Cache::forget('navigation_menus_tree');

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends($layout ?? 'layouts.app')
 
 @section('title', $submission->form->name)
 
@@ -26,6 +26,39 @@
     @if (session('success'))
         <div class="alert-success mb-4">
             {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('warning'))
+        <div class="alert-warning mb-4">
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    {{-- Post-action evaluation CTA — owner of approved work, not an eval itself --}}
+    @php
+        $viewerUserId = (int) (session('user.id') ?? 0);
+        $isOwnerView = (int) $submission->user_id === $viewerUserId;
+        $isEvalReady = $submission->parent_submission_id === null
+            && $isOwnerView
+            && ! $submission->trashed()
+            && $submission->effective_status === 'approved'
+            && (bool) ($submission->form?->evaluation_enabled ?? false)
+            && app(\App\Services\EvaluationFormResolver::class)->hasFormFor($submission);
+        $existingEval = $isEvalReady ? $submission->evaluations()->first() : null;
+    @endphp
+    @if ($isEvalReady)
+        <div class="card border-l-4 border-emerald-500 p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {{ $existingEval ? __('common.evaluation_already_submitted') : __('common.evaluation_cta_title') }}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ __('common.evaluation_cta_desc') }}</p>
+            </div>
+            <a href="{{ $existingEval ? route('forms.submission.show', $existingEval) : route('forms.submission.evaluate', $submission) }}"
+               class="btn-primary shrink-0">
+                {{ $existingEval ? __('common.view_evaluation') : __('common.action_evaluate') }}
+            </a>
         </div>
     @endif
 

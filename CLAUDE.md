@@ -107,7 +107,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 8. **ผู้ใช้:** ใช้ **`first_name` + `last_name`** — อย่าอ้าง `users.name`
 9. **`EnforcePasswordChange` middleware:** ถ้า user มี `password_change_required = true` หรือรหัสหมดอายุ จะ **redirect ไปหน้าเปลี่ยนรหัส** ก่อนเข้าหน้าอื่น — API มี `EnforcePasswordChangeForSanctum` คืน 403 JSON; ทดสอบ flow ต้องตั้งค่าฟิลด์เหล่านี้ด้วย
 10. **Seeder ที่ถูกลบ:** `CompanySeeder` และ `ReportDashboardSeeder` ไม่มีแล้ว — อย่าอ้างถึง
-11. **Breadcrumb:** ใช้ `<x-breadcrumb :items="[...]">` (ที่ `resources/views/components/breadcrumb.blade.php`) เท่านั้น — auto-prepend Home **เมื่อ trail มี ≥ 3 items** (top-level + section-level จะไม่ขึ้น "แดชบอร์ด /" เพื่อลดภาพรก — Dashboard เข้าถึงได้จาก sidebar อยู่แล้ว), **ห้าม** เขียน markup manual ซ้ำ. วาง block `@section('breadcrumb') ... @endsection` ต่อหลัง `@section('title')` ใน layout-extending views
+11. **Breadcrumb:** ใช้ `<x-breadcrumb :items="[...]">` (ที่ `resources/views/components/breadcrumb.blade.php`) เท่านั้น — **render ตาม items ที่ส่งเข้ามา ไม่ auto-prepend "แดชบอร์ด /" อีกแล้ว** (ลบ logic ตั้งแต่ 2026-05-12) เพราะ Dashboard เข้าถึงได้จาก sidebar อยู่แล้วและ "แดชบอร์ด /" ที่หน้า 3+ levels เป็นภาพรก. ถ้าหน้าใหม่ต้องการให้ "Dashboard" เป็น crumb แรก ใส่เองในอาร์เรย์. **ห้าม** เขียน markup manual ซ้ำ. วาง block `@section('breadcrumb') ... @endsection` ต่อหลัง `@section('title')` ใน layout-extending views
 12. **Sidebar pin (★):** แต่ละ leaf menu มีปุ่ม ★ ที่ toggle pin ผ่าน `POST /myprofile/pinned-menus/toggle` (`{menu_key: (string) $menu->id}`). State อยู่ที่ Alpine.store(`pinnedMenus`) — เริ่มต้นจาก `window.__PINNED_MENU_IDS__` ที่ `layouts/app.blade.php` inject ไว้. Pinned section ที่ top ของ sidebar ใช้ component เดียวกันแต่ผ่าน `:is-pinned-section="true"` เพื่อซ่อน ★ บนตัวเอง — pinned section refresh เมื่อ navigate หน้าถัดไป (ไม่ re-render instant)
 13. **`<x-data-table>` + `<x-per-page-footer>`:** ถ้าใช้ per-page-footer แยก ให้ตั้ง `:disable-pagination="true"` บน `<x-data-table>` กัน double-render paginator links
 14. **`editable_by` user tokens:** format `user:{id}` ผูกใน JSON เดียวกับ role tokens — ปลายทางเช็คผ่าน `DocumentFormSubmissionController::filterPayloadForAssignee()` ที่ filter draft writes ฝั่ง server; non-owner ตอแหลผ่าน devtools ก็เขียนได้แค่ field ที่มี token ตัวเอง — submit/destroy/return-to-draft ยัง **owner-only** (`authorizeOwnerOnlyDraft`) เพื่อไม่ให้ปนตอน workflow ดึง requester
@@ -129,6 +129,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 | `doc/uat-rbac-permissions.md` | ทดสอบ RBAC อย่างปลอดภัย |
 | `doc/backlog.md` | งาน Phase 2+ / out-of-scope ที่คุยแล้วแต่ยังไม่ได้ลุย |
 | `doc/example-maintenance-request-form.md` | Playbook ฟอร์มแจ้งซ่อม enterprise-grade (36 fields, 7 sections) — ใช้เป็น reference สำหรับสร้างฟอร์มแจ้งซ่อมใหม่ |
+| `doc/uat-settings-menus.md` | UAT checklist สำหรับเมนูตั้งค่า 21 รายการ (access + CRUD + visual regression) |
 | `backend/README.md` | Seed, demo user, SSO |
 
 **มาตรฐานทีม (เมนู + list + CRUD + audit):** เมื่อตกลงแล้ว ให้สรุปเป็น playbook ไฟล์เดียวใต้ `doc/` (เช่น `doc/menu-permissions-and-forms.md`) แล้วเพิ่ม **หนึ่งแถว** ในตารางนี้ — อย่าให้ไฟล์นี้ยาวเกินจำเป็น

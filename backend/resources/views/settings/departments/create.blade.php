@@ -69,6 +69,10 @@
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <div class="md:col-span-2">
+                    <x-form.active-toggle name="is_active" :checked="old('is_active', true)" />
+                </div>
             </div>
         </div>
 
