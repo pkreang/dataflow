@@ -64,6 +64,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 
 - Sidebar มาจาก DB: **`navigation_menus`** — `NavigationService::getMenus()` กรองตามสตริง permission + กฎ super-admin สำหรับบาง route; แคชต้นไม้ **3600 วินาที** (ล้างเมื่อ model save/delete)
 - คอลัมน์ **`permission`:** ต้อง **ตรงทุกตัวอักษร** กับชื่อ permission ที่ user มี; `null` = ไม่ล็อกสิทธิ์ที่เมนู (ยังอาจถูกจำกัดด้วยกฎ super-admin) — **ไม่ได้** สร้างชื่อสิทธิ์อัตโนมัติจากรูปแบบ `module.action`
+- **`permission` กั้น route ด้วย ไม่ใช่แค่ซ่อนเมนู:** middleware **`EnforceMenuPermission`** (alias `menu.permission`, อยู่ใน web auth group) เทียบ path ปัจจุบันกับ `navigation_menus.route` (longest-match ผ่าน `NavigationMenu::routeMatchesPath()`) — ถ้าเมนูที่ตรงมี `permission` แล้ว user ไม่มีสิทธิ์นั้น → **403** (super-admin ข้าม); map route→permission แคช key `navigation_route_permissions` (ล้างพร้อม `navigation_menus_tree`). ตั้ง permission ที่เมนูใน `/settings/navigation` = กั้นทั้ง sidebar **และ** route
 - ป้ายกำกับ: `label_en` / `label_th` มี fallback จาก `lang/*/common.php` — จัดการเมนูใน UI: **`/settings/navigation`** (เฉพาะ super-admin)
 - Reseed แบบกลุ่มจาก PHP: แก้ `NavigationMenuSeeder` แล้ว `php artisan db:seed --class=NavigationMenuSeeder`
 

@@ -39,12 +39,10 @@ class SettingsMenuAccessTest extends TestCase
             'navigation index' => ['settings.navigation.index'],
             'dashboards index' => ['settings.dashboards.index'],
             'department workflow bindings' => ['settings.department-workflow-bindings.index'],
-        ];
-    }
-
-    public static function authenticatedRoutes(): array
-    {
-        return [
+            // Settings list pages gated by their navigation menu's permission via
+            // the EnforceMenuPermission middleware — a bare regular user (no
+            // permissions) is forbidden, a super-admin bypasses. (The 19 above
+            // are gated by the super-admin middleware; same observable result.)
             'organizations index' => ['companies.index'],
             'users index' => ['users.index'],
             'roles index' => ['roles.index'],
@@ -68,28 +66,6 @@ class SettingsMenuAccessTest extends TestCase
 
     #[DataProvider('superAdminOnlyRoutes')]
     public function test_super_admin_route_renders_for_super_admin(string $routeName): void
-    {
-        $response = $this->actingAsWebSession($this->makeSuperAdmin())->get(route($routeName));
-        $response->assertSuccessful();
-        $response->assertDontSee('Whoops, looks like something went wrong');
-    }
-
-    #[DataProvider('authenticatedRoutes')]
-    public function test_authenticated_route_redirects_guest_to_login(string $routeName): void
-    {
-        $this->get(route($routeName))->assertRedirect('/login');
-    }
-
-    #[DataProvider('authenticatedRoutes')]
-    public function test_authenticated_route_renders_for_regular_user(string $routeName): void
-    {
-        $response = $this->actingAsWebSession($this->makeRegularUser())->get(route($routeName));
-        $response->assertSuccessful();
-        $response->assertDontSee('Whoops, looks like something went wrong');
-    }
-
-    #[DataProvider('authenticatedRoutes')]
-    public function test_authenticated_route_renders_for_super_admin(string $routeName): void
     {
         $response = $this->actingAsWebSession($this->makeSuperAdmin())->get(route($routeName));
         $response->assertSuccessful();

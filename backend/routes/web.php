@@ -69,7 +69,7 @@ Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'
 Route::get('/reset-password', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
 Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
 
-Route::middleware(['auth.web', 'password.enforced'])->group(function () {
+Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Mobile App surface — dedicated /m/* URLs with bottom-nav layout (for pitch demo + future mobile use)

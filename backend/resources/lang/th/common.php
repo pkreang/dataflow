@@ -13,6 +13,7 @@ return [
     'rbac_overview_note' => 'หมายเหตุ: ผู้ใช้ที่เป็น super-admin ข้ามการตรวจสิทธิ์ทั้งหมด ไม่ขึ้นกับ role',
     'rbac_search_placeholder' => 'ค้นหาสิทธิ์…',
     'rbac_role_grants' => 'สิทธิ์ที่ได้รับ',
+    'menu_permission_gates_route' => 'จะกั้นการเข้า route ด้วย (403) สำหรับผู้ที่ไม่มีสิทธิ์นี้ — ไม่ใช่แค่ซ่อนเมนูใน sidebar',
     'companies' => 'องค์กร',
     'branding' => 'โลโก้และพื้นหลัง',
     'maintenance' => 'บำรุงรักษา',

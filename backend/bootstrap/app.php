@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'password.enforced' => \App\Http\Middleware\EnforcePasswordChange::class,
             'sanctum.password' => \App\Http\Middleware\EnforcePasswordChangeForSanctum::class,
             'super-admin' => \App\Http\Middleware\SuperAdminOnly::class,
+            'menu.permission' => \App\Http\Middleware\EnforceMenuPermission::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,

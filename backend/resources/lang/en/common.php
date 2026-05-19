@@ -13,6 +13,7 @@ return [
     'rbac_overview_note' => 'Note: users with the super-admin flag bypass all permission checks regardless of their role.',
     'rbac_search_placeholder' => 'Search permissions…',
     'rbac_role_grants' => 'Permissions granted',
+    'menu_permission_gates_route' => 'Also blocks the route (403) for users without this permission — not just the sidebar menu.',
     'companies' => 'Organizations',
     'branding' => 'Logo & Background',
     'departments' => 'Departments',

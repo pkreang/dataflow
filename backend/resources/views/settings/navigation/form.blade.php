@@ -112,6 +112,7 @@
                         </option>
                     @endforeach
                 </select>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.menu_permission_gates_route') }}</p>
             </div>
 
             {{-- Sort Order --}}
