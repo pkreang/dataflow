@@ -69,4 +69,28 @@ class RolesCrudTest extends TestCase
 
         $this->assertNull(Role::find($role->id));
     }
+
+    public function test_super_admin_can_view_permission_overview(): void
+    {
+        $admin = $this->makeSuperAdmin();
+
+        $this->actingAsWebSession($admin)->get(route('roles.overview'))
+            ->assertOk()
+            ->assertSee('dashboard.read');
+    }
+
+    public function test_guest_is_redirected_from_permission_overview(): void
+    {
+        $this->get(route('roles.overview'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_super_admin_can_open_role_edit_page(): void
+    {
+        $admin = $this->makeSuperAdmin();
+        $role = Role::first();
+
+        $this->actingAsWebSession($admin)->get(route('roles.edit', $role->id))
+            ->assertOk();
+    }
 }

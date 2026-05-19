@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Concerns\HasPerPage;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
@@ -106,6 +106,21 @@ class RoleController extends Controller
         Role::findOrFail($id)->delete();
 
         return redirect()->route('roles.index')->with('success', __('common.role_flash_deleted'));
+    }
+
+    /**
+     * Read-only RBAC matrix — every permission (grouped by module) against
+     * every role, so a super-admin can see at a glance who can do what.
+     */
+    public function overview(): View
+    {
+        $grouped = $this->groupedPermissions();
+        $roles = Role::with('permissions:id,name')->orderBy('name')->get();
+        $rolePermissionIds = $roles
+            ->mapWithKeys(fn ($role) => [$role->id => $role->permissions->pluck('id')->all()])
+            ->all();
+
+        return view('roles.overview', compact('grouped', 'roles', 'rolePermissionIds'));
     }
 
     private function groupedPermissions(): array
