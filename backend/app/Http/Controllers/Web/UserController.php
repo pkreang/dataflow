@@ -14,14 +14,28 @@ use App\Services\Auth\PasswordCapabilityService;
 use App\Support\CompliantPasswordGenerator;
 use App\Support\PermissionDisplay;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
-class UserController extends Controller
+class UserController extends Controller implements HasMiddleware
 {
     use HasPerPage;
+
+    /**
+     * Listing users stays open to any authenticated user (see
+     * SettingsMenuAccessTest); creating / editing / importing / deleting
+     * users is super-admin only.
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('super-admin', except: ['index', 'show']),
+        ];
+    }
 
     public function index(Request $request): View
     {

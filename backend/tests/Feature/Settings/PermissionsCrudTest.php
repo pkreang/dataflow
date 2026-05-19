@@ -79,4 +79,11 @@ class PermissionsCrudTest extends TestCase
 
         $this->assertNotNull(Permission::find($perm->id));
     }
+
+    public function test_regular_user_cannot_reach_permission_create(): void
+    {
+        $this->actingAsWebSession($this->makeRegularUser())
+            ->get(route('permissions.create'))
+            ->assertForbidden();
+    }
 }

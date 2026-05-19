@@ -92,4 +92,11 @@ class UsersCrudTest extends TestCase
 
         $this->assertNull(User::find($user->id));
     }
+
+    public function test_regular_user_cannot_reach_user_create(): void
+    {
+        $this->actingAsWebSession($this->makeRegularUser())
+            ->get(route('users.create'))
+            ->assertForbidden();
+    }
 }

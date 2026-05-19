@@ -5,13 +5,26 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
     use HasPerPage;
+
+    /**
+     * Read actions (index / show / overview) stay open to any authenticated
+     * user — see SettingsMenuAccessTest. Write actions are super-admin only.
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('super-admin', except: ['index', 'show', 'overview']),
+        ];
+    }
 
     public function index(Request $request): View
     {

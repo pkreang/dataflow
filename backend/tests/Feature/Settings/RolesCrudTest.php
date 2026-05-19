@@ -93,4 +93,11 @@ class RolesCrudTest extends TestCase
         $this->actingAsWebSession($admin)->get(route('roles.edit', $role->id))
             ->assertOk();
     }
+
+    public function test_regular_user_cannot_reach_role_create(): void
+    {
+        $this->actingAsWebSession($this->makeRegularUser())
+            ->get(route('roles.create'))
+            ->assertForbidden();
+    }
 }
