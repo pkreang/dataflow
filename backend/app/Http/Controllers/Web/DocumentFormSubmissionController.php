@@ -401,25 +401,76 @@ class DocumentFormSubmissionController extends Controller
     public function returnToDraft(DocumentFormSubmission $submission): RedirectResponse
     {
         $this->authorizeReturnToDraft($submission);
-        $submission->load('form');
 
         $userId = (int) (session('user.id') ?? 0);
-        $form = $submission->form;
+        $fromInstanceId = $submission->approval_instance_id;
 
-        $submission->update(['status' => 'draft']);
-
-        if ($submission->fdata_row_id && $form?->hasDedicatedTable()) {
-            $this->schemaService->updateRow($form, $submission->fdata_row_id, $submission->payload ?? [], [
-                'status' => 'draft',
-            ]);
-        }
+        $this->applyReturnToDraft($submission);
 
         SubmissionActivityLog::record($submission->id, $userId, 'returned_to_draft', [
-            'from_approval_instance_id' => $submission->approval_instance_id,
+            'from_approval_instance_id' => $fromInstanceId,
         ]);
 
         return redirect()->route('forms.draft.edit', $submission)
             ->with('success', __('common.returned_to_draft'));
+    }
+
+    /**
+     * Approver action — send a submitted request back instead of approving or
+     * rejecting it. `requester` flips the submission to an editable draft;
+     * `previous_step` rewinds the workflow one approval stage. The workflow
+     * mutation and actor authorization happen inside ApprovalFlowService.
+     */
+    public function sendBack(Request $request, DocumentFormSubmission $submission, ApprovalFlowService $approvalFlowService): RedirectResponse
+    {
+        $validated = $request->validate([
+            'destination' => 'required|in:requester,previous_step',
+            'comment' => 'required|string|max:1000',
+        ]);
+
+        abort_unless($submission->approval_instance_id, 404);
+
+        $userId = (int) (session('user.id') ?? 0);
+
+        try {
+            $approvalFlowService->sendBack(
+                $submission->approval_instance_id,
+                $userId,
+                $validated['destination'],
+                $validated['comment'],
+            );
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['send_back' => $e->getMessage()]);
+        }
+
+        if ($validated['destination'] === 'requester') {
+            $this->applyReturnToDraft($submission);
+        }
+
+        SubmissionActivityLog::record($submission->id, $userId, 'sent_back', [
+            'destination' => $validated['destination'],
+            'comment' => $validated['comment'],
+        ]);
+
+        return redirect()->route('approvals.my')
+            ->with('success', __('common.send_back_success'));
+    }
+
+    /**
+     * Flip a submission back to an editable draft, mirroring the change into
+     * the dedicated fdata_* row when the form uses one. Shared by
+     * returnToDraft() (owner action) and sendBack() (approver action).
+     */
+    private function applyReturnToDraft(DocumentFormSubmission $submission): void
+    {
+        $submission->loadMissing('form');
+        $submission->update(['status' => 'draft']);
+
+        if ($submission->fdata_row_id && $submission->form?->hasDedicatedTable()) {
+            $this->schemaService->updateRow($submission->form, $submission->fdata_row_id, $submission->payload ?? [], [
+                'status' => 'draft',
+            ]);
+        }
     }
 
     public function submit(DocumentFormSubmission $submission, ApprovalFlowService $approvalFlowService): RedirectResponse

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\Approval\WorkflowCompleted;
 use App\Events\Approval\WorkflowPartialApproval;
+use App\Events\Approval\WorkflowReturned;
 use App\Events\Approval\WorkflowStarted;
 use App\Events\Approval\WorkflowStepAdvanced;
 use App\Models\ApprovalInstance;
@@ -303,6 +304,81 @@ class ApprovalFlowService
                 ]);
                 event(new WorkflowPartialApproval($instance, $step));
             }
+
+            return $instance->fresh(['steps', 'workflow']);
+        });
+    }
+
+    /**
+     * Send a pending request back instead of approving/rejecting it. Unlike a
+     * reject (which is final), a send-back is non-terminal — the request is
+     * meant to be fixed and re-considered.
+     *
+     * Destinations:
+     *  - `previous_step`: rewind to step N-1. Steps N-1 and N are reset to
+     *    `pending` (their approvals/signatures cleared); the instance stays
+     *    `pending`. Not allowed on step 1.
+     *  - `requester`: close the instance with status `returned`. The caller is
+     *    responsible for flipping the linked document back to an editable state.
+     *
+     * A signature is never required for a send-back (it is not a formal
+     * decision on the merits); a non-empty comment always is.
+     */
+    public function sendBack(int $instanceId, int $actorUserId, string $destination, string $comment): ApprovalInstance
+    {
+        if (! in_array($destination, ['requester', 'previous_step'], true)) {
+            throw new RuntimeException('Invalid send-back destination');
+        }
+        if (trim($comment) === '') {
+            throw new RuntimeException('send_back_comment_required');
+        }
+
+        return DB::transaction(function () use ($instanceId, $actorUserId, $destination, $comment) {
+            $instance = ApprovalInstance::query()->with(['steps', 'workflow'])->lockForUpdate()->findOrFail($instanceId);
+
+            if ($instance->status !== 'pending') {
+                throw new RuntimeException('Approval instance is already closed');
+            }
+
+            $currentStepNo = (int) $instance->current_step_no;
+            $step = $instance->steps->firstWhere('step_no', $currentStepNo);
+
+            if (! $step) {
+                throw new RuntimeException('Approval step not found');
+            }
+
+            if (! $this->canUserActOnStep($instance, $step, $actorUserId)) {
+                throw new RuntimeException('You are not allowed to act on this step');
+            }
+
+            if ($destination === 'previous_step') {
+                if ($currentStepNo <= 1) {
+                    throw new RuntimeException('send_back_no_previous_step');
+                }
+
+                $targetStepNo = $currentStepNo - 1;
+
+                // Reset the target step and the current step back to a clean
+                // pending state — both must be re-approved from scratch.
+                foreach ($instance->steps as $instanceStep) {
+                    if (in_array($instanceStep->step_no, [$targetStepNo, $currentStepNo], true)) {
+                        $instanceStep->update([
+                            'action' => 'pending',
+                            'approved_by' => [],
+                            'acted_by_user_id' => null,
+                            'comment' => null,
+                            'acted_at' => null,
+                            'signature_image' => null,
+                        ]);
+                    }
+                }
+
+                $instance->update(['current_step_no' => $targetStepNo]);
+            } else {
+                $instance->update(['status' => 'returned']);
+            }
+
+            event(new WorkflowReturned($instance, $destination, $actorUserId, $comment));
 
             return $instance->fresh(['steps', 'workflow']);
         });

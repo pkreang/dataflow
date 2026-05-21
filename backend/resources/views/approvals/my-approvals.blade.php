@@ -22,6 +22,10 @@
         <div class="alert-error mb-4">{{ $errors->first('approval') }}</div>
     @endif
 
+    @if ($errors->has('send_back'))
+        <div class="alert-error mb-4">{{ $errors->first('send_back') }}</div>
+    @endif
+
     <div class="space-y-4">
         @forelse($instances as $instance)
             @php
@@ -36,7 +40,7 @@
                 $docTypeModel = \App\Models\DocumentType::resolveByCode($instance->document_type);
                 $docTypeLabel = $docTypeModel?->label() ?? str_replace('_', ' ', $instance->document_type);
             @endphp
-            <div class="card border-l-4 {{ $borderColor }}">
+            <div class="card border-l-4 {{ $borderColor }}" x-data="{ sendBackOpen: false }">
                 {{-- Header --}}
                 <div class="p-4 sm:p-5">
                     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -161,6 +165,13 @@
                             <x-signature-pad name="signature_image" :saved-data-url="$mySignatureDataUrl ?? null" :required="true" />
                         </div>
                     @endif
+                    @if($instance->formSubmission)
+                        <button type="button" @click="sendBackOpen = true"
+                                class="btn-secondary justify-center py-3 sm:py-2 w-full text-sm">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l5-5M3 10l5 5"/></svg>
+                            {{ __('common.action_send_back') }}
+                        </button>
+                    @endif
                     <div class="grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-2 sm:items-center">
                         <button type="submit" name="action" value="rejected"
                                 class="btn-danger justify-center py-3 sm:py-2 sm:order-1 w-full sm:w-auto">
@@ -174,6 +185,37 @@
                         </button>
                     </div>
                 </form>
+
+                @if($instance->formSubmission)
+                    {{-- Send-back dialog — its own <form>, kept outside the approvals.act form --}}
+                    <div x-show="sendBackOpen" x-cloak
+                         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                         @keydown.escape.window="sendBackOpen = false">
+                        <div class="fixed inset-0 bg-black/50" @click="sendBackOpen = false"></div>
+                        <div class="relative card p-5 w-full max-w-md">
+                            <h4 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-3">{{ __('common.action_send_back') }}</h4>
+                            <form method="POST" action="{{ route('forms.submission.send-back', $instance->formSubmission) }}" class="space-y-3">
+                                @csrf
+                                <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                    <input type="radio" name="destination" value="requester" checked class="mt-0.5">
+                                    <span>{{ __('common.send_back_to_requester') }}</span>
+                                </label>
+                                <label class="flex items-start gap-2 text-sm {{ $instance->current_step_no <= 1 ? 'opacity-40' : 'text-slate-700 dark:text-slate-300' }}">
+                                    <input type="radio" name="destination" value="previous_step" class="mt-0.5"
+                                           {{ $instance->current_step_no <= 1 ? 'disabled' : '' }}>
+                                    <span>{{ __('common.send_back_to_previous_step') }}</span>
+                                </label>
+                                <textarea name="comment" rows="3" required
+                                          placeholder="{{ __('common.send_back_reason') }}"
+                                          class="form-input text-sm resize-y w-full"></textarea>
+                                <div class="flex justify-end gap-2">
+                                    <button type="button" @click="sendBackOpen = false" class="btn-secondary text-sm">{{ __('common.cancel') }}</button>
+                                    <button type="submit" class="btn-primary text-sm">{{ __('common.confirm') }}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endif
             </div>
         @empty
             <div class="card p-10 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500">
