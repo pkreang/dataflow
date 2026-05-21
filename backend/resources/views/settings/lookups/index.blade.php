@@ -31,7 +31,6 @@
 
     <x-data-table
         :columns="[
-            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'key', 'label' => 'Key'],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'items_count', 'label' => __('common.lookup_item_count'), 'class' => 'text-center'],
@@ -46,7 +45,6 @@
     >
         @foreach ($lists as $list)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors duration-150">
-                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $list->auto_code }}</td>
                 <td class="px-4 py-3 font-mono text-xs text-slate-700 dark:text-slate-300">
                     {{ $list->key }}
                     @if($list->is_system)

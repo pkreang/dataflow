@@ -39,7 +39,6 @@
 
     <x-data-table
         :columns="[
-            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'code', 'label' => __('common.code')],
             ['key' => 'building', 'label' => __('common.building')],
@@ -56,7 +55,6 @@
     >
         @foreach ($locations as $location)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
-                <td class="px-4 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">{{ $location->auto_code }}</td>
                 <td class="table-primary">{{ $location->name }}</td>
                 <td class="table-sub">{{ $location->code }}</td>
                 <td class="table-sub">{{ $location->building ?? '—' }}</td>

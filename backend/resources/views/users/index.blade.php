@@ -49,7 +49,6 @@
         <table class="min-w-full divide-y divide-slate-200">
             <thead class="bg-slate-50 dark:bg-slate-800/60">
                 <tr>
-                    <th class="table-header px-6 py-3 text-left">{{ __('common.system_code') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.user') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.departments') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.positions') }}</th>
@@ -82,7 +81,6 @@
                         $isSuperAdmin = $user->is_super_admin ?? false;
                     @endphp
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
-                        <td class="px-6 py-3 text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $user->auto_code }}</td>
                         <td class="px-6 py-3 whitespace-nowrap">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full {{ $avatarBg }} flex items-center justify-center shrink-0">
@@ -173,7 +171,7 @@
                         </td>
                     </tr>
                 @empty
-                    <x-table-empty-state :colspan="9" :message="__('common.no_users_found')"
+                    <x-table-empty-state :colspan="8" :message="__('common.no_users_found')"
                         :cta-href="route('users.create')" :cta-label="__('common.add_user')" />
                 @endforelse
             </tbody>
@@ -183,7 +181,7 @@
     <x-per-page-footer :paginator="$users" :perPage="$perPage" id="users-pagination" />
 
     <template id="users-skeleton-source">
-        <x-skeleton-rows :rows="5" :cols="9" />
+        <x-skeleton-rows :rows="5" :cols="8" />
     </template>
 </div>
 @endsection

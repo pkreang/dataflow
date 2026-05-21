@@ -18,11 +18,6 @@
         </a>
     </div>
 
-    <div class="alert-info mb-4">
-        {{ __('common.workflow_routing_banner') }}
-        <a href="{{ route('settings.approval-routing') }}" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">{{ __('common.approval_routing') }}</a>
-    </div>
-
     @if (session('error'))
         <div class="alert-error mb-4">
             <p class="text-sm">{{ session('error') }}</p>
@@ -31,7 +26,6 @@
 
     <x-data-table
         :columns="[
-            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'name', 'label' => __('common.workflow_col_name')],
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'stages', 'label' => __('common.workflow_col_stages')],
@@ -45,7 +39,6 @@
     >
         @foreach ($workflows as $workflow)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                <td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-slate-100">{{ $workflow->auto_code }}</td>
                 <td class="table-primary">{{ $workflow->name }}</td>
                 <td class="table-sub">
                     <span class="inline-flex items-center gap-1.5">

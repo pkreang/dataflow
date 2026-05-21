@@ -37,12 +37,6 @@
         <div class="card p-6 mb-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <div>
-                    <label class="form-label">{{ __('common.system_code') }}</label>
-                    <input type="text" value="{{ $position->auto_code }}" disabled
-                           class="form-input bg-slate-50 dark:bg-slate-800 text-slate-500 font-mono cursor-not-allowed" />
-                    <p class="mt-1 text-xs text-slate-400">{{ __('common.system_code_immutable_hint') }}</p>
-                </div>
-                <div>
                     <label class="form-label">
                         {{ __('common.code') }} <span class="text-red-500">*</span>
                     </label>

@@ -39,7 +39,6 @@
 
     <x-data-table
         :columns="[
-            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'code', 'label' => __('common.code')],
             ['key' => 'remark', 'label' => __('common.remark')],
@@ -54,7 +53,6 @@
     >
         @foreach ($categories as $category)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
-                <td class="px-4 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">{{ $category->auto_code }}</td>
                 <td class="table-primary">{{ $category->name }}</td>
                 <td class="table-sub">{{ $category->code }}</td>
                 <td class="table-sub max-w-xs truncate">{{ $category->description ?? '—' }}</td>

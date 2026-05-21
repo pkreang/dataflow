@@ -48,7 +48,6 @@
 
     <x-data-table
         :columns="[
-            ['key' => 'auto_code', 'label' => __('common.system_code')],
             ['key' => 'name', 'label' => __('common.name')],
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'fields', 'label' => __('common.fields')],
@@ -65,7 +64,6 @@
     >
         @foreach ($forms as $form)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
-                <td class="px-4 py-3 text-xs font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ $form->auto_code }}</td>
                 <td class="px-4 py-3 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-violet-500 flex items-center justify-center shrink-0">

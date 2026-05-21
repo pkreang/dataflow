@@ -42,7 +42,6 @@
                 <thead class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                         <th class="px-6 py-3 w-10"></th>
-                        <th class="table-header">{{ __('common.system_code') }}</th>
                         <th class="table-header">{{ __('common.menu_field_icon') }}</th>
                         <th class="table-header">{{ __('common.menu_field_label') }}</th>
                         <th class="table-header">{{ __('common.menu_field_route') }}</th>
@@ -61,7 +60,6 @@
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
                                 </span>
                             </td>
-                            <td class="px-6 py-3 text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $menu->auto_code }}</td>
                             <td class="px-6 py-3">
                                 <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
                                     <x-nav-icon :name="$menu->icon ?? ''" class="w-4 h-4" />
@@ -134,7 +132,6 @@
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
                                 </span>
                             </td>
-                            <td class="px-6 py-3 text-xs font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ $child->auto_code }}</td>
                             <td class="px-6 py-3">
                                 <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 ml-4">
                                     <x-nav-icon :name="$child->icon ?? ''" class="w-3.5 h-3.5" />
@@ -232,7 +229,7 @@ document.addEventListener('alpine:init', () => {
                         .then(r => r.json())
                         .then(() => {
                             document.querySelectorAll('[data-menu-id]').forEach((row, i) => {
-                                const orderCell = row.querySelector('td:nth-child(7)');
+                                const orderCell = row.querySelector('td:nth-child(6)');
                                 if (orderCell) orderCell.textContent = i + 1;
                             });
                         });

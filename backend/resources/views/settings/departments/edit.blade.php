@@ -38,12 +38,6 @@
                 @csrf
                 @method('PUT')
                 <div>
-                    <label class="form-label">{{ __('common.system_code') }}</label>
-                    <input type="text" value="{{ $department->auto_code }}" disabled
-                           class="form-input mt-1 bg-slate-50 dark:bg-slate-800 text-slate-500 font-mono cursor-not-allowed" />
-                    <p class="mt-1 text-xs text-slate-400">{{ __('common.system_code_immutable_hint') }}</p>
-                </div>
-                <div>
                     <label class="form-label">{{ __('common.code') }}</label>
                     <input name="code" value="{{ $department->code }}" required class="form-input mt-1" />
                 </div>
