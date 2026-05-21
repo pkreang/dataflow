@@ -240,6 +240,7 @@ class DocumentFormSubmissionController extends Controller
         $payload = $validated['fields'] ?? [];
 
         $payload = $this->processFileUploads($documentForm, $payload, $request);
+        $payload = $this->recomputeFormulaFields($documentForm, $payload);
 
         $userId = (int) (session('user.id') ?? 0);
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
@@ -301,6 +302,10 @@ class DocumentFormSubmissionController extends Controller
             $allowed = $this->filterPayloadForAssignee($submission, $payload, $userId);
             $payload = array_merge($submission->payload ?? [], $allowed);
         }
+
+        // Recompute formula fields server-side — never trust the client value
+        // since the hidden mirror input is editable via devtools.
+        $payload = $this->recomputeFormulaFields($submission->form, $payload);
 
         // Capture per-field diff BEFORE the update so we can record what changed.
         // Computed against the post-filter payload (what's actually persisted),
@@ -955,7 +960,7 @@ class DocumentFormSubmissionController extends Controller
             $fieldRules = $isRequired ? ['required'] : ['nullable'];
 
             $fieldRules[] = match ($field->field_type) {
-                'number', 'currency' => 'numeric',
+                'number', 'currency', 'formula' => 'numeric',
                 'date' => 'date',
                 'email' => 'email',
                 'checkbox', 'multi_select', 'multi_file' => 'array',
@@ -1051,5 +1056,35 @@ class DocumentFormSubmissionController extends Controller
             }
         }
         return true;
+    }
+
+    /**
+     * Recompute every `formula` field's value from the current payload, so the
+     * persisted value is server-derived (not the client-supplied mirror, which
+     * is editable via devtools). Bad expressions degrade to null rather than
+     * blocking the save — admins surface syntax errors at form-save time.
+     */
+    private function recomputeFormulaFields(DocumentForm $form, array $payload): array
+    {
+        $form->loadMissing('fields');
+        $evaluator = new \App\Support\FormulaEvaluator();
+
+        foreach ($form->fields as $field) {
+            if ($field->field_type !== 'formula') {
+                continue;
+            }
+            $expression = $field->options['expression'] ?? null;
+            if (! is_string($expression) || trim($expression) === '') {
+                $payload[$field->field_key] = null;
+                continue;
+            }
+            try {
+                $payload[$field->field_key] = $evaluator->evaluate($expression, $payload);
+            } catch (\InvalidArgumentException) {
+                $payload[$field->field_key] = null;
+            }
+        }
+
+        return $payload;
     }
 }

@@ -282,6 +282,18 @@ class NavigationMenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'id' => 64,
+                'parent_id' => 2,
+                'label' => 'KPI Cycles',
+                'label_en' => 'KPI Cycles',
+                'label_th' => 'รอบประเมิน KPI',
+                'icon' => 'chart-bar',
+                'route' => '/settings/kpi-cycles',
+                'permission' => 'manage_settings',
+                'sort_order' => 14,
+                'is_active' => true,
+            ],
+            [
                 'id' => 37,
                 'parent_id' => 2,
                 'label' => 'Department workflow bindings',

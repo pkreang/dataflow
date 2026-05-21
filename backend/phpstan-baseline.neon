@@ -267,13 +267,13 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 3
 			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$form\.$#'
 			identifier: property.notFound
-			count: 13
+			count: 14
 			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
 
 		-
@@ -1029,7 +1029,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 4
 			path: app/Services/ApprovalFlowService.php
 
 		-
@@ -1071,13 +1071,13 @@ parameters:
 		-
 			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
 			identifier: larastan.relationExistence
-			count: 1
+			count: 2
 			path: app/Services/ApprovalFlowService.php
 
 		-
 			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
 			identifier: larastan.relationExistence
-			count: 1
+			count: 2
 			path: app/Services/ApprovalFlowService.php
 
 		-
@@ -1205,6 +1205,12 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Services/FormSchemaService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Kpi/KpiCycleReporter.php
 
 		-
 			message: '#^Cannot access property \$month on string\.$#'

@@ -110,6 +110,7 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/forms/submissions/{submission}/print', [DocumentFormSubmissionController::class, 'print'])->name('forms.submission.print');
     Route::post('/forms/submissions/{submission}/duplicate', [DocumentFormSubmissionController::class, 'duplicate'])->name('forms.submission.duplicate');
     Route::post('/forms/submissions/{submission}/return-to-draft', [DocumentFormSubmissionController::class, 'returnToDraft'])->name('forms.submission.return-to-draft');
+    Route::post('/forms/submissions/{submission}/send-back', [DocumentFormSubmissionController::class, 'sendBack'])->name('forms.submission.send-back')->middleware('permission:approval.approve');
     Route::get('/forms/submissions/{submission}/history', [DocumentFormSubmissionController::class, 'history'])->name('forms.submission.history')->withTrashed();
     Route::get('/forms/submissions/{submission}/evaluate', [\App\Http\Controllers\Web\EvaluationController::class, 'create'])->name('forms.submission.evaluate');
     Route::post('/forms/submissions/{submission}/evaluate', [\App\Http\Controllers\Web\EvaluationController::class, 'store'])->name('forms.submission.evaluate.store');
@@ -223,6 +224,8 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/users/import', [UserController::class, 'importForm'])->name('users.import');
     Route::post('/users/import', [UserController::class, 'import'])->name('users.import.store');
     Route::resource('users', UserController::class);
+    Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.password.reset');
+    Route::post('/users/{user}/send-password-link', [UserController::class, 'sendPasswordResetLink'])->name('users.password.send-link');
     Route::get('roles/overview', [RoleController::class, 'overview'])->name('roles.overview');
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
@@ -317,6 +320,17 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/approval-routing', [SettingController::class, 'approvalRouting'])->name('settings.approval-routing');
         Route::post('/settings/approval-routing', [SettingController::class, 'saveApprovalRouting'])->name('settings.approval-routing.save');
         Route::get('/settings/system-change-log', [SystemChangeLogController::class, 'index'])->name('settings.system-change-log');
+
+        // KPI evaluation cycles — bundle of evaluations against one form across a period.
+        Route::get('/settings/kpi-cycles', [\App\Http\Controllers\Web\KpiCycleController::class, 'index'])->name('settings.kpi-cycles.index');
+        Route::get('/settings/kpi-cycles/create', [\App\Http\Controllers\Web\KpiCycleController::class, 'create'])->name('settings.kpi-cycles.create');
+        Route::post('/settings/kpi-cycles', [\App\Http\Controllers\Web\KpiCycleController::class, 'store'])->name('settings.kpi-cycles.store');
+        Route::get('/settings/kpi-cycles/{kpiCycle}/edit', [\App\Http\Controllers\Web\KpiCycleController::class, 'edit'])->name('settings.kpi-cycles.edit');
+        Route::put('/settings/kpi-cycles/{kpiCycle}', [\App\Http\Controllers\Web\KpiCycleController::class, 'update'])->name('settings.kpi-cycles.update');
+        Route::delete('/settings/kpi-cycles/{kpiCycle}', [\App\Http\Controllers\Web\KpiCycleController::class, 'destroy'])->name('settings.kpi-cycles.destroy');
+        Route::post('/settings/kpi-cycles/{kpiCycle}/open', [\App\Http\Controllers\Web\KpiCycleController::class, 'open'])->name('settings.kpi-cycles.open');
+        Route::post('/settings/kpi-cycles/{kpiCycle}/close', [\App\Http\Controllers\Web\KpiCycleController::class, 'close'])->name('settings.kpi-cycles.close');
+        Route::get('/settings/kpi-cycles/{kpiCycle}/report', [\App\Http\Controllers\Web\KpiCycleReportController::class, 'show'])->name('settings.kpi-cycles.report');
         Route::get('/settings/authentication', [SettingController::class, 'authSettings'])->name('settings.auth');
         Route::post('/settings/authentication', [SettingController::class, 'saveAuthSettings'])->name('settings.auth.save');
         Route::get('/settings/document-types', [DocumentTypeController::class, 'index'])->name('settings.document-types.index');

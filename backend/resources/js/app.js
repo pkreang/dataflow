@@ -1,4 +1,5 @@
 import './bootstrap';
+import './formula-evaluator';
 import Alpine from 'alpinejs';
 import anchor from '@alpinejs/anchor';
 import Chart from 'chart.js/auto';

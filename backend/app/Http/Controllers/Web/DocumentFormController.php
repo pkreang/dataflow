@@ -41,7 +41,7 @@ class DocumentFormController extends Controller
         return [
             'text', 'textarea', 'number', 'date', 'select', 'checkbox', 'radio', 'file', 'multi_file',
             'time', 'datetime', 'email', 'phone', 'signature', 'currency', 'lookup', 'table', 'section',
-            'auto_number', 'image', 'multi_select', 'group', 'page_break', 'qr_code',
+            'auto_number', 'image', 'multi_select', 'group', 'page_break', 'qr_code', 'formula',
         ];
     }
 
@@ -262,6 +262,8 @@ class DocumentFormController extends Controller
             'fields.*.table_columns' => ['nullable', 'string', 'max:65535'],
             'fields.*.group_options' => ['nullable', 'string', 'max:65535'],
             'fields.*.qr_options' => ['nullable', 'string', 'max:2000'],
+            'fields.*.expression' => ['nullable', 'string', 'max:500'],
+            'fields.*.decimals' => ['nullable', 'integer', 'min:0', 'max:8'],
             'fields.*.col_span' => ['nullable', 'integer', 'min:0', 'max:4'],
             'fields.*.visibility_rules' => ['nullable', 'string', 'max:65535'],
             'fields.*.required_rules' => ['nullable', 'string', 'max:65535'],
@@ -718,6 +720,26 @@ class DocumentFormController extends Controller
         // QR code: template + size + label position; no payload column.
         if ($fieldType === 'qr_code') {
             return $this->parseQrOptions($field);
+        }
+
+        // Formula: arithmetic expression over other field keys + optional
+        // display precision. Syntax-validate at save time so admins catch
+        // typos before users hit them.
+        if ($fieldType === 'formula') {
+            $expression = trim((string) ($field['expression'] ?? ''));
+            $decimals = max(0, min(8, (int) ($field['decimals'] ?? 2)));
+            if ($expression === '') {
+                return null;
+            }
+            try {
+                (new \App\Support\FormulaEvaluator())->evaluate($expression, []);
+            } catch (\InvalidArgumentException $e) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'formula' => __('common.formula_syntax_error', ['error' => $e->getMessage()]),
+                ]);
+            }
+
+            return ['expression' => $expression, 'decimals' => $decimals];
         }
 
         // multi_select supports either a lookup source OR hardcoded options.

@@ -229,7 +229,7 @@ class FormSchemaService
     {
         match ($fieldType) {
             'textarea', 'signature' => $table->text($fieldKey)->nullable(),
-            'number' => $table->decimal($fieldKey, 15, 4)->nullable(),
+            'number', 'formula' => $table->decimal($fieldKey, 15, 4)->nullable(),
             'currency' => $table->decimal($fieldKey, 15, 2)->nullable(),
             'date' => $table->date($fieldKey)->nullable(),
             'time' => $table->time($fieldKey)->nullable(),

@@ -13,6 +13,7 @@
         $isTable = $f->field_type === 'table';
         $isGroup = $f->field_type === 'group';
         $isQrCode = $f->field_type === 'qr_code';
+        $isFormula = $f->field_type === 'formula';
         $isMultiSelectLookup = $f->field_type === 'multi_select' && is_array($f->options) && isset($f->options['source']);
         return [
             'field_key' => $f->field_key,
@@ -33,6 +34,8 @@
             'table_columns' => $isTable ? ($f->options['columns'] ?? []) : [],
             'group_options' => $isGroup ? (is_array($f->options) ? $f->options : []) : [],
             'qr_options' => $isQrCode ? (is_array($f->options) ? $f->options : []) : [],
+            'expression' => $isFormula ? (string) ($f->options['expression'] ?? '') : '',
+            'decimals' => $isFormula ? (int) ($f->options['decimals'] ?? 2) : 2,
             'visibility_rules' => $f->visibility_rules ?? [],
             'required_rules' => $f->required_rules ?? [],
             'validation_rules' => (object) ($f->validation_rules ?? []),
@@ -157,11 +160,11 @@
                     </template>
                 </div>
 
-                <div x-show="currentDocumentType === 'evaluation'" x-cloak class="mt-3 rounded-lg border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-900/10 p-3">
-                    <label class="form-label text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                <div x-show="currentDocumentType === 'evaluation'" x-cloak class="mt-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-3">
+                    <label class="form-label text-xs font-semibold">
                         {{ __('common.target_document_types_label') }}
                     </label>
-                    <p class="text-xs text-emerald-700 dark:text-emerald-300 mb-2">{{ __('common.target_document_types_hint') }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">{{ __('common.target_document_types_hint') }}</p>
                     @php
                         $selectedTargets = (array) old('target_document_types', $documentForm?->target_document_types ?? []);
                     @endphp
@@ -290,10 +293,11 @@
                             <option value="section">{{ __('common.document_form_type_section') }}</option>
                             <option value="page_break">{{ __('common.document_form_type_page_break') }}</option>
                             <option value="qr_code">{{ __('common.document_form_type_qr_code') }}</option>
+                            <option value="formula">{{ __('common.document_form_type_formula') }}</option>
                             <option value="auto_number">{{ __('common.document_form_type_auto_number') }}</option>
                         </select>
                     </div>
-                    <div x-show="!['lookup','table','section','image','group','page_break','qr_code'].includes(field.field_type)">
+                    <div x-show="!['lookup','table','section','image','group','page_break','qr_code','formula'].includes(field.field_type)">
                         <label class="text-xs text-slate-500">{{ __('common.document_form_placeholder') }}</label>
                         <input :name="`fields[${idx}][placeholder]`" x-model="field.placeholder" class="form-input mt-1" />
                     </div>
@@ -534,6 +538,29 @@
                                 </div>
                             </div>
                             <input type="hidden" :name="`fields[${idx}][qr_options]`" :value="JSON.stringify(field.qr_options || {})">
+                        </div>
+                    </template>
+
+                    {{-- Formula config — expression + display decimals --}}
+                    <template x-if="field.field_type === 'formula'">
+                        <div class="md:col-span-3 border-t border-slate-100 dark:border-slate-700 pt-3 space-y-3">
+                            <div>
+                                <label class="text-xs text-slate-500">{{ __('common.formula_expression_label') }}</label>
+                                <input type="text" :name="`fields[${idx}][expression]`" x-model="field.expression"
+                                       placeholder="score_a + score_b + score_c"
+                                       maxlength="500"
+                                       class="form-input mt-1 text-sm font-mono">
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                    {{ __('common.formula_help') }}
+                                </p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-slate-500">{{ __('common.formula_decimals') }}</label>
+                                    <input type="number" min="0" max="8" :name="`fields[${idx}][decimals]`"
+                                           x-model.number="field.decimals" class="form-input mt-1 text-sm">
+                                </div>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -820,6 +847,11 @@
                 size: typeof q.size === 'number' ? q.size : 128,
                 label_position: typeof q.label_position === 'string' ? q.label_position : 'below',
             };
+        }
+        // Formula fields: ensure expression + decimals defaults so x-model bindings work.
+        if (f.field_type === 'formula') {
+            if (typeof f.expression !== 'string') f.expression = '';
+            if (typeof f.decimals !== 'number') f.decimals = 2;
         }
         return f;
     }
