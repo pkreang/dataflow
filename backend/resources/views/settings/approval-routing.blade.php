@@ -26,11 +26,6 @@
             </div>
         @endif
 
-        <div class="alert-info mb-6">
-            <p class="font-medium text-slate-900 dark:text-slate-100 mb-1">{{ __('common.approval_routing_hint_title') }}</p>
-            <p>{{ __('common.approval_routing_per_doctype_hint') }}</p>
-        </div>
-
         <form method="POST" action="{{ route('settings.approval-routing.save') }}" novalidate>
             @csrf
 
