@@ -48,13 +48,7 @@
         @enderror
     </div>
 
-    @include('companies._address_fields', [
-        'prefix' => '',
-        'model' => $company,
-        'showLegacy' => true,
-        'includeLegacyInPartial' => false,
-    ])
-    @include('companies._address_legacy_field', ['model' => $company])
+    @include('companies._address_fields', ['prefix' => '', 'model' => $company])
 
     <div>
         <label for="phone" class="form-label">

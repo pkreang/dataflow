@@ -12,10 +12,6 @@
         <div class="space-y-6 mb-8">
             @foreach ($company->branches as $branch)
                 <div class="card p-4">
-                    <div class="flex items-center gap-2 mb-3 text-xs">
-                        <span class="text-slate-500 dark:text-slate-400">{{ __('common.system_code') }}:</span>
-                        <span class="font-mono text-slate-900 dark:text-slate-100">{{ $branch->auto_code }}</span>
-                    </div>
                     <form method="POST" action="{{ route('companies.branches.update', [$company, $branch]) }}" class="space-y-3" novalidate>
                         @csrf
                         @method('PUT')
@@ -30,12 +26,7 @@
                                 <input type="text" name="name" value="{{ $branch->name }}" required maxlength="255"
                                        class="form-input">
                             </div>
-                            @include('companies._address_fields', [
-                                'prefix' => '',
-                                'model' => $branch,
-                                'showLegacy' => true,
-                                'legacyInputId' => 'branch-legacy-'.$branch->id,
-                            ])
+                            @include('companies._address_fields', ['prefix' => '', 'model' => $branch])
                             <div>
                                 <label class="form-label">{{ __('company.branch_phone') }}</label>
                                 <input type="text" name="phone" value="{{ $branch->phone }}" maxlength="20"
@@ -83,7 +74,7 @@
                     <input type="text" name="branch_name" value="{{ old('branch_name') }}" required maxlength="255"
                            class="form-input">
                 </div>
-                @include('companies._address_fields', ['prefix' => 'branch_', 'model' => null, 'showLegacy' => false])
+                @include('companies._address_fields', ['prefix' => 'branch_', 'model' => null])
                 <div>
                     <label class="form-label">{{ __('company.branch_phone') }}</label>
                     <input type="text" name="branch_phone" value="{{ old('branch_phone') }}" maxlength="20"

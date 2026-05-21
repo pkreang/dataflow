@@ -150,7 +150,7 @@ Alpine.data('userIndex', (initialQuery = '') => ({
     }
 }));
 
-/** Thai subdistrict autocomplete: fills subdistrict, district, province, postal; locks อำเภอ/จังหวัด/รหัส after pick */
+/** Thai subdistrict autocomplete: fills subdistrict, district, province, postal after pick (all fields stay editable) */
 Alpine.data('thaiSubdistrictPicker', (config) => ({
     searchUrl: config.searchUrl,
     query: '',
@@ -159,26 +159,17 @@ Alpine.data('thaiSubdistrictPicker', (config) => ({
     results: [],
     timer: null,
     highlighted: -1,
-    pickerLocked: false,
-    lastPickedSub: '',
     init() {
         this.$nextTick(() => {
             const sub = this.$refs.subdistrict;
             if (sub?.value) {
                 this.query = sub.value;
-                this.lastPickedSub = sub.value.trim();
             }
         });
     },
     onSubdistrictInput(e) {
         this.query = e.target.value;
-        if (this.pickerLocked && this.query.trim() !== (this.lastPickedSub || '').trim()) {
-            this.pickerLocked = false;
-        }
         this.onInput();
-    },
-    unlockPickerFields() {
-        this.pickerLocked = false;
     },
     onInput() {
         this.open = true;
@@ -222,8 +213,6 @@ Alpine.data('thaiSubdistrictPicker', (config) => ({
         this.$refs.province.value = item.p;
         this.$refs.postal.value = item.z;
         this.query = item.t;
-        this.lastPickedSub = item.t.trim();
-        this.pickerLocked = true;
         this.open = false;
         this.results = [];
         this.highlighted = -1;
