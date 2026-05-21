@@ -31,7 +31,7 @@ class DepartmentsCrudTest extends TestCase
         ]);
 
         $department = Department::where('code', 'ENG')->firstOrFail();
-        $response->assertRedirect(route('settings.departments.edit', $department));
+        $response->assertRedirect(route('settings.departments.index'));
         $this->assertSame('Engineering', $department->name);
         $this->assertTrue($department->is_active);
     }

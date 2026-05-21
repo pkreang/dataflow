@@ -103,8 +103,8 @@ class DepartmentController extends Controller
         ]);
 
         return redirect()
-            ->route('settings.departments.edit', $department)
-            ->with('success', __('common.department_created_bind_workflows'));
+            ->route('settings.departments.index')
+            ->with('success', __('common.department_created'));
     }
 
     public function update(Request $request, Department $department): RedirectResponse

@@ -67,4 +67,18 @@ return [
     'user_disabled' => 'ปิดใช้งานผู้ใช้แล้ว',
     'user_deleted' => 'ลบผู้ใช้สำเร็จแล้ว',
     'cannot_delete_super_admin' => 'ไม่สามารถลบผู้ดูแลระบบสูงสุดได้',
+
+    // เครื่องมือจัดการรหัสผ่านสำหรับ admin
+    'password_section_title' => 'รหัสผ่าน',
+    'password_just_created_hint' => 'ผู้ใช้ใหม่ — เลือก 1 ทางเพื่อให้เขา login ได้:',
+    'password_reset_button' => 'สร้างรหัสผ่านชั่วคราว',
+    'password_reset_confirm' => 'สร้างรหัสผ่านสุ่มใหม่? จะโชว์ครั้งเดียวเท่านั้น',
+    'password_reset_success' => 'สร้างรหัสผ่านชั่วคราวแล้ว',
+    'password_reset_warning' => 'คัดลอกรหัสนี้ตอนนี้ — จะไม่ขึ้นอีก ผู้ใช้จะต้องเปลี่ยนรหัสตอน login ครั้งแรก',
+    'password_link_button' => 'ส่งลิงก์ตั้งรหัสผ่านทางอีเมล',
+    'password_link_confirm' => 'ส่งลิงก์ตั้งรหัสผ่านไปอีเมลของผู้ใช้?',
+    'password_link_sent' => 'ส่งลิงก์ตั้งรหัสผ่านแล้ว',
+    'password_link_unsupported' => 'ส่งลิงก์ให้ผู้ใช้นี้ไม่ได้ (SSO / LDAP / ปิดใช้งาน)',
+    'password_copy' => 'คัดลอก',
+    'password_copied' => 'คัดลอกแล้ว!',
 ];

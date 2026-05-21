@@ -29,7 +29,7 @@ class UsersCrudTest extends TestCase
         $position = Position::create(['name' => 'P', 'code' => 'P', 'is_active' => true]);
         $role = Role::firstWhere('name', 'admin') ?? Role::create(['name' => 'admin', 'guard_name' => 'web']);
 
-        $this->actingAsWebSession($admin)->post(route('users.store'), [
+        $response = $this->actingAsWebSession($admin)->post(route('users.store'), [
             'first_name' => 'New',
             'last_name' => 'Hire',
             'email' => 'new-hire@example.test',
@@ -37,10 +37,12 @@ class UsersCrudTest extends TestCase
             'position_id' => $position->id,
             'role_type' => 'default',
             'role_id' => $role->id,
-        ])->assertRedirect(route('users.index'));
+        ]);
 
         $user = User::firstWhere('email', 'new-hire@example.test');
         $this->assertNotNull($user);
+        // Redirect lands on the new user's edit page so admin can pick how to set password.
+        $response->assertRedirect(route('users.edit', ['user' => $user->id, 'just_created' => 1]));
         $this->assertSame($dept->id, $user->department_id);
         $this->assertTrue($user->hasRole($role->name));
     }
