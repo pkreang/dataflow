@@ -134,6 +134,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 | `doc/system-test-playbook.md` | ขั้นตอนทดสอบทั้งระบบก่อน merge — automated (`composer test`) + static (`composer analyse`/`lint`) + UAT 2 vertical |
 | `doc/uat-settings-menus.md` | UAT checklist สำหรับเมนูตั้งค่า 21 รายการ (access + CRUD + visual regression) |
 | `doc/uat-clean-slate-walkthrough.md` | UAT แบบ clean-slate — `migrate:fresh --seed` + ป้อนข้อมูลเองทุก entity ตามลำดับ dependency (ใช้ก่อน merge ก้อนใหญ่) |
+| `doc/uat-integration-merge-2026-05-21.md` | Delta UAT checklist สำหรับ merge `integration` → `main` (KPI Cycles, formula field, send-back, RBAC, auto-code, mobile, webhooks) |
 | `backend/README.md` | Seed, demo user, SSO |
 
 **มาตรฐานทีม (เมนู + list + CRUD + audit):** เมื่อตกลงแล้ว ให้สรุปเป็น playbook ไฟล์เดียวใต้ `doc/` (เช่น `doc/menu-permissions-and-forms.md`) แล้วเพิ่ม **หนึ่งแถว** ในตารางนี้ — อย่าให้ไฟล์นี้ยาวเกินจำเป็น
