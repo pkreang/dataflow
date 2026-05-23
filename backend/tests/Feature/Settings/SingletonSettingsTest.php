@@ -7,6 +7,7 @@ use App\Models\Setting;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
 use Tests\Concerns\InteractsWithSettingsAuth;
 use Tests\TestCase;
@@ -137,7 +138,74 @@ class SingletonSettingsTest extends TestCase
 
         $this->assertSame('1', Setting::get('notifications.email_enabled'));
         $this->assertSame('1', Setting::get('notifications.approval_pending_email'));
-        $this->assertSame('0', Setting::get('notifications.line_enabled'));
+        $this->assertSame('0', Setting::get('line_messaging.enabled'));
+    }
+
+    public function test_super_admin_can_save_line_messaging_credentials(): void
+    {
+        $admin = $this->makeSuperAdmin();
+
+        $this->actingAsWebSession($admin)->put(route('settings.notifications.update'), [
+            'mail_mailer' => 'log',
+            'line_messaging_channel_access_token' => 'real-token-abc-very-long-string',
+            'line_messaging_channel_id' => '1234567890',
+            'toggle' => [
+                'line_messaging.enabled' => '1',
+            ],
+        ])->assertRedirect();
+
+        $this->assertSame('real-token-abc-very-long-string', Setting::get('line_messaging.channel_access_token'));
+        $this->assertSame('1234567890', Setting::get('line_messaging.channel_id'));
+        $this->assertSame('1', Setting::get('line_messaging.enabled'));
+    }
+
+    public function test_test_line_send_pushes_message_to_admin_line_user_id(): void
+    {
+        $admin = $this->makeSuperAdmin();
+        $admin->update(['line_user_id' => 'Uadmin1234567890']);
+        Setting::set('line_messaging.channel_access_token', 'super-token-xyz');
+
+        Http::fake(['api.line.me/v2/bot/message/push' => Http::response('', 200)]);
+
+        $this->actingAsWebSession($admin)
+            ->post(route('settings.notifications.test-line'))
+            ->assertRedirect();
+
+        Http::assertSent(function ($req) {
+            return $req->url() === 'https://api.line.me/v2/bot/message/push'
+                && $req->method() === 'POST'
+                && $req->hasHeader('Authorization', 'Bearer super-token-xyz')
+                && ($req->data()['to'] ?? null) === 'Uadmin1234567890';
+        });
+    }
+
+    public function test_test_line_send_errors_when_token_missing(): void
+    {
+        $admin = $this->makeSuperAdmin();
+        $admin->update(['line_user_id' => 'Uadmin1234567890']);
+        Setting::set('line_messaging.channel_access_token', '');
+        Http::fake();
+
+        $this->actingAsWebSession($admin)
+            ->post(route('settings.notifications.test-line'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_test_line_send_errors_when_admin_has_no_line_user_id(): void
+    {
+        $admin = $this->makeSuperAdmin();
+        Setting::set('line_messaging.channel_access_token', 'super-token-xyz');
+        Http::fake();
+
+        $this->actingAsWebSession($admin)
+            ->post(route('settings.notifications.test-line'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        Http::assertNothingSent();
     }
 
     public function test_notifications_rejects_invalid_mailer(): void

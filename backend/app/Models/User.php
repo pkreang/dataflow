@@ -41,6 +41,7 @@ class User extends Authenticatable implements HasLocalePreference
         'position_id',
         'phone',
         'line_notify_token',
+        'line_user_id',
         'remark',
         'is_active',
         'is_super_admin',
@@ -51,7 +52,7 @@ class User extends Authenticatable implements HasLocalePreference
     protected $hidden = [
         'password',
         'remember_token',
-        'line_notify_token',
+        'line_user_id',
     ];
 
     protected $appends = ['full_name'];

@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Channels\LineMessagingChannel;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\Mail\ApplyDatabaseMailConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
@@ -17,7 +20,7 @@ class NotificationSettingController extends Controller
         'notifications.approval_pending_email',
         'notifications.workflow_approved_email',
         'notifications.workflow_rejected_email',
-        'notifications.line_enabled',
+        'line_messaging.enabled',
         'notifications.approval_pending_line',
         'notifications.workflow_approved_line',
         'notifications.workflow_rejected_line',
@@ -37,9 +40,16 @@ class NotificationSettingController extends Controller
         'mail.from_name',
     ];
 
+    private const LINE_MESSAGING_FORM_KEYS = [
+        'line_messaging.channel_access_token',
+        'line_messaging.channel_id',
+        'line_login.channel_id',
+        'line_login.channel_secret',
+    ];
+
     public function index(): View
     {
-        $keys = array_merge(self::NOTIFICATION_TOGGLE_KEYS, self::MAIL_FORM_KEYS);
+        $keys = array_merge(self::NOTIFICATION_TOGGLE_KEYS, self::MAIL_FORM_KEYS, self::LINE_MESSAGING_FORM_KEYS);
         $settings = Setting::whereIn('key', $keys)
             ->pluck('value', 'key')
             ->toArray();
@@ -64,7 +74,28 @@ class NotificationSettingController extends Controller
             'mail_smtp_encryption' => 'nullable|in:tls,ssl,none',
             'mail_from_address' => 'nullable|email|max:255',
             'mail_from_name' => 'nullable|string|max:255',
+            'line_messaging_channel_access_token' => 'nullable|string|max:500',
+            'line_messaging_channel_id' => 'nullable|string|max:64',
+            'line_login_channel_id' => 'nullable|string|max:64',
+            'line_login_channel_secret' => 'nullable|string|max:128',
         ]);
+
+        Setting::updateOrCreate(
+            ['key' => 'line_messaging.channel_access_token'],
+            ['value' => trim((string) $request->input('line_messaging_channel_access_token', ''))]
+        );
+        Setting::updateOrCreate(
+            ['key' => 'line_messaging.channel_id'],
+            ['value' => trim((string) $request->input('line_messaging_channel_id', ''))]
+        );
+        Setting::updateOrCreate(
+            ['key' => 'line_login.channel_id'],
+            ['value' => trim((string) $request->input('line_login_channel_id', ''))]
+        );
+        Setting::updateOrCreate(
+            ['key' => 'line_login.channel_secret'],
+            ['value' => trim((string) $request->input('line_login_channel_secret', ''))]
+        );
 
         $toggles = $request->input('toggle', []);
 
@@ -125,6 +156,7 @@ class NotificationSettingController extends Controller
         $cacheKeys = array_merge(
             self::NOTIFICATION_TOGGLE_KEYS,
             self::MAIL_FORM_KEYS,
+            self::LINE_MESSAGING_FORM_KEYS,
             ['mail.smtp_password_enc']
         );
         foreach ($cacheKeys as $key) {
@@ -136,5 +168,39 @@ class NotificationSettingController extends Controller
         return redirect()
             ->route('settings.notifications.index')
             ->with('success', __('notifications.settings_saved'));
+    }
+
+    public function testLineSend(Request $request): RedirectResponse
+    {
+        $userId = (int) (session('user')['id'] ?? 0);
+        $admin = User::find($userId);
+
+        if (! $admin) {
+            return redirect()->route('settings.notifications.index')
+                ->with('error', __('auth.unauthenticated'));
+        }
+
+        $token = Setting::get('line_messaging.channel_access_token');
+        if (! $token) {
+            return redirect()->route('settings.notifications.index')
+                ->with('error', __('notifications.line_test_send_no_token'));
+        }
+
+        if (! $admin->line_user_id) {
+            return redirect()->route('settings.notifications.index')
+                ->with('error', __('notifications.line_test_send_no_user_id'));
+        }
+
+        $notification = new class extends Notification {
+            public function toLineMessage(object $notifiable): string
+            {
+                return __('notifications.line_test_send_message', ['app' => config('app.name')]);
+            }
+        };
+
+        (new LineMessagingChannel())->send($admin, $notification);
+
+        return redirect()->route('settings.notifications.index')
+            ->with('success', __('notifications.line_test_send_dispatched'));
     }
 }

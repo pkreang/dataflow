@@ -52,7 +52,7 @@ class StockLowNotification extends Notification implements ShouldQueue
             ->action(__('notifications.view_document'), url('/spare-parts/stock'));
     }
 
-    public function toLineNotify(object $notifiable): string
+    public function toLineMessage(object $notifiable): string
     {
         return "\n"
             .'⚠️ '.__('notifications.stock_low_title')."\n"

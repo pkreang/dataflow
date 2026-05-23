@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Channels\LineNotifyChannel;
+use App\Channels\LineMessagingChannel;
 use App\Models\NotificationPreference;
 use App\Models\Setting;
 use App\Models\User;
@@ -12,7 +12,7 @@ class NotificationPreferenceService
     /**
      * Determine which notification channels are enabled for a user + event type.
      *
-     * @return array<string|class-string> e.g. ['database', 'mail', LineNotifyChannel::class]
+     * @return array<string|class-string> e.g. ['database', 'mail', LineMessagingChannel::class]
      */
     public function channels(int $userId, string $eventType): array
     {
@@ -23,7 +23,7 @@ class NotificationPreferenceService
         }
 
         if ($this->isLineEnabled($userId, $eventType)) {
-            $channels[] = LineNotifyChannel::class;
+            $channels[] = LineMessagingChannel::class;
         }
 
         return $channels;
@@ -44,8 +44,14 @@ class NotificationPreferenceService
 
     public function isLineEnabled(int $userId, string $eventType): bool
     {
-        // System-wide master toggle
-        if (! $this->systemSetting('notifications.line_enabled', true)) {
+        // System-wide master toggle (LINE Messaging API)
+        if (! $this->systemSetting('line_messaging.enabled', false)) {
+            return false;
+        }
+
+        // System must have a Channel Access Token configured
+        $token = Setting::where('key', 'line_messaging.channel_access_token')->value('value');
+        if (! $token) {
             return false;
         }
 
@@ -54,13 +60,13 @@ class NotificationPreferenceService
             return false;
         }
 
-        // User must have a LINE token configured
-        $hasToken = User::where('id', $userId)
-            ->whereNotNull('line_notify_token')
-            ->where('line_notify_token', '!=', '')
+        // User must have linked their LINE account (line_user_id populated)
+        $hasUserId = User::where('id', $userId)
+            ->whereNotNull('line_user_id')
+            ->where('line_user_id', '!=', '')
             ->exists();
 
-        if (! $hasToken) {
+        if (! $hasUserId) {
             return false;
         }
 
