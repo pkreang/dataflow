@@ -62,6 +62,13 @@ Route::get('/m/login', [MobileController::class, 'loginShow'])->name('mobile.log
 Route::get('/auth/entra/redirect', [AuthController::class, 'redirectToEntra'])->name('auth.entra.redirect');
 Route::get('/auth/entra/callback', [AuthController::class, 'entraCallback'])->name('auth.entra.callback');
 Route::post('/auth/ldap/login', [AuthController::class, 'loginLdap'])->name('auth.ldap.login');
+
+// LINE Login (account linking — requires authenticated user)
+Route::middleware('auth.web')->group(function () {
+    Route::get('/auth/line/redirect', [ProfileController::class, 'lineLinkRedirect'])->name('auth.line.redirect');
+    Route::get('/auth/line/callback', [ProfileController::class, 'lineLinkCallback'])->name('auth.line.callback');
+    Route::post('/auth/line/unlink', [ProfileController::class, 'lineUnlink'])->name('auth.line.unlink');
+});
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
@@ -360,6 +367,7 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::put('/settings/document-forms/{documentForm}/policy', [DocumentFormWorkflowPolicyController::class, 'update'])->name('settings.document-forms.policy.update');
         Route::get('/settings/notifications', [NotificationSettingController::class, 'index'])->name('settings.notifications.index');
         Route::put('/settings/notifications', [NotificationSettingController::class, 'update'])->name('settings.notifications.update');
+        Route::post('/settings/notifications/test-line', [NotificationSettingController::class, 'testLineSend'])->name('settings.notifications.test-line');
         Route::get('/settings/branch-scoping', [BranchScopingController::class, 'edit'])->name('settings.branch-scoping');
         Route::put('/settings/branch-scoping', [BranchScopingController::class, 'update'])->name('settings.branch-scoping.update');
         Route::get('/settings/running-numbers', [RunningNumberController::class, 'index'])->name('settings.running-numbers.index');

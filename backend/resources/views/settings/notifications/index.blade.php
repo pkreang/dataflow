@@ -21,6 +21,12 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="alert-error mb-4">
+            {{ session('error') }}
+        </div>
+    @endif
+
     @if($errors->any())
         <div class="alert-error mb-4">
             <ul class="list-disc list-inside space-y-1 text-sm">
@@ -164,7 +170,7 @@
                 </div>
             </div>
 
-            {{-- LINE Notify Section --}}
+            {{-- LINE Messaging API (LINE Official Account) Section — replaces LINE Notify (discontinued 2025-03-31) --}}
             <div class="card p-6">
                 <div class="flex items-center gap-3 mb-2">
                     <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -179,16 +185,37 @@
                 </div>
 
                 <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 ml-11">
-                    {{ __('notifications.line_token_hint') }}
-                    <a href="https://notify-bot.line.me/" target="_blank" rel="noopener noreferrer"
-                       class="text-blue-600 dark:text-blue-400 hover:underline">notify-bot.line.me</a>
+                    {{ __('notifications.line_setup_hint') }}
+                    <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer"
+                       class="text-blue-600 dark:text-blue-400 hover:underline">developers.line.biz/console</a>
                 </p>
 
-                <div class="space-y-3">
+                <div class="space-y-4 ml-11">
+                    <div>
+                        <label for="line_messaging_channel_access_token" class="form-label">{{ __('notifications.line_channel_access_token') }}</label>
+                        <textarea id="line_messaging_channel_access_token"
+                                  name="line_messaging_channel_access_token"
+                                  rows="3"
+                                  class="form-input w-full font-mono text-xs"
+                                  placeholder="{{ __('notifications.line_channel_access_token_placeholder') }}">{{ $settings['line_messaging.channel_access_token'] ?? '' }}</textarea>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('notifications.line_channel_access_token_hint') }}</p>
+                    </div>
+
+                    <div>
+                        <label for="line_messaging_channel_id" class="form-label">{{ __('notifications.line_channel_id') }}</label>
+                        <input type="text" id="line_messaging_channel_id"
+                               name="line_messaging_channel_id"
+                               value="{{ $settings['line_messaging.channel_id'] ?? '' }}"
+                               class="form-input w-full max-w-xs"
+                               placeholder="{{ __('notifications.line_channel_id_placeholder') }}">
+                    </div>
+                </div>
+
+                <div class="space-y-3 mt-4">
                     <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="hidden" name="toggle[notifications.line_enabled]" value="0">
-                        <input type="checkbox" name="toggle[notifications.line_enabled]" value="1"
-                               {{ ($settings['notifications.line_enabled'] ?? '1') === '1' ? 'checked' : '' }}
+                        <input type="hidden" name="toggle[line_messaging.enabled]" value="0">
+                        <input type="checkbox" name="toggle[line_messaging.enabled]" value="1"
+                               {{ ($settings['line_messaging.enabled'] ?? '0') === '1' ? 'checked' : '' }}
                                class="rounded border-slate-300 text-green-600 focus:ring-green-500 w-4 h-4">
                         <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('notifications.line_notifications') }}</span>
                     </label>
@@ -212,6 +239,32 @@
                         </label>
                     @endforeach
                 </div>
+
+                {{-- LINE Login (account linking — separate channel from Messaging API) --}}
+                <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ __('notifications.line_login_section') }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">{{ __('notifications.line_login_section_hint') }}</p>
+
+                    <div class="space-y-4 ml-1">
+                        <div>
+                            <label for="line_login_channel_id" class="form-label">{{ __('notifications.line_login_channel_id') }}</label>
+                            <input type="text" id="line_login_channel_id" name="line_login_channel_id"
+                                   value="{{ $settings['line_login.channel_id'] ?? '' }}"
+                                   class="form-input w-full max-w-xs">
+                        </div>
+                        <div>
+                            <label for="line_login_channel_secret" class="form-label">{{ __('notifications.line_login_channel_secret') }}</label>
+                            <input type="text" id="line_login_channel_secret" name="line_login_channel_secret"
+                                   value="{{ $settings['line_login.channel_secret'] ?? '' }}"
+                                   class="form-input w-full font-mono text-xs">
+                        </div>
+                        <div>
+                            <label class="form-label">{{ __('notifications.line_login_callback_url') }}</label>
+                            <input type="text" readonly value="{{ route('auth.line.callback', [], true) }}"
+                                   class="form-input w-full font-mono text-xs bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 cursor-not-allowed">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -221,4 +274,14 @@
             </button>
         </div>
     </form>
+
+    {{-- Test send — must be OUTSIDE the main settings form (nested forms are invalid HTML) --}}
+    <div class="mt-4 flex justify-end">
+        <form method="POST" action="{{ route('settings.notifications.test-line') }}" class="inline">
+            @csrf
+            <button type="submit" class="btn-secondary text-sm">
+                {{ __('notifications.line_test_send') }}
+            </button>
+        </form>
+    </div>
 @endsection
