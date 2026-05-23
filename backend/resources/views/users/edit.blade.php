@@ -123,7 +123,7 @@
                     @else
                         <input type="email" id="email" value="{{ $user->email }}" readonly
                                class="form-input bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 cursor-not-allowed">
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.email_directory_managed_hint') }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.email_readonly_hint') }}</p>
                     @endif
                 </div>
                 <div>

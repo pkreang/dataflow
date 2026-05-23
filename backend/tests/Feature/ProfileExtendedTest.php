@@ -213,6 +213,69 @@ class ProfileExtendedTest extends TestCase
         $this->assertSame('NewLast', $user->last_name);
     }
 
+    public function test_local_user_cannot_change_own_email_via_profile_update(): void
+    {
+        $this->seedBase();
+        [$user, $position] = $this->makeUserWithPosition();
+        $originalEmail = $user->email;
+
+        $this->actingAsWebSession($user)->put(route('profile.update'), [
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => 'attacker-'.uniqid().'@evil.test',
+            'position_id' => $position->id,
+        ]);
+
+        $this->assertSame(
+            $originalEmail,
+            $user->fresh()->email,
+            'Local user email must not be editable via profile.update (login credential is immutable)'
+        );
+    }
+
+    public function test_admin_cannot_change_local_user_email_via_users_update(): void
+    {
+        $this->seedBase();
+        [$target, $position] = $this->makeUserWithPosition();
+        $dept = \App\Models\Department::create([
+            'code' => 'EMAILTST',
+            'name' => 'Email Lock Test Dept',
+            'is_active' => true,
+        ]);
+        $target->update(['department_id' => $dept->id]);
+        $originalEmail = $target->fresh()->email;
+
+        $admin = User::create([
+            'first_name' => 'Super',
+            'last_name' => 'Admin',
+            'email' => 'admin-'.uniqid().'@example.test',
+            'password' => 'password',
+            'is_active' => true,
+            'is_super_admin' => true,
+            'position_id' => $position->id,
+            'department_id' => $dept->id,
+        ]);
+
+        $response = $this->actingAsWebSession($admin)->put(route('users.update', $target->id), [
+            'first_name' => $target->first_name,
+            'last_name' => $target->last_name,
+            'email' => 'admin-changed-'.uniqid().'@evil.test',
+            'department_id' => $dept->id,
+            'position_id' => $position->id,
+            'phone' => '081-000-0000', // distinct change to prove the update ran
+        ]);
+
+        $response->assertSessionHasNoErrors(); // confirm validation passed (not a redirect-back-with-errors)
+        $response->assertRedirect();
+        $fresh = $target->fresh();
+        $this->assertSame('081-000-0000', $fresh->phone, 'Update must have actually executed');
+        $this->assertSame(
+            $originalEmail,
+            $fresh->email,
+            'Admin must not be able to change a user email via users.update (login credential is immutable)'
+        );
+    }
+
     // ── Helpers ─────────────────────────────────────────────
 
     private function seedBase(): void

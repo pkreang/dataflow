@@ -13,7 +13,6 @@ return [
     'import_ldap_lookup_failed' => 'Row skipped — LDAP check failed for :email.',
     'email_readonly_hint' => 'Email cannot be changed (used for login).',
     'email_edit_hint' => 'Used to sign in. Must be unique across users.',
-    'email_directory_managed_hint' => 'Email is managed by your sign-in provider (LDAP / Microsoft) and cannot be changed here.',
     'no_permissions_configured' => 'No permissions configured. Run: php artisan db:seed',
     'remark' => 'Remark',
     'placeholder_first_name' => 'e.g. Andy',

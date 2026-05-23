@@ -13,7 +13,6 @@ return [
     'import_ldap_lookup_failed' => 'ข้ามแถว — ตรวจสอบ LDAP ไม่สำเร็จสำหรับ :email',
     'email_readonly_hint' => 'ไม่สามารถแก้ไขอีเมลได้ (ใช้สำหรับเข้าสู่ระบบ)',
     'email_edit_hint' => 'ใช้สำหรับเข้าสู่ระบบ ต้องไม่ซ้ำกับผู้ใช้รายอื่น',
-    'email_directory_managed_hint' => 'อีเมลถูกจัดการโดยผู้ให้บริการล็อกอิน (LDAP / Microsoft) แก้ไขที่นี่ไม่ได้',
     'no_permissions_configured' => 'ยังไม่ได้ตั้งค่าสิทธิ์ กรุณารัน: php artisan db:seed',
     'remark' => 'หมายเหตุ',
     'placeholder_first_name' => 'เช่น สมชาย',
