@@ -26,7 +26,7 @@ composer dev   # web + queue + vite
 - [ ] **สร้าง cycle ใหม่:** ตั้งชื่อ + period + assign user → save → กลับมา list เห็นแถว
 - [ ] **แก้ cycle:** เพิ่ม assignment, ลบ assignment, เปลี่ยน period
 - [ ] **เปิด cycle (open):** กดเปิด → status เปลี่ยน, ฟอร์มสำหรับ assignee ถูกสร้าง
-- [ ] **ดูรายงาน:** `/kpi-cycles/{id}/report` → ตารางสรุปแสดง assignee × score
+- [ ] **ดูรายงาน:** `/settings/kpi-cycles/{id}/report` → ตารางสรุปแสดง assignee × score
 - [ ] **Formula field:** สร้างฟอร์มใหม่ → เพิ่ม field type "formula" → ตั้งสูตร เช่น `score_a + score_b`, `(a*0.4)+(b*0.6)`, `if(x>50, "ผ่าน", "ไม่ผ่าน")`
 - [ ] **Submit ฟอร์มที่มี formula:** กรอก field ต้นทาง → formula field อัปเดตค่าทันที (JS) → save → reload → ค่าตรง (PHP eval ต้อง match)
 - [ ] **Edge case:** หารด้วยศูนย์ → ไม่ crash, แสดง error/0 graceful
@@ -36,7 +36,7 @@ composer dev   # web + queue + vite
 
 ## B. Approval Send-back (commit 5a3f112) ★ ใหม่
 
-**ที่:** `/approvals/my-approvals` (รายการรออนุมัติ)
+**ที่:** `/approvals/my` (รายการรออนุมัติ)
 
 - [ ] มี action ใหม่ "ส่งกลับ" (return) นอกจาก approve/reject
 - [ ] **ส่งกลับไปยังผู้ขอ (requester):** เลือก destination = requester + comment → submit → status เปลี่ยนเป็น `returned` → requester เห็น draft กลับมาแก้ได้
@@ -49,7 +49,7 @@ composer dev   # web + queue + vite
 
 ## C. Admin Password Reset (commit 4a878b9)
 
-**ที่:** `/settings/users` → edit user
+**ที่:** `/users` → edit user
 
 - [ ] หน้า edit user ของ super-admin มี section "ตั้งรหัสผ่านใหม่"
 - [ ] กรอกรหัสใหม่ → save → user ตัวนั้น login ด้วยรหัสใหม่ได้
@@ -82,7 +82,7 @@ composer dev   # web + queue + vite
 
 ## F. RBAC: Permission overview + Write-guard (commits 0962787, 79de956, fe0a70b)
 
-**ที่:** `/settings/roles` (และ navigation menu management)
+**ที่:** `/roles` (และ navigation menu management)
 
 - [ ] **ปุ่ม "ดูภาพรวมสิทธิ์"** → matrix table role × permission ทั้งระบบ → ค้นหาได้ → footnote เรื่อง `is_super_admin`
 - [ ] **แก้ role:** ปุ่ม "เลือกทั้งกลุ่ม / ล้าง" per module → ติ๊กทีละ permission ได้ → **แถบสรุป "N / M สิทธิ์"** อัปเดตทันที (live)
@@ -142,11 +142,13 @@ composer dev   # web + queue + vite
 ## L. Mobile App + Webhooks + My Reports + Evaluations (commit 9a8d343)
 
 **Mobile app:**
-- [ ] `/m` หรือ `/mobile` (ตรวจ route ที่จริง) → mobile-optimized UI โหลด
+- [ ] `/m/login` (guest) → login → redirect ไป `/m/me` → mobile-optimized UI โหลด
+- [ ] `/m/forms`, `/m/requests`, `/m/approvals`, `/m/reports`, `/m/write` เข้าถึงได้
 - [ ] Submit ฟอร์มจากมือถือ → save ใน DB ปกติ
 
 **Webhooks:**
-- [ ] `/settings/webhooks` → สร้าง webhook → trigger event (เช่น approval) → webhook ส่ง POST → ตรวจ payload ใน receiver
+- [ ] **Outbound:** `/settings/integrations` → สร้าง webhook → trigger event (เช่น approval) → webhook ส่ง POST → ตรวจ payload ใน receiver
+- [ ] **Inbound:** `/settings/inbound-webhooks` → สร้าง endpoint → test → ดู payload
 
 **My Reports:**
 - [ ] `/my-reports` → list dashboard ที่ user เข้าถึงได้
