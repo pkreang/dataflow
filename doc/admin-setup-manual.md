@@ -191,31 +191,40 @@ settings=47
 
 **UAT check:** ☐
 
-### Step 1.2 — เพิ่ม Branch (สาขา) ใต้ Company
+### Step 1.2 — เพิ่ม Branch (สาขา) เพิ่มเติม (**OPTIONAL — ข้ามได้**)
 **ที่:** `/profile` → edit company  ·  **Permission:** `manage profile`
 
-**ทำอะไร:**
-1. ที่ `/profile` list → คลิก row action "แก้ไข" (icon ปากกา) บนแถว ABC → ไปหน้า edit
+**ทำความเข้าใจก่อน (อัปเดต 2026-05-25 หลัง UAT click-through):**
+- **company-level data = สำนักงานใหญ่ (HQ) อยู่แล้ว** โดย convention — section header ในหน้า edit เขียนชัดว่า "ข้อมูลองค์กร (สำนักงานใหญ่)" (key `company.company_info_section`)
+- **"Branches" section เอาไว้สำหรับสาขาเพิ่มเติม** ที่ไม่ใช่ HQ — เช่น สาขาภูมิภาค, โรงงาน, สำนักงานสาขา ที่มีที่อยู่/เบอร์โทรต่างจาก HQ
+- Hint ในหน้า (`company.branches_section_hint`): "ข้อมูลองค์กรด้านบนคือสำนักงานใหญ่ แต่ละสาขาตั้งที่อยู่และเบอร์โทรแยกได้ ผู้ใช้ที่ผูกสาขาจะเห็นข้อมูลติดต่อของสาขานั้นบนฟอร์มเอกสาร ถ้าไม่กรอกจะใช้ที่อยู่สำนักงานใหญ่"
+- **ห้ามสร้าง branch ชื่อ "สำนักงานใหญ่" / "HQ" ซ้ำ** — เพราะ company-level เป็น HQ อยู่แล้ว จะกลายเป็นข้อมูลซ้อน
+
+**ถ้าจะ skip:** กดเข้า Step 1.3 ต่อได้เลย — Phase 2 (Users) ผูก user ที่ "ไม่มี branch" (`branch_id=null`) ได้, ระบบจะ fallback ไปใช้ HQ ข้อมูล
+
+**ทำอะไร (ถ้าต้องการทดสอบหรือมีสาขาจริง):**
+1. ที่ `/profile` list → คลิก row action "แก้ไข" (icon ปากกา) บนแถว company → ไปหน้า edit
 2. เลื่อนลงล่างหน้า edit → เห็น section "สาขา" / "Branches" ใน dashed-border box
-3. ในกรอบ dashed กรอก:
-   - **รหัสสาขา (branch_code):** `HQ` *(required)*
-   - **ชื่อสาขา (branch_name):** `สำนักงานใหญ่` *(required)*
-   - **โทรศัพท์:** `02-123-4568` *(optional)*
-   - **ที่อยู่ (structured):** เลือกจังหวัด/อำเภอ/ตำบล (cascade) *(optional)*
-   - **สถานะ (is_active):** ☑ เปิดใช้งาน *(default true)*
+3. ในกรอบ dashed กรอก (ใช้ตัวอย่างสาขาจริง เช่น เชียงใหม่/CMI หรือ โรงงานบางบัวทอง/FTY):
+   - **รหัสสาขา (branch_code):** `CMI` *(required, ห้ามใช้ HQ)*
+   - **ชื่อสาขา (branch_name):** `สาขาเชียงใหม่` *(required, ห้ามใช้ "สำนักงานใหญ่")*
+   - **โทรศัพท์:** *(optional)*
+   - **ที่อยู่ (structured):** เลือกจังหวัด/อำเภอ/ตำบล (cascade) *(optional — ถ้าไม่กรอก ระบบ fallback ไปใช้ที่อยู่ HQ)*
+   - **สถานะ (is_active):** ☑ *(default true)*
 4. คลิกปุ่ม **"เพิ่มสาขา"** (ในกรอบ branches)
 
-**ผลที่ควรเห็น:**
+**ผลที่ควรเห็น (ถ้าทดสอบ):**
 - หน้า reload หรือ AJAX เพิ่มแถวสาขาใหม่ในตารางสาขาของ company
-- Toast: "สาขาถูกสร้างเรียบร้อย"
-- DB: `branches` row +1 พร้อม `company_id=1`
+- Toast: "สาขาถูกสร้างเรียบร้อย" (key `company.branch_created`)
+- DB: `branches` row +1 พร้อม `company_id` ของ company นั้น
 - กรอบ dashed สำหรับเพิ่มสาขาใหม่ ว่างพร้อมกรอกอีก
 
 **Pitfall:**
 - Branch ต้องมี company (FK required cascadeOnDelete) — ไม่มีปัญหาที่นี่เพราะอยู่ใต้ edit ของ company
 - ถ้าจะเพิ่มสาขาที่ 2 → กรอกในกรอบ dashed อีกรอบ ไม่ต้องออกจากหน้า edit
+- **ไม่มีปุ่ม "สร้าง HQ"** — เพราะ company = HQ อยู่แล้ว
 
-**UAT check:** ☐
+**UAT check:** ☐ (☑ ทันทีถ้า skip — single-HQ ก็ valid)
 
 ### Step 1.3 — สร้าง Departments (ฝ่าย/แผนก)
 **ที่:** `/settings/departments`  ·  **เมนู:** "ฝ่าย/แผนก"  ·  **Permission:** `manage_settings` *(super-admin)*
