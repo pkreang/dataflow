@@ -231,13 +231,15 @@ settings=47
 4. คลิก **"บันทึก"**
 
 **ผลที่ควรเห็น:**
-- Redirect กลับ list
+- Redirect กลับ list (`/settings/departments`)
 - Toast: "สร้างแผนกเรียบร้อย" (key `common.department_created`)
 - ตารางแสดง 1 แถว — IT, เทคโนโลยีสารสนเทศ, active
 - **ไม่มี** คอลัมน์ "รหัสระบบ / auto_code" ใน list (commit 2a4bd19 ซ่อน)
 - DB: `departments` row +1, `code='IT'` (uppercase)
 
 **ทำซ้ำสร้างอีก 2-3 แผนก** (เช่น `HR` → ทรัพยากรบุคคล, `FIN` → การเงิน, `OPS` → ปฏิบัติการ)
+
+**ผูก workflow ให้แผนก:** sidebar Settings → **"แผนก ↔ workflow"** (`/settings/department-workflow-bindings`) — grid matrix สำหรับ bind หลายแผนก × หลาย document_type ในที่เดียว (เปิดเมนูตั้งแต่ 2026-05-25 — ก่อนหน้านี้ `is_active: false`); หรือเข้าผ่านหน้า **edit ของแผนก** มี Workflow Bindings card ขวามือก็ได้
 
 **Pitfall:**
 - **code unique globally** — ไม่ใช่ unique per company; ทั้งระบบมี `IT` ได้ตัวเดียว
