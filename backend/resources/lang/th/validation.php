@@ -161,6 +161,8 @@ return [
 
     'document_form' => [
         'duplicate_field_key' => 'คีย์ฟิลด์ต้องไม่ซ้ำในฟอร์มเดียวกัน',
+        'field_key_reserved' => 'คีย์ฟิลด์ใช้ไม่ได้ — เป็นคำสงวน (id, user_id, department_id, status, reference_no, approval_instance_id, created_at, updated_at)',
+        'table_name_conflicts_system' => 'ชื่อตารางนี้มีอยู่ในระบบและถูกใช้โดยฟอร์มอื่น',
         'lookup_source_required' => 'กรุณาเลือกแหล่งข้อมูลสำหรับฟิลด์แบบค้นหา',
         'depends_on_invalid' => 'ฟิลด์ที่อ้างอิงต้องเป็นฟิลด์ค้นหาอื่นในฟอร์มนี้',
         'foreign_key_required' => 'กรอกคีย์เชื่อมโยงเมื่อฟิลด์ค้นหานี้อ้างอิงฟิลด์ค้นหาอื่น',

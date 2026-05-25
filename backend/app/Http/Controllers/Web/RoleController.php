@@ -2,23 +2,47 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
-    public function index(): View
+    use HasPerPage;
+
+    /**
+     * Read actions (index / show / overview) stay open to any authenticated
+     * user — see SettingsMenuAccessTest. Write actions are super-admin only.
+     */
+    public static function middleware(): array
     {
-        $roles = Role::withCount('permissions')->get()->map(function ($role) {
-            $role->users_count = $role->users()->count();
+        return [
+            new Middleware('super-admin', except: ['index', 'show', 'overview']),
+        ];
+    }
 
-            return $role;
-        })->toArray();
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'roles_per_page');
+        $roles = Role::withCount('permissions')
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(fn ($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'display_name' => $role->display_name ?? $role->name,
+                'permissions_count' => $role->permissions_count,
+                'users_count' => $role->users()->count(),
+                'created_at' => $role->created_at,
+            ]);
 
-        return view('roles.index', compact('roles'));
+        return view('roles.index', compact('roles', 'perPage'));
     }
 
     public function show(int $id): View
@@ -95,6 +119,21 @@ class RoleController extends Controller
         Role::findOrFail($id)->delete();
 
         return redirect()->route('roles.index')->with('success', __('common.role_flash_deleted'));
+    }
+
+    /**
+     * Read-only RBAC matrix — every permission (grouped by module) against
+     * every role, so a super-admin can see at a glance who can do what.
+     */
+    public function overview(): View
+    {
+        $grouped = $this->groupedPermissions();
+        $roles = Role::with('permissions:id,name')->orderBy('name')->get();
+        $rolePermissionIds = $roles
+            ->mapWithKeys(fn ($role) => [$role->id => $role->permissions->pluck('id')->all()])
+            ->all();
+
+        return view('roles.overview', compact('grouped', 'roles', 'rolePermissionIds'));
     }
 
     private function groupedPermissions(): array

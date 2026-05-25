@@ -10,12 +10,18 @@
 @endsection
 
 @section('content')
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-6 gap-2">
         <h2 class="page-title">{{ __('common.all_roles') }}</h2>
-        <a href="{{ route('roles.create') }}" class="btn-primary inline-flex items-center">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            {{ __('common.add_role') }}
-        </a>
+        <div class="flex items-center gap-2 shrink-0">
+            <a href="{{ route('roles.overview') }}" class="btn-secondary inline-flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 6h18M3 18h18"/></svg>
+                {{ __('common.rbac_overview_button') }}
+            </a>
+            <a href="{{ route('roles.create') }}" class="btn-primary inline-flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                {{ __('common.add_role') }}
+            </a>
+        </div>
     </div>
 
     @if (session('success'))
@@ -36,6 +42,7 @@
         :empty-message="__('common.no_roles_found')"
         :empty-cta-href="route('roles.create')"
         :empty-cta-label="__('common.add_role')"
+        :disable-pagination="true"
     >
         @foreach ($roles as $role)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
@@ -87,6 +94,8 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$roles" :perPage="$perPage" id="roles-pagination" />
 
     {{-- Delete Confirm Modal --}}
     <div x-data="{ show: false, id: null, name: '' }"

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,10 @@ use Illuminate\Support\Facades\Cache;
 
 class NavigationMenu extends Model
 {
+    use HasAutoCode;
+
     protected $fillable = [
+        'auto_code',
         'parent_id', 'label', 'label_en', 'label_th', 'icon', 'route',
         'permission', 'document_form_id', 'sort_order', 'is_active',
     ];
@@ -130,12 +134,22 @@ class NavigationMenu extends Model
 
     public function isActive(): bool
     {
-        if ($this->route === null || $this->route === '') {
+        return self::routeMatchesPath($this->route, request()->path());
+    }
+
+    /**
+     * Whether a stored menu `route` (a URI path) covers the given request path —
+     * exact match, or a path-segment prefix (so `/cmms/pm` covers `/cmms/pm/x`).
+     * Shared by sidebar highlighting and the menu-permission route gate.
+     */
+    public static function routeMatchesPath(?string $route, string $currentPath): bool
+    {
+        if ($route === null || $route === '') {
             return false;
         }
 
-        $routePath = ltrim($this->route, '/');
-        $currentPath = trim(request()->path(), '/');
+        $routePath = ltrim($route, '/');
+        $currentPath = trim($currentPath, '/');
 
         if ($routePath === '') {
             return false;
@@ -153,9 +167,17 @@ class NavigationMenu extends Model
 
     protected static function booted(): void
     {
-        $clear = fn () => Cache::forget('navigation_menus_tree');
+        $clear = function (): void {
+            Cache::forget('navigation_menus_tree');
+            Cache::forget('navigation_route_permissions');
+        };
 
         static::saved($clear);
         static::deleted($clear);
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'NAV';
     }
 }

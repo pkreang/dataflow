@@ -51,6 +51,7 @@
         :empty-message="__('common.no_equipment_locations')"
         :empty-cta-href="route('settings.equipment-locations.create')"
         :empty-cta-label="__('common.add_equipment_location')"
+        :disable-pagination="true"
     >
         @foreach ($locations as $location)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
@@ -71,5 +72,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$locations" :perPage="$perPage" id="equipment-locations-pagination" />
 </div>
 @endsection

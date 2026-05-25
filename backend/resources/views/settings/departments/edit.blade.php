@@ -49,6 +49,9 @@
                     <label class="form-label">{{ __('common.remark') }}</label>
                     <textarea name="description" rows="3" class="form-input mt-1 resize-y">{{ $department->description }}</textarea>
                 </div>
+                <div>
+                    <x-form.active-toggle name="is_active" :checked="old('is_active', $department->is_active)" />
+                </div>
                 <button class="btn-primary">{{ __('common.save') }}</button>
             </form>
         </div>

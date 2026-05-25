@@ -13,7 +13,6 @@ return [
     'import_ldap_lookup_failed' => 'Row skipped — LDAP check failed for :email.',
     'email_readonly_hint' => 'Email cannot be changed (used for login).',
     'email_edit_hint' => 'Used to sign in. Must be unique across users.',
-    'email_directory_managed_hint' => 'Email is managed by your sign-in provider (LDAP / Microsoft) and cannot be changed here.',
     'no_permissions_configured' => 'No permissions configured. Run: php artisan db:seed',
     'remark' => 'Remark',
     'placeholder_first_name' => 'e.g. Andy',
@@ -67,4 +66,18 @@ return [
     'user_disabled' => 'User disabled.',
     'user_deleted' => 'User deleted successfully.',
     'cannot_delete_super_admin' => 'Cannot delete a super administrator.',
+
+    // Admin password helpers
+    'password_section_title' => 'Password',
+    'password_just_created_hint' => 'New user — pick one option below so they can sign in:',
+    'password_reset_button' => 'Generate temporary password',
+    'password_reset_confirm' => 'Generate a new random password? It will be shown once.',
+    'password_reset_success' => 'New temporary password generated.',
+    'password_reset_warning' => 'Copy this password now — it will not be shown again. The user will be required to change it on first login.',
+    'password_link_button' => 'Send reset link via email',
+    'password_link_confirm' => 'Send a password reset link to this user\'s email?',
+    'password_link_sent' => 'Password reset link sent.',
+    'password_link_unsupported' => 'Cannot send a reset link to this user (SSO / LDAP / inactive).',
+    'password_copy' => 'Copy',
+    'password_copied' => 'Copied!',
 ];

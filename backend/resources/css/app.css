@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* Force light color-scheme so native form controls (input/textarea/select)
+   don't auto-switch to dark when the OS prefers dark mode. */
+:root { color-scheme: light; }
+
 [x-cloak] {
     display: none !important;
 }
@@ -309,3 +313,153 @@ body {
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
 }
+
+/* Form field grid — collapses to 1 col on mobile, honours layout_columns on sm+ */
+.form-field-grid {
+    grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+    .form-field-grid {
+        grid-template-columns: repeat(var(--form-grid-cols, 1), minmax(0, 1fr));
+    }
+}
+
+/* Form field grid — cells with col_span > 1 should still span 1 col on mobile */
+@media (max-width: 639px) {
+    .form-field-grid > [style*="grid-column"] {
+        grid-column: span 1 !important;
+    }
+}
+
+/* ============================================================
+ * Mobile shell — phone-shape preview + mountain bg + glass cards
+ * Mockup palette: /Users/pkreang/Downloads/Mockup Mobile
+ * Scoped to .mob-* classes — kept out of main app to avoid leaks.
+ * Designed to map cleanly to Flutter widgets for future port.
+ * ============================================================ */
+:root {
+    --mob-navy: #0c2460;
+    --mob-blue: #0f6ed8;
+    --mob-teal: #059ca5;
+    --mob-orange: #ff8a00;
+    --mob-green: #128344;
+    --mob-purple: #7a5bd8;
+    --mob-muted: #42577f;
+}
+.mob-shell {
+    min-height: 100dvh;
+    background: linear-gradient(135deg, #eaf3f6, #f8fbfc 48%, #cbdde8);
+    color: var(--mob-navy);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+.mob-phone {
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: #eaf4f6;
+}
+@media (min-width: 640px) {
+    .mob-shell { padding: 16px; }
+    .mob-phone {
+        border-radius: 34px;
+        border: 1px solid rgba(255,255,255,.8);
+        box-shadow: 0 28px 88px rgba(10, 35, 70, .28);
+        max-height: calc(100dvh - 32px);
+    }
+}
+.mob-bg-photo {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.04) 35%, rgba(10,35,55,.32) 100%),
+        url('/images/mobile-bg.png') center/cover no-repeat;
+}
+.mob-glass {
+    position: relative;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,.55);
+    background: rgba(255,255,255,.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 14px;
+    box-shadow: 0 8px 24px rgba(10,35,70,.06);
+}
+.mob-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+.mob-kpi-icon {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+}
+.mob-kpi-icon.tone-orange { background: var(--mob-orange); }
+.mob-kpi-icon.tone-green  { background: var(--mob-green); }
+.mob-kpi-icon.tone-blue   { background: var(--mob-blue); }
+.mob-kpi-icon.tone-purple { background: var(--mob-purple); }
+.mob-kpi-icon.tone-teal   { background: var(--mob-teal); }
+.mob-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgb(226 232 240);
+    z-index: 40;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.mob-bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 4px 8px;
+    font-size: 11px;
+    color: var(--mob-muted);
+    text-decoration: none;
+}
+.mob-bottom-nav a.active {
+    color: var(--mob-blue);
+    font-weight: 600;
+}
+.mob-list-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.85);
+    border: 1px solid rgba(255,255,255,.55);
+}
+.mob-icon-square {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.mob-badge {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.mob-badge.tone-orange { color: var(--mob-orange); background: rgba(255,138,0,.12); }
+.mob-badge.tone-green  { color: var(--mob-green); background: rgba(18,131,68,.12); }
+.mob-badge.tone-blue   { color: var(--mob-blue); background: rgba(15,110,216,.12); }
+.mob-badge.tone-red    { color: #b91c1c; background: rgba(185,28,28,.10); }
+.mob-badge.tone-gray   { color: var(--mob-muted); background: rgba(66,87,127,.10); }

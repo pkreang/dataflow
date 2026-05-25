@@ -7,26 +7,33 @@ use App\Models\ReportDashboardWidget;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
+/**
+ * Vertical-specific (school) dashboard. Invoked from the school demo seeders
+ * (DevelopmentDemoSeeder, BodindechaDemoSeeder) on top of the base seed,
+ * which already creates "Home (Default)" + "Home (Manager)" via
+ * HomeDashboardSeeder. Idempotent: keyed by name so reseeds replace widgets
+ * cleanly instead of duplicating.
+ */
 class DashboardSeeder extends Seeder
 {
     public function run(): void
     {
-        if (ReportDashboard::count() > 0) {
-            return;
-        }
-
         $admin = User::where('email', 'admin@example.com')->first();
         $adminId = $admin?->id ?? 1;
 
-        $dashboard = ReportDashboard::create([
-            'name' => 'School eForm Overview',
-            'description' => 'ภาพรวมคำขออนุมัติแบบฟอร์มโรงเรียน',
-            'layout_columns' => 2,
-            'visibility' => 'all',
-            'required_permission' => null,
-            'is_active' => true,
-            'created_by' => $adminId,
-        ]);
+        $dashboard = ReportDashboard::updateOrCreate(
+            ['name' => 'School eForm Overview'],
+            [
+                'description' => 'ภาพรวมคำขออนุมัติแบบฟอร์มโรงเรียน',
+                'layout_columns' => 2,
+                'visibility' => 'all',
+                'required_permission' => null,
+                'is_active' => true,
+                'created_by' => $adminId,
+            ]
+        );
+
+        $dashboard->widgets()->delete();
 
         $widgets = [
             [

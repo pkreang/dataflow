@@ -33,6 +33,7 @@ class DocumentFormSubmissionController extends Controller
 
         $forms = DocumentForm::query()
             ->where('is_active', true)
+            ->where('document_type', '!=', 'evaluation') // eval forms triggered via parent submission only
             ->visibleToUser($userDeptId)
             ->orderBy('name')
             ->get()
@@ -103,8 +104,12 @@ class DocumentFormSubmissionController extends Controller
         $this->applyFieldFilters($query, $documentForm, $searchable, $filters);
 
         $perPage = $this->resolvePerPage($request, 'list_by_form_per_page');
+        $with = ['instance', 'latestActivity.user', 'submittedActivity'];
+        if ($documentForm->document_type === 'evaluation') {
+            $with[] = 'originalSubmission.form';
+        }
         $submissions = $query->select('document_form_submissions.*')
-            ->with(['instance', 'latestActivity.user', 'submittedActivity'])
+            ->with($with)
             ->latest('document_form_submissions.id')
             ->paginate($perPage)
             ->withQueryString();
@@ -214,6 +219,10 @@ class DocumentFormSubmissionController extends Controller
     public function create(DocumentForm $documentForm): View
     {
         abort_if(! $documentForm->is_active, 404);
+        // Evaluation forms must be filled via the "Evaluate" button on an approved
+        // parent submission — not by directly navigating to forms.create.
+        abort_if($documentForm->document_type === 'evaluation', 403,
+            'Evaluation forms can only be filled via the "Evaluate" button on an approved submission.');
         $documentForm->load('fields');
 
         return view('forms.create', ['form' => $documentForm]);
@@ -222,6 +231,8 @@ class DocumentFormSubmissionController extends Controller
     public function storeDraft(Request $request, DocumentForm $documentForm): RedirectResponse
     {
         abort_if(! $documentForm->is_active, 404);
+        abort_if($documentForm->document_type === 'evaluation', 403,
+            'Evaluation forms must be submitted through the "Evaluate" button on a parent submission.');
         $documentForm->load('fields');
 
         $spec = $this->buildPayloadRules($documentForm, (array) $request->input('fields', []));
@@ -229,6 +240,7 @@ class DocumentFormSubmissionController extends Controller
         $payload = $validated['fields'] ?? [];
 
         $payload = $this->processFileUploads($documentForm, $payload, $request);
+        $payload = $this->recomputeFormulaFields($documentForm, $payload);
 
         $userId = (int) (session('user.id') ?? 0);
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
@@ -290,6 +302,10 @@ class DocumentFormSubmissionController extends Controller
             $allowed = $this->filterPayloadForAssignee($submission, $payload, $userId);
             $payload = array_merge($submission->payload ?? [], $allowed);
         }
+
+        // Recompute formula fields server-side — never trust the client value
+        // since the hidden mirror input is editable via devtools.
+        $payload = $this->recomputeFormulaFields($submission->form, $payload);
 
         // Capture per-field diff BEFORE the update so we can record what changed.
         // Computed against the post-filter payload (what's actually persisted),
@@ -390,25 +406,76 @@ class DocumentFormSubmissionController extends Controller
     public function returnToDraft(DocumentFormSubmission $submission): RedirectResponse
     {
         $this->authorizeReturnToDraft($submission);
-        $submission->load('form');
 
         $userId = (int) (session('user.id') ?? 0);
-        $form = $submission->form;
+        $fromInstanceId = $submission->approval_instance_id;
 
-        $submission->update(['status' => 'draft']);
-
-        if ($submission->fdata_row_id && $form?->hasDedicatedTable()) {
-            $this->schemaService->updateRow($form, $submission->fdata_row_id, $submission->payload ?? [], [
-                'status' => 'draft',
-            ]);
-        }
+        $this->applyReturnToDraft($submission);
 
         SubmissionActivityLog::record($submission->id, $userId, 'returned_to_draft', [
-            'from_approval_instance_id' => $submission->approval_instance_id,
+            'from_approval_instance_id' => $fromInstanceId,
         ]);
 
         return redirect()->route('forms.draft.edit', $submission)
             ->with('success', __('common.returned_to_draft'));
+    }
+
+    /**
+     * Approver action — send a submitted request back instead of approving or
+     * rejecting it. `requester` flips the submission to an editable draft;
+     * `previous_step` rewinds the workflow one approval stage. The workflow
+     * mutation and actor authorization happen inside ApprovalFlowService.
+     */
+    public function sendBack(Request $request, DocumentFormSubmission $submission, ApprovalFlowService $approvalFlowService): RedirectResponse
+    {
+        $validated = $request->validate([
+            'destination' => 'required|in:requester,previous_step',
+            'comment' => 'required|string|max:1000',
+        ]);
+
+        abort_unless($submission->approval_instance_id, 404);
+
+        $userId = (int) (session('user.id') ?? 0);
+
+        try {
+            $approvalFlowService->sendBack(
+                $submission->approval_instance_id,
+                $userId,
+                $validated['destination'],
+                $validated['comment'],
+            );
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['send_back' => $e->getMessage()]);
+        }
+
+        if ($validated['destination'] === 'requester') {
+            $this->applyReturnToDraft($submission);
+        }
+
+        SubmissionActivityLog::record($submission->id, $userId, 'sent_back', [
+            'destination' => $validated['destination'],
+            'comment' => $validated['comment'],
+        ]);
+
+        return redirect()->route('approvals.my')
+            ->with('success', __('common.send_back_success'));
+    }
+
+    /**
+     * Flip a submission back to an editable draft, mirroring the change into
+     * the dedicated fdata_* row when the form uses one. Shared by
+     * returnToDraft() (owner action) and sendBack() (approver action).
+     */
+    private function applyReturnToDraft(DocumentFormSubmission $submission): void
+    {
+        $submission->loadMissing('form');
+        $submission->update(['status' => 'draft']);
+
+        if ($submission->fdata_row_id && $submission->form?->hasDedicatedTable()) {
+            $this->schemaService->updateRow($submission->form, $submission->fdata_row_id, $submission->payload ?? [], [
+                'status' => 'draft',
+            ]);
+        }
     }
 
     public function submit(DocumentFormSubmission $submission, ApprovalFlowService $approvalFlowService): RedirectResponse
@@ -831,7 +898,7 @@ class DocumentFormSubmissionController extends Controller
     /**
      * @return array{rules: array, attributes: array}
      */
-    private function buildPayloadRules(DocumentForm $form, array $submittedPayload = []): array
+    public function buildPayloadRules(DocumentForm $form, array $submittedPayload = []): array
     {
         $rules = [];
         $attributes = [];
@@ -893,7 +960,7 @@ class DocumentFormSubmissionController extends Controller
             $fieldRules = $isRequired ? ['required'] : ['nullable'];
 
             $fieldRules[] = match ($field->field_type) {
-                'number', 'currency' => 'numeric',
+                'number', 'currency', 'formula' => 'numeric',
                 'date' => 'date',
                 'email' => 'email',
                 'checkbox', 'multi_select', 'multi_file' => 'array',
@@ -989,5 +1056,35 @@ class DocumentFormSubmissionController extends Controller
             }
         }
         return true;
+    }
+
+    /**
+     * Recompute every `formula` field's value from the current payload, so the
+     * persisted value is server-derived (not the client-supplied mirror, which
+     * is editable via devtools). Bad expressions degrade to null rather than
+     * blocking the save — admins surface syntax errors at form-save time.
+     */
+    private function recomputeFormulaFields(DocumentForm $form, array $payload): array
+    {
+        $form->loadMissing('fields');
+        $evaluator = new \App\Support\FormulaEvaluator();
+
+        foreach ($form->fields as $field) {
+            if ($field->field_type !== 'formula') {
+                continue;
+            }
+            $expression = $field->options['expression'] ?? null;
+            if (! is_string($expression) || trim($expression) === '') {
+                $payload[$field->field_key] = null;
+                continue;
+            }
+            try {
+                $payload[$field->field_key] = $evaluator->evaluate($expression, $payload);
+            } catch (\InvalidArgumentException) {
+                $payload[$field->field_key] = null;
+            }
+        }
+
+        return $payload;
     }
 }

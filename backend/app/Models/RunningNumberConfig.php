@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Model;
 
 class RunningNumberConfig extends Model
 {
+    use HasAutoCode;
+
     protected $fillable = [
+        'auto_code',
         'document_type',
         'prefix',
         'digit_count',
@@ -28,5 +32,10 @@ class RunningNumberConfig extends Model
             'last_reset_at' => 'date',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'RNC';
     }
 }

@@ -13,15 +13,31 @@ use App\Services\Auth\LdapUserDirectoryLookup;
 use App\Services\Auth\PasswordCapabilityService;
 use App\Support\CompliantPasswordGenerator;
 use App\Support\PermissionDisplay;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
-class UserController extends Controller
+class UserController extends Controller implements HasMiddleware
 {
     use HasPerPage;
+
+    /**
+     * Listing users stays open to any authenticated user (see
+     * SettingsMenuAccessTest); creating / editing / importing / deleting
+     * users is super-admin only.
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('super-admin', except: ['index', 'show']),
+        ];
+    }
 
     public function index(Request $request): View
     {
@@ -215,7 +231,10 @@ class UserController extends Controller
             $user->syncPermissions($permissions);
         }
 
-        return redirect()->route('users.index')->with('success', __('users.user_created'));
+        // Redirect to the edit page so the admin can immediately pick how the
+        // new user gets their password (generate temp / send reset link).
+        return redirect()->route('users.edit', ['user' => $user->id, 'just_created' => 1])
+            ->with('success', __('users.user_created'));
     }
 
     public function show(int $id): View
@@ -344,6 +363,44 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('users.index')->with('success', __('users.user_deleted'));
+    }
+
+    /**
+     * Admin generates a fresh random password for the user and flashes it
+     * back to the screen once so the admin can copy + hand it over. Forces
+     * the user to change it on next login.
+     */
+    public function resetPassword(User $user): RedirectResponse
+    {
+        $plain = CompliantPasswordGenerator::generate();
+
+        $user->update([
+            'password' => $plain,           // 'password' cast = hashed automatically
+            'password_changed_at' => now(),
+            'password_must_change' => true,
+        ]);
+
+        return redirect()->route('users.edit', $user)
+            ->with('success', __('users.password_reset_success'))
+            ->with('temp_password', $plain);
+    }
+
+    /**
+     * Admin triggers Laravel's built-in password broker so the user gets the
+     * standard "set your password" email. Silently no-ops for SSO/LDAP users
+     * (they can't change their password in-app anyway).
+     */
+    public function sendPasswordResetLink(User $user): RedirectResponse
+    {
+        if (! $user->is_active || ! PasswordCapabilityService::canChangePasswordInApp($user)) {
+            return redirect()->route('users.edit', $user)
+                ->with('error', __('users.password_link_unsupported'));
+        }
+
+        Password::broker()->sendResetLink(['email' => $user->email]);
+
+        return redirect()->route('users.edit', $user)
+            ->with('success', __('users.password_link_sent'));
     }
 
     /**

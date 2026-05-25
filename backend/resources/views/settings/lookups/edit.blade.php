@@ -11,7 +11,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-4xl mx-auto">
+<div>
     <a href="{{ route('settings.lookups.index') }}" class="text-sm text-blue-600 hover:underline">&larr; {{ __('common.lookups') }}</a>
     <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mt-2 mb-4">
         {{ app()->getLocale() === 'th' ? $lookup->label_th : $lookup->label_en }}

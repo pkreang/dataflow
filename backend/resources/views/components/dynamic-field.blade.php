@@ -101,6 +101,24 @@
         <span class="flex-1 border-t border-dashed border-slate-300 dark:border-slate-600"></span>
     </div>
 
+@elseif($field->field_type === 'formula')
+    @php
+        $formulaOpts = is_array($field->options) ? $field->options : [];
+        $formulaExpression = (string) ($formulaOpts['expression'] ?? '');
+        $formulaDecimals = max(0, min(8, (int) ($formulaOpts['decimals'] ?? 2)));
+    @endphp
+    {{-- Display input: read-only, formatted to the configured decimal count.
+         Hidden input mirrors the raw value so it lands in payload on submit.
+         Both bind reactively to fp (form-data Alpine scope). --}}
+    <input type="text" readonly
+           class="form-input mt-1 bg-slate-50 dark:bg-slate-800 cursor-not-allowed font-mono"
+           :value="(() => { const _v = window.evaluateFormula({!! json_encode($formulaExpression) !!}, fp); return _v === null ? '' : Number(_v).toFixed({{ $formulaDecimals }}); })()">
+    <input type="hidden" name="{{ $name }}"
+           :value="(() => { const _v = window.evaluateFormula({!! json_encode($formulaExpression) !!}, fp); return _v === null ? '' : _v; })()">
+    @if($formulaExpression === '')
+        <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">{{ __('common.formula_expression_empty') }}</p>
+    @endif
+
 @elseif($field->field_type === 'group')
     @php
         $groupOpts = is_array($field->options) ? $field->options : [];

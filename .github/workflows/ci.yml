@@ -1,0 +1,175 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Laravel app lives in backend/ — run every step from there.
+defaults:
+  run:
+    working-directory: backend
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Fast gate: mirrors local `composer test` (SQLite :memory:) ──────────────
+  tests-sqlite:
+    name: Tests (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, sqlite, pdo_sqlite, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Many feature tests render Blade pages with @vite — they 500 without a
+      # built manifest. Assets MUST be built before the test suite runs.
+      - name: Build front-end assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Run test suite
+        run: composer test
+
+  # ── Integration gate: real MySQL 8.0 (catches what SQLite :memory: hides) ───
+  tests-mysql:
+    name: Tests (MySQL 8.0)
+    runs-on: ubuntu-latest
+    # Promote to a required check once consistently green.
+    continue-on-error: true
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testing
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      # phpunit.xml's <env> entries are force=false — these real env vars win,
+      # so the suite runs against MySQL instead of SQLite :memory:.
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: testing
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, mysql, pdo_mysql, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Build front-end assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Run test suite (MySQL)
+        run: composer test
+
+  # ── Static analysis: PHPStan (baselined) + Pint on changed files only ───────
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the Pint step can diff against the base.
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, sqlite, pdo_sqlite, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHPStan (Larastan, baselined)
+        run: composer analyse
+
+      # Pre-existing style debt is not reformatted yet — gate only the files
+      # this push/PR actually changed. Full normalization happens once the
+      # in-flight feature branches have merged.
+      - name: Pint (changed files only)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
+          fi
+          FILES=$(git diff --name-only --relative --diff-filter=ACMR "$BASE" HEAD -- '*.php' | tr '\n' ' ')
+          if [ -n "$FILES" ]; then
+            echo "Linting changed PHP files: $FILES"
+            vendor/bin/pint --test $FILES
+          else
+            echo "No PHP files changed — skipping Pint."
+          fi

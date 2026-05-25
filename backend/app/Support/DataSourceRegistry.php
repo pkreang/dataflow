@@ -11,11 +11,19 @@ use App\Models\Equipment;
 use App\Models\SparePart;
 use App\Models\SparePartTransaction;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class DataSourceRegistry
 {
+    /**
+     * Per-request memo for the dynamic per-form source array. The array contains
+     * Closures that bind to a `$form` model — those can't be serialised, so we
+     * deliberately avoid `Cache::remember` (it serialises into the DB cache
+     * driver and throws "Serialization of 'Closure' is not allowed"). Static
+     * memo gives us the same intra-request perf without leaving the process.
+     */
+    private static ?array $formSourcesMemo = null;
+
     /**
      * All queryable data source definitions for report dashboard widgets.
      * Includes static hardcoded sources + dynamic per-DocumentForm sources.
@@ -329,6 +337,44 @@ class DataSourceRegistry
                     'created_at' => 'Created At',
                 ],
             ],
+
+            // Cross-form submission source — counts/filters span every DocumentForm.
+            // Used by the seeded Home dashboard for "my drafts" / "my submissions"
+            // KPIs that previously lived as hardcoded cards. Per-form sources
+            // (form:{form_key}) are still preferred for form-specific reporting.
+            'document_form_submissions' => [
+                'label_en' => 'Form Submissions (all forms)',
+                'label_th' => 'การส่งฟอร์ม (ทุกฟอร์ม)',
+                'model' => DocumentFormSubmission::class,
+                'base_query' => null,
+                'aggregate_fields' => [
+                    'id' => 'Count',
+                ],
+                'group_by_fields' => [
+                    'status' => 'Status',
+                    'form_id' => 'Form',
+                    'user_id' => 'Requester',
+                    'department_id' => 'Department',
+                ],
+                'filter_fields' => [
+                    'status' => 'Status',
+                    'form_id' => 'Form',
+                    'user_id' => 'Requester',
+                    'department_id' => 'Department',
+                ],
+                'date_fields' => [
+                    'created_at' => 'Created At',
+                    'updated_at' => 'Updated At',
+                ],
+                'display_columns' => [
+                    'reference_no' => 'Ref No',
+                    'status' => 'Status',
+                    'form_id' => 'Form',
+                    'user_id' => 'Requester',
+                    'department_id' => 'Department',
+                    'created_at' => 'Created At',
+                ],
+            ],
         ];
     }
 
@@ -336,8 +382,10 @@ class DataSourceRegistry
      * Auto-generate a source for each active DocumentForm so admins can build reports
      * directly from form fields without writing code. Aggregates/group-by/filters are
      * derived from field metadata (numeric types → aggregate, select/radio/date/dept
-     * → group_by, is_searchable → filter). Cached 5 min to avoid reading fields every
-     * request. Source key prefix `form:{form_key}` never collides with static sources.
+     * → group_by, is_searchable → filter). Memoised per request — never persisted
+     * to a serialising cache driver because each entry holds a Closure that
+     * captures `$form`. Source key prefix `form:{form_key}` never collides with
+     * static sources.
      */
     protected static function perFormSources(): array
     {
@@ -345,91 +393,95 @@ class DataSourceRegistry
             return [];
         }
 
-        return Cache::remember('datasource_registry_form_sources', 300, function () {
-            $sources = [];
-            $forms = DocumentForm::query()
-                ->where('is_active', true)
-                ->with('fields')
-                ->get();
+        if (self::$formSourcesMemo !== null) {
+            return self::$formSourcesMemo;
+        }
 
-            foreach ($forms as $form) {
-                $aggregate = ['id' => 'Count'];
-                $groupBy = [
-                    'status' => 'Submission status',
-                    'department_id' => 'Department',
-                    'user_id' => 'Requester',
-                ];
-                $filter = [
-                    'status' => 'Status',
-                    'department_id' => 'Department',
-                ];
-                $display = [
-                    'reference_no' => 'Ref No',
-                    'status' => 'Status',
-                    'department_id' => 'Department',
-                    'user_id' => 'Requester',
-                    'created_at' => 'Created',
-                ];
-                $dateFields = [
-                    'created_at' => 'Created At',
-                    'updated_at' => 'Updated At',
-                ];
+        $sources = [];
+        $forms = DocumentForm::query()
+            ->where('is_active', true)
+            ->with('fields')
+            ->get();
 
-                // fdata_* columns live alongside submission — only fields there are
-                // directly query-able via SQL (without json_extract).
-                $hasFdata = $form->hasDedicatedTable();
-                if ($hasFdata) {
-                    foreach ($form->fields as $f) {
-                        $key = $f->field_key;
-                        if (in_array($f->field_type, ['number', 'currency'], true)) {
-                            $aggregate[$key] = $f->label.' ('.$f->field_type.')';
-                        }
-                        if (in_array($f->field_type, ['select', 'radio', 'date', 'datetime', 'lookup'], true)) {
-                            $groupBy[$key] = $f->label;
-                        }
-                        if ($f->is_searchable) {
-                            $filter[$key] = $f->label;
-                        }
-                        if (in_array($f->field_type, ['date', 'datetime'], true)) {
-                            $dateFields[$key] = $f->label;
-                        }
-                        if (! in_array($f->field_type, ['section', 'signature', 'file', 'image', 'auto_number'], true)) {
-                            $display[$key] = $f->label;
-                        }
+        foreach ($forms as $form) {
+            $aggregate = ['id' => 'Count'];
+            $groupBy = [
+                'status' => 'Submission status',
+                'department_id' => 'Department',
+                'user_id' => 'Requester',
+            ];
+            $filter = [
+                'status' => 'Status',
+                'department_id' => 'Department',
+            ];
+            $display = [
+                'reference_no' => 'Ref No',
+                'status' => 'Status',
+                'department_id' => 'Department',
+                'user_id' => 'Requester',
+                'created_at' => 'Created',
+            ];
+            $dateFields = [
+                'created_at' => 'Created At',
+                'updated_at' => 'Updated At',
+            ];
+
+            // fdata_* columns live alongside submission — only fields there are
+            // directly query-able via SQL (without json_extract).
+            $hasFdata = $form->hasDedicatedTable();
+            if ($hasFdata) {
+                foreach ($form->fields as $f) {
+                    $key = $f->field_key;
+                    if (in_array($f->field_type, ['number', 'currency'], true)) {
+                        $aggregate[$key] = $f->label.' ('.$f->field_type.')';
+                    }
+                    if (in_array($f->field_type, ['select', 'radio', 'date', 'datetime', 'lookup'], true)) {
+                        $groupBy[$key] = $f->label;
+                    }
+                    if ($f->is_searchable) {
+                        $filter[$key] = $f->label;
+                    }
+                    if (in_array($f->field_type, ['date', 'datetime'], true)) {
+                        $dateFields[$key] = $f->label;
+                    }
+                    if (! in_array($f->field_type, ['section', 'signature', 'file', 'image', 'auto_number'], true)) {
+                        $display[$key] = $f->label;
                     }
                 }
-
-                $sources['form:'.$form->form_key] = [
-                    'label_en' => 'Form: '.$form->name,
-                    'label_th' => 'ฟอร์ม: '.$form->name,
-                    'model' => null,
-                    'source_type' => 'form',
-                    'form_id' => $form->id,
-                    'has_fdata' => $hasFdata,
-                    'base_query' => $hasFdata
-                        // Query the dedicated fdata_* table directly — columns align
-                        // with field keys for group_by/aggregate/filter to work without JSON paths.
-                        ? fn () => \Illuminate\Support\Facades\DB::table($form->submission_table)->toBase()
-                        : fn () => DocumentFormSubmission::where('form_id', $form->id),
-                    'aggregate_fields' => $aggregate,
-                    'group_by_fields' => $groupBy,
-                    'filter_fields' => $filter,
-                    'date_fields' => $dateFields,
-                    'display_columns' => $display,
-                ];
             }
 
-            return $sources;
-        });
+            $sources['form:'.$form->form_key] = [
+                'label_en' => 'Form: '.$form->name,
+                'label_th' => 'ฟอร์ม: '.$form->name,
+                'model' => null,
+                'source_type' => 'form',
+                'form_id' => $form->id,
+                'has_fdata' => $hasFdata,
+                'base_query' => $hasFdata
+                    // Query the dedicated fdata_* table directly — columns align
+                    // with field keys for group_by/aggregate/filter to work without JSON paths.
+                    ? fn () => \Illuminate\Support\Facades\DB::table($form->submission_table)->toBase()
+                    : fn () => DocumentFormSubmission::where('form_id', $form->id),
+                'aggregate_fields' => $aggregate,
+                'group_by_fields' => $groupBy,
+                'filter_fields' => $filter,
+                'date_fields' => $dateFields,
+                'display_columns' => $display,
+            ];
+        }
+
+        return self::$formSourcesMemo = $sources;
     }
 
     /**
-     * Forget the per-form cache. Invoked from DocumentForm model boot events so adding
-     * or editing a form surfaces as a new report data source within the same session.
+     * Reset the per-request memo. Invoked from DocumentForm model boot events so
+     * adding or editing a form within the same request surfaces as a new report
+     * data source. No-op across requests (static state already resets on PHP-FPM
+     * worker reuse); only matters in long-running processes (queue, Octane).
      */
     public static function flushFormSourcesCache(): void
     {
-        Cache::forget('datasource_registry_form_sources');
+        self::$formSourcesMemo = null;
     }
 
     /**
@@ -441,9 +493,13 @@ class DataSourceRegistry
     }
 
     /**
-     * Returns a base Eloquent Builder for the given source.
+     * Returns a base query builder for the given source. Most sources return
+     * an Eloquent Builder; form sources backed by a dedicated fdata_* table
+     * return a Query\Builder (column names align with field keys directly).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder
      */
-    public static function query(string $source): \Illuminate\Database\Eloquent\Builder
+    public static function query(string $source)
     {
         $config = static::sources()[$source] ?? null;
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
@@ -15,11 +16,17 @@ use Illuminate\View\View;
 
 class DepartmentController extends Controller
 {
-    public function index(): View
-    {
-        $departments = Department::query()->orderBy('name')->get();
+    use HasPerPage;
 
-        return view('settings.departments.index', compact('departments'));
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'departments_per_page');
+        $departments = Department::query()
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('settings.departments.index', compact('departments', 'perPage'));
     }
 
     public function create(): View
@@ -79,37 +86,41 @@ class DepartmentController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:100|unique:departments,code',
+            'code' => ['required', 'string', 'max:100', 'unique:departments,code'],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         $department = Department::create([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
 
         return redirect()
-            ->route('settings.departments.edit', $department)
-            ->with('success', __('common.department_created_bind_workflows'));
+            ->route('settings.departments.index')
+            ->with('success', __('common.department_created'));
     }
 
     public function update(Request $request, Department $department): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => "required|string|max:100|unique:departments,code,{$department->id}",
+            'code' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('departments', 'code')->ignore($department->id)],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         $department->update([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -200,5 +211,10 @@ class DepartmentController extends Controller
         return redirect()
             ->route('settings.departments.edit', $department)
             ->with('success', __('common.saved'));
+    }
+
+    private function normalizeCode(mixed $raw): string
+    {
+        return strtoupper(trim((string) $raw));
     }
 }

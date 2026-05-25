@@ -51,7 +51,7 @@ class WorkflowApprovedNotification extends Notification implements ShouldQueue
             ->action(__('notifications.view_document'), url($this->documentUrl()));
     }
 
-    public function toLineNotify(object $notifiable): string
+    public function toLineMessage(object $notifiable): string
     {
         $ref = $this->instance->reference_no ?? "#{$this->instance->id}";
 

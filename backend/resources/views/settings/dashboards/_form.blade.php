@@ -1,8 +1,9 @@
 @php
     $isEdit = isset($dashboard);
+    $routeNamespace = $routeNamespace ?? 'settings.dashboards';
     $action = $isEdit
-        ? route('settings.dashboards.update', $dashboard)
-        : route('settings.dashboards.store');
+        ? route($routeNamespace.'.update', $dashboard)
+        : route($routeNamespace.'.store');
     $initialWidgets = $initialWidgets ?? [];
 @endphp
 
@@ -40,6 +41,7 @@
                     <option value="4" @selected($layoutCols === 4)>4 Columns</option>
                 </select>
             </div>
+            @unless($hideVisibilityPicker ?? false)
             <div x-data="{ visibility: '{{ old('visibility', $dashboard->visibility ?? 'all') }}' }">
                 <label class="form-label">Visibility <span class="text-red-500">*</span></label>
                 <select name="visibility" x-model="visibility" class="form-input mt-1">
@@ -53,6 +55,9 @@
                            class="form-input mt-1" />
                 </div>
             </div>
+            @else
+            <div></div>
+            @endunless
             <div class="flex items-end">
                 <x-form.active-toggle
                     name="is_active"
@@ -210,24 +215,69 @@
                     </div>
                 </div>
 
+                {{-- Chart preview (sample data) --}}
+                <div x-show="widget.widget_type === 'chart'" class="border-t border-slate-100 dark:border-slate-700 pt-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-xs font-medium text-slate-600 dark:text-slate-300">{{ __('common.chart_preview_label') }}</p>
+                        <p class="text-[10px] text-slate-400">{{ __('common.chart_preview_hint') }}</p>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 dark:bg-slate-900/40 p-3 border border-slate-200 dark:border-slate-700">
+                        <div style="position: relative; height: 200px;">
+                            <canvas
+                                x-effect="
+                                    const type = widget.widget_type;
+                                    const chartType = widget.chart_type;
+                                    if (type === 'chart') {
+                                        $nextTick(() => renderChartPreview($el, chartType));
+                                    }
+                                "
+                                style="max-height: 200px; width: 100%;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Metric preview (sample value) --}}
+                <div x-show="widget.widget_type === 'metric'" class="border-t border-slate-100 dark:border-slate-700 pt-3">
+                    <p class="text-xs font-medium text-slate-600 dark:text-slate-300 mb-2">{{ __('common.chart_preview_label') }}</p>
+                    <div class="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 p-5 border border-blue-200 dark:border-blue-800">
+                        <p class="text-xs text-slate-600 dark:text-slate-300 mb-1" x-text="widget.title || 'Metric'"></p>
+                        <p class="text-3xl font-bold text-blue-700 dark:text-blue-300" x-text="metricSampleValue(widget.aggregation)"></p>
+                        <p class="text-[10px] text-slate-400 mt-2">{{ __('common.chart_preview_hint') }}</p>
+                    </div>
+                </div>
+
                 {{-- Table config --}}
                 <div x-show="widget.widget_type === 'table'"
-                     class="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-slate-100 dark:border-slate-700 pt-3">
+                     class="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-3">
                     <div>
-                        <label class="text-xs text-slate-500 block mb-2">Columns</label>
-                        <div class="space-y-1">
+                        <div class="flex items-center justify-between mb-2 gap-2">
+                            <label class="text-xs text-slate-500">
+                                Columns
+                                <span class="ml-1 text-slate-400" x-text="`(${selectedColumnCount(widget)}/${Object.keys(getSourceFields(widget.data_source, 'display_columns')).length})`"></span>
+                            </label>
+                            <div class="flex gap-2">
+                                <button type="button"
+                                        @click="selectAllColumns(widget)"
+                                        class="text-xs text-blue-600 dark:text-blue-400 hover:underline">{{ __('common.select_all') }}</button>
+                                <span class="text-slate-300 dark:text-slate-600">·</span>
+                                <button type="button"
+                                        @click="clearAllColumns(widget)"
+                                        class="text-xs text-slate-500 dark:text-slate-400 hover:underline">{{ __('common.clear_all') }}</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-900/20 p-3 max-h-[260px] overflow-y-auto">
                             <template x-for="[ckey, clabel] in Object.entries(getSourceFields(widget.data_source, 'display_columns'))" :key="ckey">
-                                <label class="inline-flex items-center gap-2 mr-4">
+                                <label class="inline-flex items-center gap-2 min-w-0 cursor-pointer" :title="clabel">
                                     <input type="checkbox"
                                            :checked="isColumnSelected(widget, ckey)"
                                            @change="toggleColumn(widget, ckey)"
-                                           class="rounded text-blue-600">
-                                    <span class="text-sm text-slate-700 dark:text-slate-300" x-text="clabel"></span>
+                                           class="rounded text-blue-600 shrink-0">
+                                    <span class="text-sm text-slate-700 dark:text-slate-300 truncate" x-text="clabel"></span>
                                 </label>
                             </template>
                         </div>
                     </div>
-                    <div>
+                    <div class="md:w-1/3">
                         <label class="text-xs text-slate-500">Per Page</label>
                         <select x-model="widget.per_page" class="form-input mt-1">
                             <option value="10">10</option>
@@ -257,7 +307,7 @@
         </div>
 
         <div class="flex flex-wrap justify-end gap-3 pt-2">
-            <a href="{{ route('settings.dashboards.index') }}" class="btn-secondary">
+            <a href="{{ route($routeNamespace.'.index') }}" class="btn-secondary">
                 {{ __('common.cancel') }}
             </a>
             <button type="submit" class="btn-primary">
@@ -381,9 +431,100 @@ function dashboardBuilder(initialWidgets, dataSources) {
             }
         },
 
+        selectAllColumns(widget) {
+            const keys = Object.keys(this.getSourceFields(widget.data_source, 'display_columns'));
+            widget.table_columns = JSON.stringify(keys);
+        },
+
+        clearAllColumns(widget) {
+            widget.table_columns = '[]';
+        },
+
+        selectedColumnCount(widget) {
+            try {
+                const cols = JSON.parse(widget.table_columns || '[]');
+                return Array.isArray(cols) ? cols.length : 0;
+            } catch {
+                return 0;
+            }
+        },
+
         colSpanClass(n) {
             const map = { 1: 'col-span-1', 2: 'col-span-2', 3: 'col-span-3', 4: 'col-span-4' };
             return map[parseInt(n)] || '';
+        },
+
+        metricSampleValue(aggregation) {
+            switch (aggregation) {
+                case 'sum': return '฿128,500';
+                case 'avg': return '42.7';
+                case 'min': return '8';
+                case 'max': return '186';
+                default: return '247';
+            }
+        },
+
+        renderChartPreview(canvas, chartType) {
+            if (!canvas || !window.Chart) return;
+            // Tear down a previous instance attached to this canvas
+            const prev = Chart.getChart(canvas);
+            if (prev) prev.destroy();
+
+            const sampleLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const sampleSeries = [12, 19, 14, 25, 22, 30];
+            const pieLabels = ['Pending', 'Approved', 'Rejected', 'Draft'];
+            const pieSeries = [42, 86, 14, 23];
+            const palette = [
+                'rgba(59, 130, 246, 0.85)',
+                'rgba(16, 185, 129, 0.85)',
+                'rgba(244, 63, 94, 0.85)',
+                'rgba(245, 158, 11, 0.85)',
+                'rgba(139, 92, 246, 0.85)',
+                'rgba(20, 184, 166, 0.85)',
+            ];
+            const borderPalette = palette.map(c => c.replace('0.85', '1'));
+
+            const isCircle = chartType === 'pie' || chartType === 'donut';
+            const isArea = chartType === 'area';
+            const cjsType = isCircle ? (chartType === 'donut' ? 'doughnut' : 'pie')
+                          : (isArea ? 'line' : chartType);
+
+            const dataset = isCircle ? {
+                data: pieSeries,
+                backgroundColor: palette,
+                borderColor: '#fff',
+                borderWidth: 2,
+            } : {
+                label: 'Sample',
+                data: sampleSeries,
+                backgroundColor: cjsType === 'bar' ? palette[0] : (isArea ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.5)'),
+                borderColor: borderPalette[0],
+                borderWidth: 2,
+                fill: isArea,
+                tension: 0.35,
+                pointRadius: 3,
+            };
+
+            new Chart(canvas, {
+                type: cjsType,
+                data: {
+                    labels: isCircle ? pieLabels : sampleLabels,
+                    datasets: [dataset],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 400 },
+                    plugins: {
+                        legend: { display: isCircle, position: 'right', labels: { boxWidth: 10, font: { size: 10 } } },
+                        tooltip: { enabled: true },
+                    },
+                    scales: isCircle ? {} : {
+                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 10 } }, beginAtZero: true },
+                    },
+                },
+            });
         },
     };
 }

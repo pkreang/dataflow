@@ -26,12 +26,7 @@
                                 <input type="text" name="name" value="{{ $branch->name }}" required maxlength="255"
                                        class="form-input">
                             </div>
-                            @include('companies._address_fields', [
-                                'prefix' => '',
-                                'model' => $branch,
-                                'showLegacy' => true,
-                                'legacyInputId' => 'branch-legacy-'.$branch->id,
-                            ])
+                            @include('companies._address_fields', ['prefix' => '', 'model' => $branch])
                             <div>
                                 <label class="form-label">{{ __('company.branch_phone') }}</label>
                                 <input type="text" name="phone" value="{{ $branch->phone }}" maxlength="20"
@@ -79,7 +74,7 @@
                     <input type="text" name="branch_name" value="{{ old('branch_name') }}" required maxlength="255"
                            class="form-input">
                 </div>
-                @include('companies._address_fields', ['prefix' => 'branch_', 'model' => null, 'showLegacy' => false])
+                @include('companies._address_fields', ['prefix' => 'branch_', 'model' => null])
                 <div>
                     <label class="form-label">{{ __('company.branch_phone') }}</label>
                     <input type="text" name="branch_phone" value="{{ old('branch_phone') }}" maxlength="20"

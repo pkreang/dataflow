@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,9 +17,10 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use HasApiTokens, HasAutoCode, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     protected $fillable = [
+        'auto_code',
         'first_name',
         'last_name',
         'email',
@@ -39,17 +41,18 @@ class User extends Authenticatable implements HasLocalePreference
         'position_id',
         'phone',
         'line_notify_token',
+        'line_user_id',
         'remark',
         'is_active',
         'is_super_admin',
         'last_active_at',
-        'dashboard_config',
+        'home_dashboard_id',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
-        'line_notify_token',
+        'line_user_id',
     ];
 
     protected $appends = ['full_name'];
@@ -64,7 +67,6 @@ class User extends Authenticatable implements HasLocalePreference
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
-            'dashboard_config' => 'array',
         ];
     }
 
@@ -104,6 +106,11 @@ class User extends Authenticatable implements HasLocalePreference
         return $this->belongsTo(Position::class, 'position_id');
     }
 
+    public function homeDashboard(): BelongsTo
+    {
+        return $this->belongsTo(ReportDashboard::class, 'home_dashboard_id');
+    }
+
     public function passwordHistories(): HasMany
     {
         return $this->hasMany(UserPasswordHistory::class);
@@ -127,5 +134,10 @@ class User extends Authenticatable implements HasLocalePreference
         $fallback = (string) config('app.locale', 'th');
 
         return in_array($fallback, ['th', 'en'], true) ? $fallback : 'th';
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'USER';
     }
 }

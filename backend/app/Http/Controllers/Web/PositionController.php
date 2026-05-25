@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\Position;
 use App\Models\User;
@@ -11,11 +12,17 @@ use Illuminate\View\View;
 
 class PositionController extends Controller
 {
-    public function index(): View
-    {
-        $positions = Position::query()->orderBy('name')->get();
+    use HasPerPage;
 
-        return view('settings.positions.index', compact('positions'));
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'positions_per_page');
+        $positions = Position::query()
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('settings.positions.index', compact('positions', 'perPage'));
     }
 
     public function create(): View
@@ -25,16 +32,18 @@ class PositionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:100|unique:positions,code',
+            'code' => ['required', 'string', 'max:100', 'unique:positions,code'],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         Position::create([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -51,16 +60,18 @@ class PositionController extends Controller
 
     public function update(Request $request, Position $position): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => "required|string|max:100|unique:positions,code,{$position->id}",
+            'code' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('positions', 'code')->ignore($position->id)],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         $position->update([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -80,5 +91,10 @@ class PositionController extends Controller
         $position->delete();
 
         return redirect()->route('settings.positions.index')->with('success', __('common.deleted'));
+    }
+
+    private function normalizeCode(mixed $raw): string
+    {
+        return strtoupper(trim((string) $raw));
     }
 }

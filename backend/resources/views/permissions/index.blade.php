@@ -24,8 +24,9 @@
     <div class="flex items-center justify-end gap-4 mb-6">
         <span class="text-sm text-slate-500 dark:text-slate-400">{{ $total }} {{ __('common.total') }}</span>
         <a href="{{ route('permissions.create') }}"
-           class="btn-primary inline-flex items-center gap-1">
-            + {{ __('common.create') }}
+           class="btn-primary inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ __('common.add_permission') }}
         </a>
     </div>
 

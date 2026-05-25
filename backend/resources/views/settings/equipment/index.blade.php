@@ -49,6 +49,7 @@
         :empty-message="__('common.no_equipment_categories')"
         :empty-cta-href="route('settings.equipment.create')"
         :empty-cta-label="__('common.add_equipment_category')"
+        :disable-pagination="true"
     >
         @foreach ($categories as $category)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
@@ -67,5 +68,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$categories" :perPage="$perPage" id="equipment-categories-pagination" />
 </div>
 @endsection

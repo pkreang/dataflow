@@ -8,22 +8,22 @@ use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DepartmentController;
 use App\Http\Controllers\Web\DocumentFormController;
-use App\Http\Controllers\Web\LookupListController;
-use App\Http\Controllers\Web\MaintenanceController;
-use App\Http\Controllers\Web\SparePartsController;
-use App\Http\Controllers\Web\UserPinnedMenuController;
-use App\Http\Controllers\Web\EquipmentController;
-use App\Http\Controllers\Web\EquipmentLocationController;
 use App\Http\Controllers\Web\DocumentFormSubmissionController;
 use App\Http\Controllers\Web\DocumentFormWorkflowPolicyController;
 use App\Http\Controllers\Web\DocumentTypeController;
+use App\Http\Controllers\Web\EquipmentController;
+use App\Http\Controllers\Web\EquipmentLocationController;
 use App\Http\Controllers\Web\LookupController;
+use App\Http\Controllers\Web\LookupListController;
+use App\Http\Controllers\Web\MaintenanceController;
+use App\Http\Controllers\Web\MobileController;
+use App\Http\Controllers\Web\MyReportController;
 use App\Http\Controllers\Web\NavigationMenuController;
 use App\Http\Controllers\Web\NotificationController;
-use App\Http\Controllers\Web\PocSchemaFirstController;
 use App\Http\Controllers\Web\NotificationSettingController;
 use App\Http\Controllers\Web\PasswordResetController;
 use App\Http\Controllers\Web\PermissionController;
+use App\Http\Controllers\Web\PocSchemaFirstController;
 use App\Http\Controllers\Web\PositionController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\RepairRequestController;
@@ -32,9 +32,12 @@ use App\Http\Controllers\Web\ReportDashboardController;
 use App\Http\Controllers\Web\RoleController;
 use App\Http\Controllers\Web\RunningNumberController;
 use App\Http\Controllers\Web\SettingController;
+use App\Http\Controllers\Web\SparePartsController;
 use App\Http\Controllers\Web\SystemChangeLogController;
 use App\Http\Controllers\Web\ThailandAddressSearchController;
 use App\Http\Controllers\Web\UserController;
+use App\Http\Controllers\Web\UserPinnedMenuController;
+use App\Http\Controllers\Web\WebhookController;
 use App\Http\Controllers\Web\WorkflowController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -55,9 +58,17 @@ Route::get('/lang/{locale}', function (string $locale) {
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/m/login', [MobileController::class, 'loginShow'])->name('mobile.login');
 Route::get('/auth/entra/redirect', [AuthController::class, 'redirectToEntra'])->name('auth.entra.redirect');
 Route::get('/auth/entra/callback', [AuthController::class, 'entraCallback'])->name('auth.entra.callback');
 Route::post('/auth/ldap/login', [AuthController::class, 'loginLdap'])->name('auth.ldap.login');
+
+// LINE Login (account linking — requires authenticated user)
+Route::middleware('auth.web')->group(function () {
+    Route::get('/auth/line/redirect', [ProfileController::class, 'lineLinkRedirect'])->name('auth.line.redirect');
+    Route::get('/auth/line/callback', [ProfileController::class, 'lineLinkCallback'])->name('auth.line.callback');
+    Route::post('/auth/line/unlink', [ProfileController::class, 'lineUnlink'])->name('auth.line.unlink');
+});
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
@@ -65,10 +76,34 @@ Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'
 Route::get('/reset-password', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
 Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
 
-Route::middleware(['auth.web', 'password.enforced'])->group(function () {
+Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Mobile App surface — dedicated /m/* URLs with bottom-nav layout (for pitch demo + future mobile use)
+    Route::prefix('m')->name('mobile.')->group(function () {
+        Route::get('/', [MobileController::class, 'home'])->name('home');
+        Route::get('/approvals', [MobileController::class, 'approvals'])->name('approvals');
+        Route::get('/forms', [MobileController::class, 'forms'])->name('forms');
+        Route::get('/write', [MobileController::class, 'forms'])->name('write'); // alias for "เขียนฟอร์ม" tab
+        Route::get('/forms/{documentForm:form_key}', [MobileController::class, 'formCreate'])->name('form.create');
+        Route::get('/requests/{submission}', [MobileController::class, 'requestDetail'])->name('request.detail')->withTrashed();
+        Route::get('/requests/{submission}/evaluate', [MobileController::class, 'evaluateForm'])->name('request.evaluate');
+        Route::post('/requests/{submission}/evaluate', [\App\Http\Controllers\Web\EvaluationController::class, 'store'])->name('request.evaluate.store');
+        Route::get('/reports', [MobileController::class, 'reports'])->name('reports');
+        Route::get('/requests', [MobileController::class, 'requests'])->name('requests');
+        Route::get('/me', [MobileController::class, 'me'])->name('me');
+    });
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/dashboards/{dashboard}', [ReportController::class, 'showDashboard'])->name('reports.dashboards.show');
+    Route::get('/reports/evaluations', [\App\Http\Controllers\Web\EvaluationReportController::class, 'index'])
+        ->middleware('permission:manage_settings')
+        ->name('reports.evaluations');
+
+    // Self-service report builder — user-scoped dashboards (created_by = $userId)
+    Route::resource('my-reports', MyReportController::class)
+        ->names('my-reports')
+        ->parameters(['my-reports' => 'dashboard'])
+        ->except(['show']);
 
     // Document Form Submissions (user-facing)
     Route::get('/forms', [DocumentFormSubmissionController::class, 'index'])->name('forms.index');
@@ -82,7 +117,10 @@ Route::middleware(['auth.web', 'password.enforced'])->group(function () {
     Route::get('/forms/submissions/{submission}/print', [DocumentFormSubmissionController::class, 'print'])->name('forms.submission.print');
     Route::post('/forms/submissions/{submission}/duplicate', [DocumentFormSubmissionController::class, 'duplicate'])->name('forms.submission.duplicate');
     Route::post('/forms/submissions/{submission}/return-to-draft', [DocumentFormSubmissionController::class, 'returnToDraft'])->name('forms.submission.return-to-draft');
+    Route::post('/forms/submissions/{submission}/send-back', [DocumentFormSubmissionController::class, 'sendBack'])->name('forms.submission.send-back')->middleware('permission:approval.approve');
     Route::get('/forms/submissions/{submission}/history', [DocumentFormSubmissionController::class, 'history'])->name('forms.submission.history')->withTrashed();
+    Route::get('/forms/submissions/{submission}/evaluate', [\App\Http\Controllers\Web\EvaluationController::class, 'create'])->name('forms.submission.evaluate');
+    Route::post('/forms/submissions/{submission}/evaluate', [\App\Http\Controllers\Web\EvaluationController::class, 'store'])->name('forms.submission.evaluate.store');
     Route::post('/forms/submissions/{submission}/restore', [DocumentFormSubmissionController::class, 'restore'])->name('forms.submission.restore');
     Route::post('/forms/submissions/{submission}/assigned-editors', [DocumentFormSubmissionController::class, 'updateAssignedEditors'])->name('forms.submission.assigned-editors.update');
     Route::post('/forms/submissions/bulk-delete-drafts', [DocumentFormSubmissionController::class, 'bulkDeleteDrafts'])->name('forms.submissions.bulk-delete-drafts');
@@ -168,6 +206,7 @@ Route::middleware(['auth.web', 'password.enforced'])->group(function () {
     Route::get('/myprofile/login-history', [ProfileController::class, 'loginHistory'])->name('profile.login-history');
     Route::get('/myprofile/activity', [ProfileController::class, 'activity'])->name('profile.activity');
     Route::post('/myprofile/pinned-menus/toggle', [UserPinnedMenuController::class, 'toggle'])->name('profile.pinned-menus.toggle');
+    Route::patch('/myprofile/home-dashboard', [ProfileController::class, 'updateHomeDashboard'])->name('profile.home-dashboard.update');
     Route::get('/myprofile/sessions', [ProfileController::class, 'activeSessions'])->name('profile.sessions');
     Route::delete('/myprofile/sessions/{tokenId}', [ProfileController::class, 'revokeSession'])->name('profile.sessions.revoke');
     Route::delete('/myprofile/sessions-others', [ProfileController::class, 'revokeOtherSessions'])->name('profile.sessions.revoke-others');
@@ -192,6 +231,9 @@ Route::middleware(['auth.web', 'password.enforced'])->group(function () {
     Route::get('/users/import', [UserController::class, 'importForm'])->name('users.import');
     Route::post('/users/import', [UserController::class, 'import'])->name('users.import.store');
     Route::resource('users', UserController::class);
+    Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.password.reset');
+    Route::post('/users/{user}/send-password-link', [UserController::class, 'sendPasswordResetLink'])->name('users.password.send-link');
+    Route::get('roles/overview', [RoleController::class, 'overview'])->name('roles.overview');
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
@@ -285,6 +327,17 @@ Route::middleware(['auth.web', 'password.enforced'])->group(function () {
         Route::get('/settings/approval-routing', [SettingController::class, 'approvalRouting'])->name('settings.approval-routing');
         Route::post('/settings/approval-routing', [SettingController::class, 'saveApprovalRouting'])->name('settings.approval-routing.save');
         Route::get('/settings/system-change-log', [SystemChangeLogController::class, 'index'])->name('settings.system-change-log');
+
+        // KPI evaluation cycles — bundle of evaluations against one form across a period.
+        Route::get('/settings/kpi-cycles', [\App\Http\Controllers\Web\KpiCycleController::class, 'index'])->name('settings.kpi-cycles.index');
+        Route::get('/settings/kpi-cycles/create', [\App\Http\Controllers\Web\KpiCycleController::class, 'create'])->name('settings.kpi-cycles.create');
+        Route::post('/settings/kpi-cycles', [\App\Http\Controllers\Web\KpiCycleController::class, 'store'])->name('settings.kpi-cycles.store');
+        Route::get('/settings/kpi-cycles/{kpiCycle}/edit', [\App\Http\Controllers\Web\KpiCycleController::class, 'edit'])->name('settings.kpi-cycles.edit');
+        Route::put('/settings/kpi-cycles/{kpiCycle}', [\App\Http\Controllers\Web\KpiCycleController::class, 'update'])->name('settings.kpi-cycles.update');
+        Route::delete('/settings/kpi-cycles/{kpiCycle}', [\App\Http\Controllers\Web\KpiCycleController::class, 'destroy'])->name('settings.kpi-cycles.destroy');
+        Route::post('/settings/kpi-cycles/{kpiCycle}/open', [\App\Http\Controllers\Web\KpiCycleController::class, 'open'])->name('settings.kpi-cycles.open');
+        Route::post('/settings/kpi-cycles/{kpiCycle}/close', [\App\Http\Controllers\Web\KpiCycleController::class, 'close'])->name('settings.kpi-cycles.close');
+        Route::get('/settings/kpi-cycles/{kpiCycle}/report', [\App\Http\Controllers\Web\KpiCycleReportController::class, 'show'])->name('settings.kpi-cycles.report');
         Route::get('/settings/authentication', [SettingController::class, 'authSettings'])->name('settings.auth');
         Route::post('/settings/authentication', [SettingController::class, 'saveAuthSettings'])->name('settings.auth.save');
         Route::get('/settings/document-types', [DocumentTypeController::class, 'index'])->name('settings.document-types.index');
@@ -314,6 +367,7 @@ Route::middleware(['auth.web', 'password.enforced'])->group(function () {
         Route::put('/settings/document-forms/{documentForm}/policy', [DocumentFormWorkflowPolicyController::class, 'update'])->name('settings.document-forms.policy.update');
         Route::get('/settings/notifications', [NotificationSettingController::class, 'index'])->name('settings.notifications.index');
         Route::put('/settings/notifications', [NotificationSettingController::class, 'update'])->name('settings.notifications.update');
+        Route::post('/settings/notifications/test-line', [NotificationSettingController::class, 'testLineSend'])->name('settings.notifications.test-line');
         Route::get('/settings/branch-scoping', [BranchScopingController::class, 'edit'])->name('settings.branch-scoping');
         Route::put('/settings/branch-scoping', [BranchScopingController::class, 'update'])->name('settings.branch-scoping.update');
         Route::get('/settings/running-numbers', [RunningNumberController::class, 'index'])->name('settings.running-numbers.index');
@@ -337,6 +391,29 @@ Route::middleware(['auth.web', 'password.enforced'])->group(function () {
         Route::resource('settings/dashboards', ReportDashboardController::class)
             ->names('settings.dashboards')
             ->except(['show']);
+
+        // Integrations — webhook hub
+        Route::resource('settings/integrations', WebhookController::class)
+            ->parameters(['integrations' => 'webhook'])
+            ->names('settings.webhooks')
+            ->except(['show']);
+        Route::post('settings/integrations/{webhook}/test', [WebhookController::class, 'testSend'])
+            ->name('settings.webhooks.test');
+
+        // Integrations — inbound (external systems POST data to us)
+        Route::resource('settings/inbound-webhooks', \App\Http\Controllers\Web\IncomingWebhookController::class)
+            ->parameters(['inbound-webhooks' => 'inbound_webhook'])
+            ->names('settings.inbound-webhooks')
+            ->except(['show']);
+        Route::post('settings/inbound-webhooks/{inbound_webhook}/test', [\App\Http\Controllers\Web\IncomingWebhookController::class, 'testReceive'])
+            ->name('settings.inbound-webhooks.test');
+
+        // Evaluation forms — list page (filtered by document_type='evaluation').
+        // Edit/Delete go through the existing settings.document-forms.* routes.
+        Route::get('settings/evaluation-form', [\App\Http\Controllers\Web\EvaluationController::class, 'indexAdmin'])
+            ->name('settings.evaluation-form');
+        Route::get('settings/evaluation-form/create', [\App\Http\Controllers\Web\EvaluationController::class, 'createAdmin'])
+            ->name('settings.evaluation-form.create');
 
         // PoC — Schema-first form builder (annotate columns of existing tables, render form, submit)
         Route::prefix('poc/schema-first')->name('poc.schema-first.')->group(function () {

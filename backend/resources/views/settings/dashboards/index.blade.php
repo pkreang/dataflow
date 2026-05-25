@@ -11,7 +11,7 @@
 
 @section('content')
 @php
-    $totalDashboards = $dashboards->count();
+    $totalDashboards = $dashboards->total();
 @endphp
 <div x-data="{ search: '' }">
     <div class="flex items-center justify-between mb-2">
@@ -21,9 +21,9 @@
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ $totalDashboards }} dashboard(s)</p>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{{ route('settings.dashboards.create') }}" class="btn-primary">
+            <a href="{{ route('settings.dashboards.create') }}" class="btn-primary inline-flex items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                {{ __('common.add') }}
+                {{ __('common.add_dashboard') }}
             </a>
         </div>
     </div>
@@ -35,7 +35,7 @@
                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
             <input type="text" x-model="search" placeholder="{{ __('common.search') }}..."
-                   class="form-input pl-10">
+                   class="form-input" style="padding-left: 2.5rem;">
         </div>
     </div>
 
@@ -51,6 +51,9 @@
         </div>
     @endif
 
+    @if ($dashboards->isEmpty())
+        <x-table-empty-state card :message="__('common.no_data')" />
+    @else
     <div class="table-wrapper">
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead class="bg-slate-50 dark:bg-slate-800/60">
@@ -152,5 +155,8 @@
             </tbody>
         </table>
     </div>
+
+    <x-per-page-footer :paginator="$dashboards" :perPage="$perPage" id="dashboards-pagination" />
+    @endif
 </div>
 @endsection

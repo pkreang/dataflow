@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,13 +10,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Position extends Model
 {
     use HasFactory;
+    use HasAutoCode;
 
     protected $fillable = [
+        'auto_code',
         'name',
         'code',
         'description',
         'is_active',
     ];
+
+    protected function autoCodePrefix(): string
+    {
+        return 'POS';
+    }
 
     protected function casts(): array
     {

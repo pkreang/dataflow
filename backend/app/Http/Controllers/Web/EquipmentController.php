@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\EquipmentCategory;
 use Illuminate\Http\RedirectResponse;
@@ -10,8 +11,11 @@ use Illuminate\View\View;
 
 class EquipmentController extends Controller
 {
+    use HasPerPage;
+
     public function index(Request $request): View
     {
+        $perPage = $this->resolvePerPage($request, 'equipment_categories_per_page');
         $query = EquipmentCategory::query()->orderBy('name');
 
         if ($search = $request->input('search')) {
@@ -21,9 +25,9 @@ class EquipmentController extends Controller
             });
         }
 
-        $categories = $query->paginate(15)->withQueryString();
+        $categories = $query->paginate($perPage)->withQueryString();
 
-        return view('settings.equipment.index', compact('categories'));
+        return view('settings.equipment.index', compact('categories', 'perPage'));
     }
 
     public function create(): View
@@ -33,16 +37,18 @@ class EquipmentController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:equipment_categories,code',
+            'code' => ['required', 'string', 'max:50', 'unique:equipment_categories,code'],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         EquipmentCategory::create([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -57,16 +63,18 @@ class EquipmentController extends Controller
 
     public function update(Request $request, EquipmentCategory $equipmentCategory): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => "required|string|max:50|unique:equipment_categories,code,{$equipmentCategory->id}",
+            'code' => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('equipment_categories', 'code')->ignore($equipmentCategory->id)],
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ]);
 
         $equipmentCategory->update([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'description' => $validated['description'] ?? null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
@@ -84,5 +92,10 @@ class EquipmentController extends Controller
         $equipmentCategory->delete();
 
         return redirect()->route('settings.equipment.index')->with('success', __('common.deleted'));
+    }
+
+    private function normalizeCode(mixed $raw): string
+    {
+        return strtoupper(trim((string) $raw));
     }
 }

@@ -18,7 +18,7 @@ class FormSchemaService
     ];
 
     /** Field types that do not store data — skip when creating columns. */
-    private const SKIP_TYPES = ['section', 'auto_number', 'page_break', 'qr_code'];
+    public const SKIP_TYPES = ['section', 'auto_number', 'page_break', 'qr_code'];
 
     public function getTableName(string $formKey): string
     {
@@ -229,7 +229,7 @@ class FormSchemaService
     {
         match ($fieldType) {
             'textarea', 'signature' => $table->text($fieldKey)->nullable(),
-            'number' => $table->decimal($fieldKey, 15, 4)->nullable(),
+            'number', 'formula' => $table->decimal($fieldKey, 15, 4)->nullable(),
             'currency' => $table->decimal($fieldKey, 15, 2)->nullable(),
             'date' => $table->date($fieldKey)->nullable(),
             'time' => $table->time($fieldKey)->nullable(),
