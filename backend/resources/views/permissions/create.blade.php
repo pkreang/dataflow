@@ -35,7 +35,7 @@
                 @error('name')
                     <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                 @enderror
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('common.permission_name_hint') }}</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 whitespace-pre-line">{{ __('common.permission_name_hint') }}</p>
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2">

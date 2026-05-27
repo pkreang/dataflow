@@ -10,6 +10,7 @@
     - icon      (string, optional — 'edit', 'delete', 'view', 'toggle')
     - class     (string, optional — extra CSS e.g. 'text-red-600 dark:text-red-400')
     - confirm   (string, optional — confirmation message)
+    - hidden    (array, optional — name=>value pairs rendered as <input type="hidden"> inside the form; only applies when method is set)
 
     The dropdown is teleported to <body> and positioned with @alpinejs/anchor so it
     escapes overflow ancestors (e.g. .table-wrapper with overflow-x-auto). Default
@@ -51,6 +52,9 @@
                           novalidate>
                         @csrf
                         @method($item['method'])
+                        @foreach (($item['hidden'] ?? []) as $hiddenName => $hiddenValue)
+                            <input type="hidden" name="{{ $hiddenName }}" value="{{ $hiddenValue }}">
+                        @endforeach
                         <button type="submit"
                                 class="flex items-center gap-2 w-full px-[var(--cell-pad-x)] py-[var(--cell-pad-y)] text-sm {{ $class }} text-left">
                             @include('components._row-action-icon', ['icon' => $iconName])

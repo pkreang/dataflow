@@ -308,14 +308,280 @@ echo "positions=".\App\Models\Position::count().PHP_EOL;'
 
 # Phase 2 — Users & Roles
 
-*(จะเขียนหลังจบ Phase 1 — เพื่อให้ตรงกับ UI จริงที่ user เห็น)*
+ลำดับ: สำรวจ seeded roles → สร้าง test users → ทดสอบ admin password reset → ทดสอบ non-admin permission gate → ทบทวน role overview matrix
 
-หัวข้อที่จะ cover:
-- ทบทวน 4 seeded roles (super-admin, admin, viewer, approver) + permissions ที่ผูก
-- สร้าง test users 3 คน (จะใช้ใน Phase ถัด ๆ)
-- ทดสอบ admin password reset (commit 4a878b9)
-- ทดสอบ login เป็น non-admin → permission gates 403 + menu hide
-- หน้า "ดูภาพรวมสิทธิ์" (`/roles/overview` — commit 79de956)
+- **Bootstrap login:** `admin@example.com` / `password` (super-admin, `password_must_change=false`)
+- **Seeded state ที่จะเห็น:** 4 roles (`super-admin`, `admin`, `viewer`, `approver`) + 25 permissions + 1 bootstrap user
+- ระบบล็อกอิน 3 mode: Local / Microsoft Entra (OIDC) / LDAP — Phase นี้ใช้ **Local mode** เท่านั้น (instance default)
+- Departments + Positions ที่สร้างใน Phase 1 จำเป็นต้องมีอย่างน้อย 1 ตัวก่อนสร้าง user (validate `required|exists`)
+
+### Step 2.1 — สำรวจ seeded roles + permissions (read-only)
+**ที่:** `/roles/overview`  ·  **Entry point:** ที่หน้า `/roles` (เมนู "บทบาท" ใน sidebar) → กดปุ่ม **"ดูภาพรวมสิทธิ์"** มุมขวาบน  ·  **Permission:** route `/roles/overview` ไม่ล็อก (controller `index/show/overview` exempt จาก super-admin middleware) — เข้าได้ทุก authenticated user
+
+**ทำอะไร:**
+1. คลิกเมนู "ภาพรวมสิทธิ์" → เปิดหน้า matrix
+2. ดูหัวคอลัมน์: ควรเห็น **4 roles** (super-admin, admin, approver, viewer หรือคล้าย)
+3. ดูแถว: **25 permissions** จัดกลุ่มตามโมดูล (manage_settings, user_access.*, approval.*, ฯลฯ)
+4. ทดสอบ search box (ด้านบนตาราง) — พิมพ์ "approval" → กรองแถวที่ permission name มี keyword
+5. คลิกชื่อ role ในหัวคอลัมน์ → ไปหน้า `/roles/{id}/edit` (super-admin เท่านั้นที่แก้ได้)
+
+**Verify ด้วย tinker:**
+```bash
+cd backend
+php artisan tinker --execute='
+echo "roles=".\Spatie\Permission\Models\Role::count().PHP_EOL;
+echo "perms=".\Spatie\Permission\Models\Permission::count().PHP_EOL;
+foreach(\Spatie\Permission\Models\Role::all() as $r){
+  echo "  ".$r->name." → ".$r->permissions->count()." perms".PHP_EOL;
+}'
+```
+
+**ผลที่ควรเห็น:**
+- หน้า matrix render พร้อมเครื่องหมายในเซลล์ที่ role-นั้นมี permission-นี้
+- super-admin row: ไม่มี explicit perms (system bypass ผ่าน `Gate::before`) — เซลล์อาจว่าง แต่จริงๆ มีทุก permission
+- admin row: ทุก perm checked (25 perms via `Role::syncPermissions(Permission::all())`)
+- approver row: 3 perms checked (approval.approve, view_purchase_requests, view_purchase_orders)
+- viewer row: ทุก perm ที่ action เป็น `read` หรือ `export` checked
+- tinker count: `roles=4`, `perms=25`
+
+**Pitfall:**
+- super-admin **ไม่ผูกผ่าน Spatie role** — column `users.is_super_admin` ใน DB เป็นตัวตัดสิน (`Gate::before` ข้ามการเช็ค permission)
+- หน้านี้ **read-only สำหรับทุกคน** (ไม่ล็อกด้วย permission middleware) — เห็น overview ได้แต่ edit ผ่าน role page ต้อง super-admin
+
+**UAT check:** ☐
+
+### Step 2.2 — สร้าง Test Users 3 คน
+**ที่:** `/users`  ·  **เมนู:** "ผู้ใช้" (หรือ "Users")  ·  **Permission:** `manage_settings` *(super-admin)*
+
+**ทำอะไร (ทำ 3 รอบ — user 3 คน):**
+1. ไปเมนู "ผู้ใช้" → list มี **1 row** (admin@example.com) จาก seed
+2. คลิกปุ่ม **"เพิ่มผู้ใช้"** มุมขวาบน → ไปหน้า create
+3. กรอก:
+   - **ชื่อจริง (first_name):** `สมชาย` *(required, max 255)*
+   - **นามสกุล (last_name):** `ใจดี` *(required, max 255)*
+   - **อีเมล (email):** `somchai@abc.co.th` *(required, unique:users,email)*
+   - **เบอร์โทร (phone):** `081-234-5678` *(optional, max 50)*
+   - **แผนก (department):** เลือก `IT` *(required — dropdown มาจาก Phase 1)*
+   - **ตำแหน่ง (position):** เลือก `MGR` *(required)*
+   - **หมายเหตุ (remark):** *(optional, max 1000)*
+   - **สถานะ (is_active):** ☑ *(default true)*
+   - **ประเภทบทบาท (role_type):**
+     - `default` → เลือก role 1 ตัวจาก dropdown (4 ตัว: super-admin / admin / approver / viewer)
+     - `custom` → ติ๊ก permission ทีละช่อง (จาก matrix grid 25 perms)
+   - **role:** `admin` *(สำหรับ user 1 — somchai)*
+4. คลิก **"บันทึก"**
+
+**ผลที่ควรเห็น (สำคัญ — UX commit 4a878b9):**
+- Redirect ไป **หน้า edit ของ user ใหม่** พร้อม query string `?just_created=1`
+- Toast: "สร้างผู้ใช้เรียบร้อย" (key `users.user_created`)
+- ที่หน้า edit จะเห็น **block พิเศษ** สำหรับ "รหัสผ่าน" — มี 2 ปุ่ม:
+  - **"สร้างรหัสผ่านชั่วคราว"** → POST `/users/{id}/reset-password` → จะแสดง temp password แบบ one-time ในแถบสีเขียวด้านบน
+  - **"ส่งลิงก์ตั้งรหัสผ่านทางอีเมล"** → POST `/users/{id}/send-password-link` → ส่งอีเมล standard "set your password" (Local user เท่านั้น — SSO/LDAP no-op)
+- ตอน create ระบบ **สุ่ม password ให้อัตโนมัติ** ด้วย `CompliantPasswordGenerator::generate()` (ไม่มี input field ในฟอร์ม) — ต้องกด "สุ่ม" ที่หน้า edit เพื่อ reveal
+- `password_must_change=true` *(default จาก setting `password_force_change_first_login`)*
+
+**ทำซ้ำสร้างอีก 2 users:**
+
+| # | first_name | last_name | email | department | position | role |
+|---|---|---|---|---|---|---|
+| 1 | สมชาย | ใจดี | somchai@abc.co.th | IT | MGR | admin |
+| 2 | สมหญิง | รักงาน | somying@abc.co.th | FIN | SUP | approver |
+| 3 | สมศรี | ขยัน | somsri@abc.co.th | ACC | SUP | viewer |
+
+**สำคัญ: เก็บ temp password ของ user 3 (somsri, viewer) ไว้ใช้ใน Step 2.4!** หลังกด "สร้างรหัสผ่านชั่วคราว" รหัสจะแสดงครั้งเดียวบนหน้าจอ — copy ไว้ก่อน refresh
+
+**Pitfall:**
+- **Email unique ทั้งระบบ** — กรอกซ้ำ → validation error "อีเมลนี้ถูกใช้แล้ว"
+- **Department + Position required** — ถ้า dropdown ว่าง = Phase 1 ยังไม่สร้าง dept/position
+- password ตอน create **ไม่มี input field** — ระบบสุ่มให้อัตโนมัติ แล้วต้องกด "สุ่ม" ที่หน้า edit เพื่อ reveal
+- **ไม่ใช่ user ทุกคนเปลี่ยนรหัสผ่านได้** — SSO/LDAP user (`auth_provider != 'local'`) จะกด "ส่งลิงก์" ไม่ได้ (no-op + error message)
+
+**UAT check:** ☐
+
+### Step 2.3 — Admin Password Reset (สำหรับ existing user)
+**ที่:** `/users/{id}/edit` ของ test user คนใดก็ได้  ·  **Permission:** `manage_settings`
+
+**ทำอะไร:**
+1. ที่ `/users` list → คลิก row action "แก้ไข" บน somchai → หน้า edit
+2. หา block "รหัสผ่าน" (อยู่ส่วนล่างฟอร์ม)
+3. คลิกปุ่ม **"สร้างรหัสผ่านชั่วคราว"**
+4. ดู green banner ที่ขึ้นด้านบนหน้า → ควรแสดง **temp password** (เช่น `Xk7@mN2p$qR9`)
+5. **Copy temp password ก่อน refresh** (one-time view)
+
+**ผลที่ควรเห็น:**
+- หน้าเดิม (`/users/{id}/edit`) reload พร้อม:
+  - Toast green: "รีเซ็ตรหัสผ่านเรียบร้อย" (key `users.password_reset_success`)
+  - แถบ banner แสดง `temp_password` ที่สุ่มได้ (flash session, one-time view)
+- DB ของ user นั้น:
+  - `password` = hash ใหม่ของรหัสที่สุ่ม
+  - `password_changed_at` = now()
+  - `password_must_change` = `true` *(บังคับเปลี่ยนตอน login ครั้งถัดไป)*
+
+**ทดสอบ password_must_change flow:**
+1. Logout admin
+2. Login เป็น somchai ด้วย temp password
+3. ระบบควร **redirect ไปหน้าเปลี่ยนรหัสผ่าน** ทันที (middleware `EnforcePasswordChange`) ก่อนเข้าหน้าอื่น
+4. กรอกรหัสผ่านใหม่ → save → เข้า dashboard ปกติ
+5. Logout → log กลับเป็น admin
+
+**Pitfall:**
+- **Temp password แสดงครั้งเดียว** — refresh แล้ว flash หาย, copy ก่อนเสมอ
+- ถ้า user เป็น SSO/LDAP จะใช้ "สร้างรหัสผ่านชั่วคราว" **ไม่ได้** (password ในระบบไม่ใช้งาน)
+- `EnforcePasswordChange` ทำงาน web only — API ใช้ `EnforcePasswordChangeForSanctum` คืน 403 JSON
+
+**UAT check:** ☐
+
+### Step 2.4 — Non-Admin Login → Permission Gate
+**ที่:** logout admin → login เป็น `somsri@abc.co.th` (role: viewer)  ·  **Permission test:** `manage_settings` (viewer ไม่มี)
+
+**ทำอะไร:**
+1. Logout admin → กลับหน้า login
+2. Login เป็น **somsri** ด้วย temp password จาก Step 2.2
+3. ถ้ามี `password_must_change` → เปลี่ยนรหัสก่อน
+4. ที่ dashboard → สังเกต **sidebar ที่หายไป**:
+   - "ตั้งค่า" group: เมนูส่วนใหญ่ควรหายไป (Branding, Navigation, Departments, Positions, ฯลฯ)
+   - viewer ได้แต่ permissions read+export → เห็นเฉพาะเมนู view
+5. ลอง access route ที่ super-admin only โดยพิมพ์ใน URL bar: `http://localhost:8000/settings/branch-scoping`
+6. ระบบควรคืน **403 Forbidden** (middleware `super-admin` หรือ `EnforceMenuPermission`)
+7. ลอง access `/settings/users` → 403 (`manage_settings` required)
+
+**ผลที่ควรเห็น:**
+- sidebar viewer มีเมนู: ดูฟอร์มเอกสาร, ดูรายงาน, profile — รายการสั้นกว่าของ admin มาก
+- `/settings/*` ส่วนใหญ่ → 403 page "ไม่มีสิทธิ์เข้าถึง"
+- API endpoint (Bearer token) ที่ super-admin only — ตัวอย่าง: `GET /v1/departments` → JSON 403 `{"error":"auth.super_admin_only"}`
+
+**ทำซ้ำกับ approver (somying):**
+- approver มี perms approval.approve + view PR + view PO
+- sidebar จะมีเมนู "อนุมัติเอกสาร" + "ใบขอซื้อ" + "ใบสั่งซื้อ" แต่ไม่มี "ตั้งค่า" / "ผู้ใช้"
+- `/settings/*` → 403 ส่วนใหญ่
+
+**Pitfall:**
+- ถ้า cache nav menu (TTL 3600s) ค้าง user อาจเห็นเมนูเก่า — ตอน restart server / model save จะ invalidate cache อัตโนมัติ
+- `is_super_admin` flag ใน session **ใช้แสดง UI เท่านั้น** — middleware `super-admin` เช็ค DB column จริง
+- non-admin คลิกชื่อ role ใน /roles/overview ได้ (link open) แต่ form edit จะ readonly
+
+**UAT check:** ☐
+
+### Step 2.5 — Role Overview Matrix (verify search + link)
+**ที่:** `/roles/overview`  ·  **Permission:** ไม่ล็อก (กลับมาใช้ admin login)
+
+**ทำอะไร:**
+1. Logout viewer → log กลับ admin
+2. ไป `/roles/overview` อีกครั้ง
+3. ทดสอบ search:
+   - พิมพ์ `approval` → กรองแถวที่ permission name มี keyword
+   - พิมพ์ `view` → เห็น row view_* permissions
+   - ลบ search → กลับมาทุก row
+4. คลิก **ชื่อ role** ในหัวคอลัมน์ (เช่น "approver") → redirect ไป `/roles/{id}/edit`
+5. ดูหน้า edit role: เห็น checkbox grid permissions, สามารถ tick/untick + บันทึก
+6. กลับ `/roles/overview` → confirm matrix ตรงกับที่แก้
+
+**ผลที่ควรเห็น:**
+- Search filter ทำงาน client-side (instant filter, ไม่ reload)
+- คลิก role link → หน้า edit (super-admin เท่านั้นที่ save ได้)
+- หลังแก้ permission ของ role + save → กลับมาดู matrix ก็เห็น checkmark เปลี่ยน
+
+**Pitfall:**
+- **Cache permission ของ Spatie** — หลังแก้ role ใหม่ ถ้าไม่ refresh page อาจเห็นค่าเก่า — Spatie cache invalidates ผ่าน model event แต่ server-side cache อาจค้าง — กด hard refresh
+- viewer/approver คลิก role link ได้แต่หน้า edit จะ block save (auth fail) — สำหรับทดสอบ
+
+**UAT check:** ☐
+
+### Step 2.6 — สร้าง Custom Role
+**ที่:** `/roles/create`  ·  **เมนู:** "บทบาท" / "Roles" (เข้าจาก list `/roles` แล้วกดปุ่ม "เพิ่มบทบาท")  ·  **Permission:** `super-admin` middleware (DB column `is_super_admin=true`)
+
+**ทำอะไร:**
+1. ไป `/roles` → list มี 4 row (super-admin, admin, approver, viewer)
+2. คลิกปุ่ม **"เพิ่มบทบาท"** มุมขวาบน → ไปหน้า `/roles/create`
+3. กรอก:
+   - **ชื่อบทบาท (name):** `editor` *(required, unique, machine identifier — ใช้ snake_case หรือ kebab)*
+4. เลือก permissions ที่จะให้กับ role นี้:
+   - หน้า matrix แสดง 25 permissions จัดกลุ่มตาม **module** (collapsible sections, Alpine.js toggle)
+   - คลิกหัวกลุ่มเพื่อเปิด/ปิด → ติ๊ก checkbox subset (เช่น ติ๊ก permission `manage_settings` + `view_purchase_orders` 2 ตัว)
+5. คลิก **"บันทึก"**
+
+**ผลที่ควรเห็น:**
+- Redirect กลับ `/roles` (list) — toast green: "สร้างบทบาทสำเร็จ" (key `common.role_flash_created`)
+- ตาราง list เพิ่ม 1 row `editor` — แสดง permission count ที่ผูก
+- DB: `roles` row +1 (name=`editor`, guard_name=`web`), `role_has_permissions` row +N ตาม checkbox ที่ติ๊ก
+- กลับไปดู `/roles/overview` → คอลัมน์ "editor" ปรากฏใน matrix พร้อม checkmark เซลล์ที่ผูกไว้
+
+**Verify ด้วย tinker:**
+```bash
+php artisan tinker --execute='
+$r = \Spatie\Permission\Models\Role::where("name","editor")->first();
+echo "role=".$r->name." perms=".$r->permissions->count().PHP_EOL;
+foreach($r->permissions as $p) echo "  - ".$p->name.PHP_EOL;'
+```
+
+**Pitfall:**
+- **Role ลบไม่ได้** ถ้ามี user assigned — ต้อง unassign ก่อน (Spatie safeguard)
+- **guard_name fix `web`** — ถ้าจะใช้กับ API ต้องสร้าง role แยก guard `api` (Phase นี้ไม่ทดสอบ)
+- ไม่มี field `label_en`/`label_th` ในฟอร์ม — UI ใช้ `PermissionDisplay::label($name)` lookup จาก `lang/*/permissions_display.php['names'][...]` ถ้าไม่มีก็ render raw `name`
+- หน้านี้ **super-admin only** — admin ทั่วไปไม่เข้าได้ (ต่างจาก /roles/overview ที่ทุกคนเข้า view ได้)
+
+**UAT check:** ☐
+
+### Step 2.7 — สร้าง Custom Permission
+**ที่:** `/permissions/create`  ·  **เมนู:** "สิทธิ์" / "Permissions" (เข้าจาก list `/permissions`)  ·  **Permission:** `super-admin` middleware
+
+**ทำอะไร:**
+1. ไป `/permissions` → list มี 25 row จาก seed (จัดกลุ่มตาม module: `manage_settings`, `user_access.*`, `approval.*`, ฯลฯ)
+2. คลิกปุ่ม **"เพิ่มสิทธิ์"** มุมขวาบน → ไปหน้า `/permissions/create`
+3. กรอก field เดียว:
+   - **ชื่อสิทธิ์ (name):** `reports.viewer` *(required, max 100, unique, format แนะนำ `module.action`)*
+   - Placeholder ใน input: `"module.action"`
+   - Help text ใต้: hint key `common.permission_name_hint`
+4. คลิก **"บันทึก"**
+
+**ผลที่ควรเห็น:**
+- Redirect กลับ `/permissions` (list) — toast: "บันทึกเรียบร้อย" (key `common.saved`)
+- ตาราง list เพิ่ม 1 row `reports.viewer` — auto-parse `module='reports'`, `action='viewer'` (split ที่ `.` แรก)
+- DB: `permissions` row +1 (`guard_name='web'`); Spatie cache `PermissionRegistrar::forgetCachedPermissions()` clear อัตโนมัติ
+- ที่ `/roles/overview` — แถวใหม่ `reports.viewer` ปรากฏ แต่ทุก role ไม่มี checkmark (ยังไม่ผูก)
+
+**ขั้นถัดไปบังคับ:** การมี permission ใน DB **ไม่ทำให้** ใครได้สิทธิ์ทันที — ต้องไปผูก:
+- เข้า `/roles/{id}/edit` ของ role ที่ต้องการ → ติ๊ก `reports.viewer` → save  
+- **หรือ** ใน user edit page เลือก `role_type=custom` แล้วติ๊ก permissions[] ตรงๆ
+- **หรือ** assign โดยตรงผ่าน Spatie: `$user->givePermissionTo('reports.viewer')` (โค้ด level)
+
+**Pitfall ใหญ่:**
+- **สร้าง permission row เปล่าๆ ไม่ gate route ใดๆ** — โค้ดจะกัน route ต้อง reference string ตรงเป๊ะ:
+  - `@can('reports.viewer', ...)` ใน Blade view
+  - `middleware('permission:reports.viewer')` ใน routes
+  - `'permission' => 'reports.viewer'` ใน `navigation_menus` row (เพื่อ filter sidebar)
+  - **ถ้าไม่มี code reference → permission นี้แค่อยู่ใน DB เฉยๆ ไม่มีผล**
+- **ลบ permission ไม่ได้** ถ้า:
+  - มี role ผูกอยู่ (`role_has_permissions`)
+  - หรือ user ผูกตรง (`model_has_permissions`)
+  - → จะแสดง error `common.permission_cannot_delete_in_use` ที่ UI list page
+- guard_name fix `web` — ใช้กับ user ที่ login web อย่างเดียว
+- module auto-parse จาก segment แรก: `name='user'` ที่ไม่มี `.` → module=`user`, action=`user`
+
+**UAT check:** ☐
+
+### ผลรวมหลัง Phase 2
+
+DB state ที่ควรได้:
+```
+users = 4 (1 admin seed + 3 test: somchai, somying, somsri)
+roles = 5 (4 seed + 1 custom: editor)
+permissions = 26 (25 seed + 1 custom: reports.viewer)
+```
+
+ตรวจด้วย:
+```bash
+php artisan tinker --execute='
+echo "users=".\App\Models\User::count().PHP_EOL;
+echo "roles=".\Spatie\Permission\Models\Role::count().PHP_EOL;
+echo "perms=".\Spatie\Permission\Models\Permission::count().PHP_EOL;
+foreach(\App\Models\User::with("roles","department","position")->get() as $u){
+  $r = $u->roles->pluck("name")->join(",") ?: ($u->is_super_admin ? "super-admin(DB)" : "(no role)");
+  echo "  ".$u->email." | ".$u->department?->code."/".$u->position?->code." | role=".$r.PHP_EOL;
+}'
+```
+
+พร้อมสำหรับ Phase 3 (Master data) → user pool ตั้งครบสำหรับ assign ตอนสร้าง workflow + form ที่ผูก approver
 
 ---
 

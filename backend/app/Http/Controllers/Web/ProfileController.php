@@ -662,7 +662,20 @@ class ProfileController extends Controller
             return back()->withErrors(['current_password' => __('common.current_password_incorrect')]);
         }
 
+        $wasForced = (bool) $user->password_must_change;
+
         PasswordLifecycleService::applySelfServicePasswordChange($user, $request->password);
+
+        if ($wasForced) {
+            $request->session()->forget(['user', 'api_token', 'user_permissions']);
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->with('status', __('auth.password_changed_please_relogin'));
+        }
+
+        $request->session()->regenerate();
 
         return back()->with('success', __('common.password_changed'));
     }

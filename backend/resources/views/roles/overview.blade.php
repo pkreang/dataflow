@@ -35,7 +35,14 @@
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                 @forelse ($grouped as $module => $perms)
-                    <tr class="bg-slate-50 dark:bg-slate-800/40">
+                    @php
+                        $moduleSearch = collect($perms)
+                            ->map(fn ($p) => \Illuminate\Support\Str::lower(\App\Support\PermissionDisplay::label($p['name'] ?? '').' '.($p['name'] ?? '')))
+                            ->implode(' ');
+                    @endphp
+                    <tr class="bg-slate-50 dark:bg-slate-800/40"
+                        data-module-search="{{ $moduleSearch }}"
+                        x-show="!q || ($el.dataset.moduleSearch || '').includes(q.toLowerCase())">
                         <td colspan="{{ count($roles) + 1 }}"
                             class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             {{ \App\Support\PermissionDisplay::module($module) }}
@@ -51,7 +58,9 @@
                             </td>
                             @foreach ($roles as $role)
                                 <td class="px-4 py-2 text-center">
-                                    @if (in_array($perm['id'], $rolePermissionIds[$role->id] ?? [], true))
+                                    @if ($role->name === 'super-admin')
+                                        <span class="text-green-600 dark:text-green-400 font-semibold" title="{{ __('common.rbac_super_admin_bypass') }}">✓</span>
+                                    @elseif (in_array($perm['id'], $rolePermissionIds[$role->id] ?? [], true))
                                         <span class="text-green-600 dark:text-green-400 font-semibold" title="{{ $role->name }}">✓</span>
                                     @else
                                         <span class="text-slate-300 dark:text-slate-600">·</span>
