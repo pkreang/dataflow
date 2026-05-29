@@ -602,7 +602,7 @@ foreach(\App\Models\User::with("roles","department","position")->get() as $u){
    - **ชื่อ EN (label_en):** `Repair Request` *(required, max 255)*
    - **ชื่อ TH (label_th):** `ใบแจ้งซ่อม` *(required, max 255)*
    - **คำอธิบาย (description):** *(optional)*
-   - **ไอคอน (icon):** เลือกจาก dropdown (รายการมาจาก `IconCatalog::names()` เช่น `wrench`, `document-text`) *(optional)*
+   - **ไอคอน (icon):** เลือกจาก dropdown (รายการมาจาก `IconCatalog::names()` 22 ตัว เช่น `wrench`, `currency`, `document`, `briefcase`) *(optional)*
    - **ลำดับ (sort_order):** `0` *(optional, ใช้เรียงในตัวเลือก)*
    - **สถานะใช้งาน (is_active):** ☑ *(default true)*
 4. คลิก **"บันทึก"**
@@ -620,7 +620,7 @@ foreach(\App\Models\User::with("roles","department","position")->get() as $u){
 - **ลบไม่ได้** ถ้ามี `document_forms` หรือ `approval_workflows` ใช้ code นี้ — error `common.cannot_delete_document_type`
 - ใช้ `evaluation` เป็น code สำรองสำหรับฟอร์มประเมิน (Phase 6.8 จะใช้ filter)
 
-**UAT check:** ☐
+**UAT check:** (done) — สร้าง 2 รายการ: `repair_request` / `ใบแจ้งซ่อม` / `wrench` + `purchase_request` / `ใบสั่งซื้อ` / `currency`
 
 ### Step 3.2 — สร้าง Lookups (รายการอ้างอิง)
 **ที่:** `/settings/lookups`  ·  **เมนู:** "รายการอ้างอิง"  ·  **Permission:** `manage_settings`
@@ -657,8 +657,9 @@ foreach(\App\Models\User::with("roles","department","position")->get() as $u){
 - ลบไม่ได้ถ้า: `is_system=true` (system protected) **หรือ** มี form field type `lookup` ที่ `options.source` = key นี้ → error ระบุชื่อฟอร์มที่อ้าง
 - **CSV import:** column header **ต้องมี `value` อย่างน้อย** (จะ default label_th/label_en = value ถ้าไม่ใส่); mode `replace` ลบทั้งหมดก่อน import, `append` ใช้ updateOrCreate (key = `list_id` + `value`)
 - export CSV เริ่มด้วย UTF-8 BOM (`\xEF\xBB\xBF`) เพื่อ Excel ไทย
+- **Keyboard-layout pitfall:** ตอนพิมพ์ `label_en` field — ถ้า OS ค้าง Thai input mode จะติด vowel/tone marks (เช่น ◌็ mai-taikhu) นำหน้าตัวภาษาอังกฤษได้แบบไม่เตือน (`็็High` แทน `High`) — UI render เพี้ยน แต่ DB เก็บ raw + validation ไม่ block. **แนะนำ** ตรวจ label_en หลัง save อย่างน้อย 1 รอบก่อนปิดงาน
 
-**UAT check:** ☐
+**UAT check:** (done) — สร้าง `repair_priority` 4 items: `low/medium/high/critical` ภาษาไทย/อังกฤษครบ. เจอ + แก้ typo `็็High → High` (Thai input mode contamination)
 
 ### Step 3.3 — สร้าง Running Numbers (เลขที่เอกสารอัตโนมัติ)
 **ที่:** `/settings/running-numbers`  ·  **เมนู:** "เลขที่เอกสารอัตโนมัติ"  ·  **Permission:** `manage_settings`
@@ -688,18 +689,18 @@ foreach(\App\Models\User::with("roles","department","position")->get() as $u){
 - 1 `document_type` มีได้แค่ 1 config — dropdown "ประเภทเอกสาร" บนหน้า create **ซ่อน type ที่มี config แล้ว** อัตโนมัติ
 - **หลายฟอร์มที่ใช้ `document_type` เดียวกัน → แชร์ running number lane** เดียวกัน (ไม่ใช่ per-form) — non-obvious ดู comment ใน controller `index()`
 - ปุ่ม **"Reset"** บนแถว: set `last_number=0` + `last_reset_at=วันนี้` — ใช้ตอนต้นปี/เดือนใหม่ (หรือทดสอบ flow); reset_mode ไม่ auto-reset ตอน midnight — runtime ของ workflow จะ check `last_reset_at` ตอน format ref_no
-- format ของ ref_no: `prefix[+YYYY[MM]]-NNNN…` ขึ้นกับ include_year/include_month + digit_count
+- format ของ ref_no: `prefix[+YYYY[MM]]-NNNN…` ขึ้นกับ include_year/include_month + digit_count — **dash ก่อนปียังไม่ใส่ให้อัตโนมัติ** (`RunningNumberService::format()` ต่อตรง `prefix.YYYY.-.NNNN`) ดังนั้น **ต้องพิมพ์ dash ท้าย prefix เอง** (เช่น `RR-` ไม่ใช่ `RR`) ไม่งั้นจะได้ `RR2026-00001` ไม่ใช่ `RR-2026-00001`
 
-**UAT check:** ☐
+**UAT check:** (done) — สร้าง 2 configs: `repair_request` (RR-, yearly, 5 digits) + `purchase_request` (PR-, yearly, 5 digits). ทดสอบ Reset บนแถว PR → `last_reset_at=2026-05-29`. ยืนยันได้: (a) dropdown `document_type` ซ่อน type ที่ใช้แล้ว, (b) ต้องใส่ dash ที่ prefix เอง
 
 ### ผลรวมหลัง Phase 3
 
-DB state ที่ควรได้:
+DB state ที่ควรได้ (UAT baseline ที่ทำจริง):
 ```
-document_types ≥ 3
-lookup_lists ≥ 1 (ที่สร้างเองนอกเหนือจาก seeded)
-lookup_list_items ≥ 4
-running_number_configs ≥ 1
+document_types ≥ 2          # repair_request, purchase_request (3.1)
+lookup_lists ≥ 1            # repair_priority (3.2)
+lookup_list_items ≥ 4       # low / medium / high / critical (3.2)
+running_number_configs ≥ 1  # RR- (3.3, optional + PR- = 2)
 ```
 
 ตรวจด้วย:
