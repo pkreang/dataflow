@@ -88,7 +88,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_stage_name') }}</label>
-                                <input :name="`stages[${idx}][name]`" x-model="stage.name" required class="form-input mt-1" />
+                                <input :name="`stages[${idx}][name]`" x-model="stage.name" @input="checkValidity()" required class="form-input mt-1" />
                             </div>
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_approver_type') }}</label>
@@ -101,7 +101,7 @@
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_approver_ref') }}</label>
                                 <template x-if="stage.approver_type === 'role'">
-                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" required class="form-input mt-1">
+                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @change="checkValidity()" required class="form-input mt-1">
                                         <option value="">{{ __('common.workflow_placeholder_select_role') }}</option>
                                         <template x-for="role in roles" :key="`role-${role}`">
                                             <option :value="role" x-text="role"></option>
@@ -109,7 +109,7 @@
                                     </select>
                                 </template>
                                 <template x-if="stage.approver_type === 'user'">
-                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" required class="form-input mt-1">
+                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @change="checkValidity()" required class="form-input mt-1">
                                         <option value="">{{ __('common.workflow_placeholder_select_user') }}</option>
                                         <template x-for="user in users" :key="`user-${user.id}`">
                                             <option :value="String(user.id)" x-text="user.label"></option>
@@ -118,7 +118,7 @@
                                 </template>
                                 <template x-if="stage.approver_type === 'position'">
                                     <div>
-                                        <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" required class="form-input mt-1">
+                                        <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @change="checkValidity()" required class="form-input mt-1">
                                             <option value="">{{ __('common.workflow_placeholder_select_position') }}</option>
                                             <template x-for="p in positions" :key="`pos-${p.id}`">
                                                 <option :value="String(p.id)" x-text="p.label"></option>
@@ -130,7 +130,7 @@
                             </div>
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_min_approvals') }}</label>
-                                <input type="number" min="1" :name="`stages[${idx}][min_approvals]`" x-model="stage.min_approvals" required class="form-input mt-1" />
+                                <input type="number" min="1" :name="`stages[${idx}][min_approvals]`" x-model="stage.min_approvals" @input="checkValidity()" required class="form-input mt-1" />
                             </div>
                         </div>
                         <div class="flex items-center gap-2 pt-1">

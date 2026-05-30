@@ -760,8 +760,9 @@ echo "running_numbers=".\App\Models\RunningNumberConfig::count().PHP_EOL;'
 - **Update workflow → stages ถูกลบทั้งหมดแล้วสร้างใหม่** (delete+recreate) — ใช้ ID `approval_instance_steps` อ้าง stage จะหายตาม **แต่ FK ใช้ `step_no` ไม่ใช่ stage id** ดังนั้น running instances ไม่กระทบ
 - **ลบ workflow ไม่ได้** ถ้ามี `approval_instances` (เคยใช้สร้าง flow แล้ว) **หรือ** มี `department_workflow_bindings` ผูกอยู่ → error `common.cannot_delete_workflow`
 - **require_signature** propagate ตอน `start()` ของ instance → `approval_instance_steps.require_signature` ใช้ `<x-signature-pad>` ตอน approve (CLAUDE.md §7)
+- **ปุ่ม "บันทึก" ติด disabled หลังเพิ่ม Stage ใหม่** *(แก้แล้วใน UAT baseline นี้ — 2026-05-29)*: ก่อนแก้ Alpine state `workflowBuilder()` / `workflowBuilderEdit()` เรียก `checkValidity()` แค่จากปุ่ม `addStage`/`removeStage`/`moveUp/Down`/`cloneStage`/`applyTemplate` + เปลี่ยน `approver_type` dropdown เท่านั้น — ไม่มี handler บน input `stage.name` / `min_approvals` หรือ `<select x-model="stage.approver_ref">` 3 ตัว → กรอกครบทุก field แล้วปุ่ม save ยังล็อค. ต้องคลิก "ลง→ขึ้น" บน Stage 1 เพื่อ trigger re-validation. **Fix:** เพิ่ม `@input="checkValidity()"` / `@change="checkValidity()"` บน 5 จุดใน `backend/resources/views/settings/workflow/{create,edit}.blade.php` (ดู git diff สำหรับ commit Phase 4)
 
-**UAT check:** ☐
+**UAT check:** (done) — workflow #1 `ขั้นตอนอนุมัติการแจ้งซ่อม` (repair_request, 2 stages: position หัวหน้างาน → user Super Admin) + workflow #2 `ขั้นตอนอนุมัตสั่งซื้อ` (purchase_request, 2 stages) สร้างสำเร็จ
 
 ### Step 4.2 — ตั้งโหมดการเลือก Workflow (Approval Routing)
 **ที่:** `/settings/approval-routing`  ·  **เมนู:** "การเลือก workflow อนุมัติ"  ·  **Permission:** `manage_settings`
@@ -784,7 +785,7 @@ echo "running_numbers=".\App\Models\RunningNumberConfig::count().PHP_EOL;'
 - ถ้าเลือก `department_scoped` แล้วไม่มี binding ใน Phase 4.3 → submit ฟอร์ม **fail** หาก workflow lookup ไม่เจอ
 - `ApprovalFlowService` ใช้ค่านี้ตัดสิน — ดูในโค้ดที่ resolve workflow ตอน start instance
 
-**UAT check:** ☐
+**UAT check:** (done) — repair_request=hybrid + purchase_request=hybrid (เก็บใน `document_types.routing_mode`)
 
 ### Step 4.3 — ผูก Department ↔ Workflow (สำหรับ hybrid / department_scoped)
 **ที่:** `/settings/department-workflow-bindings`  ·  **เมนู:** "แผนก ↔ workflow" *(seeded เป็น `is_active=false` — เข้าผ่าน URL ตรง หรือเปิด menu ใน Phase 6.7)*  ·  **Permission:** `manage_settings`
@@ -806,8 +807,9 @@ echo "running_numbers=".\App\Models\RunningNumberConfig::count().PHP_EOL;'
 - ระบบ **bulk save** ทั้ง matrix — เซลล์ที่ workflow.document_type ไม่ตรงกับคอลัมน์จะถูก **silently skip** (loop `continue;` ใน `bulkBindWorkflows`)
 - ลบ department ไม่ได้ถ้ามี binding อยู่ → error `common.cannot_delete_department` (แต่ถ้าลบ binding ออกก่อน แล้วลบได้ — ถ้ายังไม่มี user ผูกแผนกนั้น)
 - เมนูถูก seed `is_active=false` เพราะใช้ทั่วไปไม่บ่อย — ถ้าจะให้ end-user เห็น เปิดใน Phase 6.7 (Menu Manager)
+- **matrix UI ไม่กรอง column dropdown ตาม `routing_mode`** — แสดง `purchase_request` กับ `repair_request` ทั้งสองคอลัมน์เสมอ ผู้ทดสอบ UAT อาจเลือก binding ผิดคอลัมน์โดยไม่รู้ตัว (ตัวอย่าง 2026-05-29: ทั้ง บัญชี กับ IT ถูกผูกเข้า `purchase_request` ทั้งคู่ ขาด `repair_request` binding) — server ยอมรับเพราะ `workflow.document_type` ตรงคอลัมน์ — ตรวจหลัง save ด้วย tinker block ใน "ผลรวมหลัง Phase 4"
 
-**UAT check:** ☐
+**UAT check:** (done) — `department_workflow_bindings=2` (บัญชี×purchase_request, เทคโนโลยีสารสนเทศ×purchase_request) — note: ไม่มี repair_request binding → hybrid mode จะ fallback ไป workflow org-wide (workflow #1) เมื่อแจ้งซ่อม
 
 ### ผลรวมหลัง Phase 4
 
