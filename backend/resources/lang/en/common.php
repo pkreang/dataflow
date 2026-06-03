@@ -463,7 +463,7 @@ return [
     'document_form_default_title' => 'Title',
     'document_form_default_amount' => 'Amount',
     'document_form_type_text' => 'Text',
-    'document_form_type_textarea' => 'Long text',
+    'document_form_type_textarea' => 'Text area',
     'document_form_type_number' => 'Number',
     'document_form_type_date' => 'Date',
     'document_form_type_select' => 'Dropdown',
@@ -1083,7 +1083,7 @@ return [
     'group_row_default' => 'Item',
 
     // Page break
-    'document_form_type_page_break' => 'Page break (print only)',
+    'document_form_type_page_break' => 'Page break',
     'page_break_marker' => 'Page break',
 
     // Conditional required

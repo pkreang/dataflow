@@ -463,7 +463,7 @@ return [
     'document_form_default_title' => 'หัวข้อ',
     'document_form_default_amount' => 'จำนวนเงิน',
     'document_form_type_text' => 'ข้อความ',
-    'document_form_type_textarea' => 'ข้อความยาว',
+    'document_form_type_textarea' => 'ข้อความหลายบรรทัด',
     'document_form_type_number' => 'ตัวเลข',
     'document_form_type_date' => 'วันที่',
     'document_form_type_select' => 'รายการเลือก',
@@ -494,7 +494,7 @@ return [
     'document_form_type_lookup' => 'ค้นหาจากตาราง',
     'document_form_type_table' => 'ตาราง',
     'document_form_type_section' => 'หัวข้อแบ่งกลุ่ม',
-    'document_form_type_auto_number' => 'เลขที่เอกสาร (อัตโนมัติ)',
+    'document_form_type_auto_number' => 'เลขที่เอกสารอัตโนมัติ',
     'document_form_type_image' => 'ภาพ',
     'document_form_type_multi_select' => 'เลือกหลายค่า',
     'multi_select_hint' => 'กด Ctrl/Cmd ค้างเพื่อเลือกหลายค่า',
@@ -1072,7 +1072,7 @@ return [
     'signature' => 'ลายเซ็น',
 
     // Group repeater (subform)
-    'document_form_type_group' => 'กลุ่ม (subform ทำซ้ำได้)',
+    'document_form_type_group' => 'กลุ่ม subform',
     'group_min_rows' => 'จำนวนแถวขั้นต่ำ',
     'group_max_rows' => 'จำนวนแถวสูงสุด',
     'group_layout_columns' => 'จำนวนคอลัมน์ภายใน',
@@ -1083,7 +1083,7 @@ return [
     'group_row_default' => 'รายการ',
 
     // Page break
-    'document_form_type_page_break' => 'แบ่งหน้า (เฉพาะ print)',
+    'document_form_type_page_break' => 'แบ่งหน้า',
     'page_break_marker' => 'แบ่งหน้า',
 
     // Conditional required

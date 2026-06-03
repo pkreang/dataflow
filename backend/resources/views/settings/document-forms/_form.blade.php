@@ -602,7 +602,9 @@
                             <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{{ __('common.visibility_rules') ?? 'Visibility Rules' }}</p>
                             <template x-for="(rule, ri) in (field.visibility_rules || [])" :key="ri">
                                 <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,2fr)_auto] items-center gap-2 mb-2">
-                                    <select x-model="rule.field" class="form-input py-1 px-2 text-xs min-w-0">
+                                    <select x-model="rule.field"
+                                            x-init="$nextTick(() => { if (rule.field) $el.value = rule.field })"
+                                            class="form-input py-1 px-2 text-xs min-w-0">
                                         <option value="">{{ __('common.select_field') }}</option>
                                         <template x-for="(other, oi) in fields" :key="'vis-'+oi">
                                             <template x-if="oi !== idx && other.field_key && other.field_type !== 'section'">
@@ -632,7 +634,9 @@
                             <p class="text-xs text-slate-400 dark:text-slate-500 mb-2">{{ __('common.required_rules_help') }}</p>
                             <template x-for="(rule, ri) in (field.required_rules || [])" :key="'req-'+ri">
                                 <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,2fr)_auto] items-center gap-2 mb-2">
-                                    <select x-model="rule.field" class="form-input py-1 px-2 text-xs min-w-0">
+                                    <select x-model="rule.field"
+                                            x-init="$nextTick(() => { if (rule.field) $el.value = rule.field })"
+                                            class="form-input py-1 px-2 text-xs min-w-0">
                                         <option value="">{{ __('common.select_field') }}</option>
                                         <template x-for="(other, oi) in fields" :key="'req-fld-'+oi">
                                             <template x-if="oi !== idx && other.field_key && other.field_type !== 'section'">
@@ -806,6 +810,9 @@
             </div>
         </template>
         </div>{{-- /data-form-canvas --}}
+
+        {{-- Bottom duplicate of "+ Add Field" buttons — accessible without scrolling back up --}}
+        @include('settings.document-forms._form-inline-field-actions')
 
         @if($inlineToolbar ?? false)
             </div>

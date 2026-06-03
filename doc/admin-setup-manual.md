@@ -872,8 +872,9 @@ foreach (\App\Models\DocumentType::all() as $dt) {
 - ฟอร์มที่ยังไม่มี dedicated table (legacy) → save ครั้งแรกที่ใส่ `table_name` ระบบสร้างให้ + backfill payload เก่าผ่าน `php artisan forms:backfill-dedicated-table <form_key>` (CLAUDE.md §2)
 - **target_document_types** ใช้ได้เฉพาะตอน `document_type='evaluation'` — สำหรับฟอร์มประเมินที่ผูกกับ document_type อื่น (Phase 6.8)
 - evaluation_enabled toggle ใช้ตอน close cycle → trigger evaluation flow
+- **MySQL DDL implicit-commit ตัด DB::transaction** *(แก้แล้วใน UAT baseline นี้ — 2026-06-03)*: เดิม `store()`/`update()` ห่อ `DocumentForm::create()` + `$fields->create()` + `Schema::create()/syncTable()` ใน `DB::transaction(closure)` เดียวกัน. MySQL ทำ implicit COMMIT ทุก DDL (`CREATE TABLE` / `ALTER TABLE`) → กลาง closure transaction หายไป → ปลาย closure Laravel call `PDO->commit()` → `PDOException: There is no active transaction` → user เห็น 500 error ทั้งที่ data persisted แล้ว. **Fix:** ย้าย `createTable()`/`syncTable()` ออกจาก `DB::transaction()` (`backend/app/Http/Controllers/Web/DocumentFormController.php` `store()` line 422-481, `update()` line 483-549) + `try/catch` ใน store() drop ตาราง + ลบ form row ถ้า DDL ล้ม. tests SQLite ไม่จับ bug นี้เพราะ SQLite ไม่ implicit-commit on DDL — proof: tinker probe บน MySQL `DB::transaction(fn () => Schema::create(...))` throw แน่นอน
 
-**UAT check:** ☐
+**UAT check:** (done) — form #1 `repair_request_form` (doc_type=repair_request, table=fdata_repair_request) + 2 default fields (title text, amount number) สร้างสำเร็จ (recovered จาก bug fix)
 
 ### Step 5.2 — เพิ่ม Fields (24 field types)
 **ที่:** หน้า edit/create form builder
@@ -911,12 +912,17 @@ foreach (\App\Models\DocumentType::all() as $dt) {
 - **col_span:** 0-4 (0 = ใช้ค่า layout_columns)
 
 **Pitfall:**
-- **field_key reserved**: ห้ามใช้ key ที่อยู่ใน `FormSchemaService::RESERVED_COLUMNS` (เช่น `id`, `created_at`, `user_id`, `status`) **ยกเว้น** field_type อยู่ใน `SKIP_TYPES` (`section`, `auto_number`, `page_break`, `qr_code`) — auto_number ใช้ key `reference_no` ได้เพราะไม่สร้างคอลัมน์
+- **field_key reserved**: ห้ามใช้ key ที่อยู่ใน `FormSchemaService::RESERVED_COLUMNS` (`id`, `user_id`, `department_id`, `status`, `reference_no`, `approval_instance_id`, `created_at`, `updated_at`) **ยกเว้น** field_type อยู่ใน `SKIP_TYPES` (`section`, `auto_number`, `page_break`, `qr_code`) — `auto_number` ใช้ key `reference_no` ได้เพราะไม่สร้างคอลัมน์ (system column มีอยู่แล้ว); `status` ใช้ไม่ได้กับ select → ตั้ง key เป็น `report_status` แทน
 - **lookup cascade**: ตั้ง `depends_on` = field_key ของ lookup parent + `foreign_key` (snake_case `[a-z_]+`) — เด็กจะ filter ตามค่าที่ parent เลือก
 - **เพิ่ม field type ใหม่** ต้องแตะ **5 จุด** (CLAUDE.md §10 ตาราง)
 - **table_columns:** JSON array, แต่ละ col มี `key` + `type` + ใน TABLE_COLUMN_TYPES; keys ห้ามซ้ำ; max 40 cols
+- **Preview modal label fallback bug** *(แก้แล้ว 2026-06-03)*: เดิมใช้ `field.label || 'ฟิลด์ยังไม่มีชื่อ'` แต่ field editor มี input แค่ `label_th`/`label_en` ไม่มี `label` → ฟิลด์ใหม่ preview เห็น placeholder ทั้งที่กรอกแล้ว. Fix: `_form-preview-modal.blade.php` 3 บรรทัด (58, 64, 147) → `field.label_th || field.label_en || field.label || ...` (match server controller :444)
+- **Palette label truncate + naming** *(แก้แล้ว 2026-06-03)*: เดิม `_form-palette.blade.php:73` ใช้ class `truncate` → ป้ายไทยยาวๆ โดน ellipsis ตัด (เช่น `ช่องทำเครื่องหมาย`, `เลขที่เอกสาร (อัตโนมัติ)`). Fix: `truncate` → `line-clamp-2 leading-tight` + rename `textarea`: `Long text`/`ข้อความยาว` → `Text area`/`ข้อความหลายบรรทัด`; ย่อ TH label ของ `auto_number`/`group`/`page_break` ตัดวงเล็บออก
+- **+ เพิ่ม Field button bottom duplicate** *(แก้แล้ว 2026-06-03)*: เดิมปุ่ม "+ เพิ่ม Field" อยู่ที่ section header → scroll ลงต่ำ field 5+ → ปุ่มหายใต้ fixed primary bar (z-110). Fix: เพิ่ม `@include('_form-inline-field-actions')` หลัง canvas close (`_form.blade.php:808+`) → ปุ่มท้าย list ด้วย, ไม่ต้อง scroll ขึ้น
+- **Locale switch state loss** *(by design)*: ปุ่มสลับภาษา `/lang/th` หรือ `/lang/en` ทำ session update + `redirect()->back()` (full GET reload) → ค่าที่ยังไม่ save ในฟอร์มจะหาย. **save ก่อนสลับเสมอ** (`routes/web.php:47-57`). ถ้าอยากเทียบ TH↔EN ใช้ Preview modal (อยู่ภาษาเดียว) แทน
+- **Label display priority ตอน user submit ฟอร์ม:** `DocumentFormField::localized_label` accessor (`App\Models\DocumentFormField:65-77`) ใช้ลำดับ: `label_{current_locale}` → `label_en` → `label_th` → `label` (legacy). กรอก `label_th` + `label_en` ครบทั้ง 2 ภาษาเสมอ (form builder บังคับ required อยู่แล้ว)
 
-**UAT check:** ☐
+**UAT check:** (done) — 8 fields บน form #1: reference_no (auto_number), title (text, required), description (textarea), priority (lookup→repair_priority), occurred_at (date, required), report_status (select), attachment (file), requester_sign (signature). Physical table `fdata_repair_request` มีคอลัมน์ dynamic 7 ตัว (auto_number SKIP_TYPE)
 
 ### Step 5.3 — Field-level Permissions & Rules
 **ที่:** ในแต่ละ field row (expand "Advanced" panel)
@@ -945,8 +951,10 @@ foreach (\App\Models\DocumentType::all() as $dt) {
 - **JS↔PHP parity**: `evaluateRulesPhp` (server) vs `window.evaluateVisibilityRules` (JS) ต้อง sync — ดู `tests/Feature/EvaluateRulesPhpTest.php` (17 parity cases) (CLAUDE.md §8 ข้อ 16)
 - Quirks: `'0'` ไม่ใช่ empty; array values ใน `equals` เช็ค membership; unknown operator → false
 - non-owner ที่ใส่ `user:{id}` token เขียน draft ได้ (ผ่าน `DocumentFormSubmissionController::filterPayloadForAssignee()`) แต่ **submit/destroy/return-to-draft ยัง owner-only**
+- **`editable_by` = null = "default = requester only" (by design)**: `DocumentFormController::parseEditableBy()` line 1002-1004 มี optimization — ถ้า user เลือกแค่ `requester` (ค่า default) → return `null` → DB เก็บ `null` ไม่ใช่ `["requester"]`. Load path `_form.blade.php:42` แปลง `null → ['requester']` กลับให้ Alpine. ดังนั้น `null` ใน column ปกติ; เห็น `null` ใน tinker = "ใช้ default" ไม่ใช่ "ห้ามแก้"
+- **Rule field dropdown blank ใน edit page** *(แก้แล้ว 2026-06-03)*: เดิม `<select x-model="rule.field">` กับ options dynamic ใน `<template x-for>` race condition — Alpine bind x-model ก่อน options render → browser select แสดง blank "Select field" แม้ `rule.field` มีค่า. Fix: `_form.blade.php` line 605 (visibility) + 635 (required) — เพิ่ม `x-init="$nextTick(() => { if (rule.field) $el.value = rule.field })"` ตาม pattern ของ `lookup_source` select (line 310)
 
-**UAT check:** ☐
+**UAT check:** (done) — ตั้ง rules 3 จุด: #3 description (required when priority=critical), #6 report_status (editable_by=[requester, step_1]), #7 attachment (visible_to_departments=[IT id=2])
 
 ### Step 5.4 — Workflow Policy (Range-based selection)
 **ที่:** `/settings/document-forms/{form}/policy`  ·  **Permission:** `manage_settings`
@@ -965,16 +973,22 @@ foreach (\App\Models\DocumentType::all() as $dt) {
 - Range-based workflow ใช้ตอน routing_mode ของ document_type เป็น `hybrid` หรือเฉพาะกรณี — `ApprovalFlowService` resolve ตอน submit
 - ถ้าไม่ใช้ range → ข้าม step นี้ได้
 
-**UAT check:** ☐
+**UAT check:** (skip) — UAT baseline นี้ใช้ binding ระดับ department ใน Phase 4.3 ไม่ใช้ range-based
 
 ### Step 5.5 — Clone + Create Report (optional)
-**ที่:** จาก list หน้า `/settings/document-forms`
+**ที่:**
+- **Clone:** row action ในหน้า list `/settings/document-forms`
+- **Create report:** ปุ่ม **"📊 สร้างรายงาน" (สีเขียว)** ที่ **top fixed action bar ของหน้า EDIT ฟอร์ม** (`/settings/document-forms/{id}/edit`) — ระหว่าง "Workflow policy" และ "Cancel". แสดงเฉพาะตอน edit mode (`_form-action-buttons.blade.php:24-39` `@if($isEdit)`)
 
 **ทำอะไร:**
 - **Clone:** คลิก row action "Clone" → สร้างฟอร์มใหม่ที่ copy fields + structure (form_key + table_name + name ถูก suffix `_copy`)
-- **Create report:** คลิก "สร้างรายงาน" → ระบบสร้าง dashboard อัตโนมัติ 3 widgets (total count, breakdown by status, recent submissions table) ที่ data source `form:<form_key>` → ไปแก้ใน `/settings/dashboards` (Phase 6.2)
+- **Create report:** คลิกปุ่ม "📊 สร้างรายงาน" → confirm dialog "สร้าง dashboard จากฟอร์มนี้?" → POST → ระบบสร้าง dashboard อัตโนมัติ 3 widgets (metric `Total submissions` + chart `By status` + table `Recent`) ที่ data source `form:<form_key>` → redirect ไปหน้า report. แก้/เพิ่ม widget ต่อใน `/settings/dashboards` (Phase 6.2)
 
-**UAT check:** ☐
+**Pitfall:**
+- **ปุ่มไม่อยู่ที่ row action ของ index page** — ใช้คำผิดง่ายตอน UAT walkthrough. ปุ่มอยู่ที่ **top action bar ของ edit page** เท่านั้น
+- **DataSourceRegistry `toBase()` bug** *(แก้แล้ว 2026-06-03)*: เดิม `DataSourceRegistry::perFormSources()` ที่ `App\Support\DataSourceRegistry:463` ใช้ `DB::table($table)->toBase()` แต่ `DB::table()` คืน `Query\Builder` อยู่แล้ว — Query\Builder ไม่มี method `toBase()` (มีแต่ Eloquent\Builder ที่แปลงเป็น Query\Builder) → widget data API throw `BadMethodCallException` → JS เห็น "Failed to load data" บน 3 widgets ทั้งหมด. Fix: ลบ `->toBase()` ออก
+
+**UAT check:** (done — create report only) — `report_dashboards=1` (auto-generated), `report_dashboard_widgets=3` (metric / chart / table) ทุก widget โหลด data จาก `form:repair_request_form` สำเร็จ (count=0 เพราะยังไม่มี submission)
 
 ### ผลรวมหลัง Phase 5
 

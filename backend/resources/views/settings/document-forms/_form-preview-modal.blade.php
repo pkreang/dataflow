@@ -55,13 +55,13 @@
                     {{-- section divider --}}
                     <template x-if="field.field_type === 'section'">
                         <div class="pt-4 pb-2 first:pt-0">
-                            <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b-2 border-blue-500/30 dark:border-blue-400/30" x-text="field.label || '{{ __('common.document_form_type_section') }}'"></h4>
+                            <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b-2 border-blue-500/30 dark:border-blue-400/30" x-text="field.label_th || field.label_en || field.label || '{{ __('common.document_form_type_section') }}'"></h4>
                         </div>
                     </template>
 
                     <template x-if="field.field_type !== 'section'">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <span x-text="field.label || '{{ __('common.document_form_field_untitled') }}'"></span>
+                            <span x-text="field.label_th || field.label_en || field.label || '{{ __('common.document_form_field_untitled') }}'"></span>
                             <span x-show="field.is_required" class="text-red-500 ml-0.5">*</span>
                         </label>
                     </template>
@@ -144,7 +144,7 @@
                             <template x-if="!(field.options_raw || '').trim()">
                                 <label class="flex items-center gap-2.5 text-sm text-gray-700 dark:text-gray-300 pointer-events-none select-none">
                                     <input type="checkbox" tabindex="-1" class="h-4 w-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 accent-blue-600">
-                                    <span x-text="field.label || '{{ __('common.document_form_field_untitled') }}'"></span>
+                                    <span x-text="field.label_th || field.label_en || field.label || '{{ __('common.document_form_field_untitled') }}'"></span>
                                 </label>
                             </template>
                         </div>

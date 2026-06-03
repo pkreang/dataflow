@@ -460,7 +460,8 @@ class DataSourceRegistry
                 'base_query' => $hasFdata
                     // Query the dedicated fdata_* table directly — columns align
                     // with field keys for group_by/aggregate/filter to work without JSON paths.
-                    ? fn () => \Illuminate\Support\Facades\DB::table($form->submission_table)->toBase()
+                    // DB::table() already returns a Query\Builder; no toBase() call needed.
+                    ? fn () => \Illuminate\Support\Facades\DB::table($form->submission_table)
                     : fn () => DocumentFormSubmission::where('form_id', $form->id),
                 'aggregate_fields' => $aggregate,
                 'group_by_fields' => $groupBy,

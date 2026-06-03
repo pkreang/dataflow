@@ -423,7 +423,8 @@ class DocumentFormController extends Controller
     {
         $validated = $this->validatedDocumentFormPayload($request);
 
-        DB::transaction(function () use ($validated) {
+        $form = null;
+        DB::transaction(function () use ($validated, &$form) {
             $form = DocumentForm::create([
                 'form_key' => $validated['form_key'],
                 'name' => $validated['name'],
@@ -460,9 +461,17 @@ class DocumentFormController extends Controller
                     'visible_to_departments' => $this->parseDepartmentIds($field),
                 ]);
             }
-
-            $this->schemaService->createTable($form->load('fields'));
         });
+
+        // DDL outside DB::transaction — MySQL implicit-commits on CREATE TABLE,
+        // which would orphan the outer commit (PDO "no active transaction").
+        try {
+            $this->schemaService->createTable($form->load('fields'));
+        } catch (\Throwable $e) {
+            Schema::dropIfExists($form->submission_table);
+            $form->delete();
+            throw $e;
+        }
 
         $message = __('common.saved');
         if ($warning = $this->autoNumberWarning($validated['fields'], $validated['document_type'])) {
@@ -476,7 +485,8 @@ class DocumentFormController extends Controller
     {
         $validated = $this->validatedDocumentFormPayload($request, $documentForm);
 
-        DB::transaction(function () use ($validated, $documentForm) {
+        $needsCreateTable = false;
+        DB::transaction(function () use ($validated, $documentForm, &$needsCreateTable) {
             $documentForm->update([
                 'form_key' => $validated['form_key'],
                 'name' => $validated['name'],
@@ -517,11 +527,17 @@ class DocumentFormController extends Controller
             // First-time table creation for forms that had no dedicated table yet
             if (! $documentForm->hasDedicatedTable() && ! empty($validated['table_name'])) {
                 $documentForm->update(['submission_table' => $validated['table_name']]);
-                $this->schemaService->createTable($documentForm->load('fields'));
-            } else {
-                $this->schemaService->syncTable($documentForm, $documentForm->fields()->get());
+                $needsCreateTable = true;
             }
         });
+
+        // DDL outside DB::transaction — MySQL implicit-commits on CREATE/ALTER TABLE.
+        // syncTable() self-heals via its own hasTable() guard if a prior DDL left partial state.
+        if ($needsCreateTable) {
+            $this->schemaService->createTable($documentForm->load('fields'));
+        } else {
+            $this->schemaService->syncTable($documentForm, $documentForm->fields()->get());
+        }
 
         $message = __('common.updated');
         if ($warning = $this->autoNumberWarning($validated['fields'], $validated['document_type'])) {
