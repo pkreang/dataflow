@@ -1043,8 +1043,11 @@ echo "physical=".(\Illuminate\Support\Facades\Schema::hasTable($form->submission
 - form_id ใช้ `restrictOnDelete` — ลบฟอร์มที่ผูก cycle ไม่ได้
 - เปิดรอบแล้ว assignment list **ลบไม่ได้** ตรง ๆ — ต้อง close แล้ว clean up
 - Phase 6.8 (Evaluation Form) ต้องสร้างฟอร์มก่อนถึงจะใช้ใน 6.1 ได้
+- **Nested form bug → ปุ่มบันทึก assignments ไม่ทำงาน** *(แก้แล้ว 2026-06-04)*: เดิม `kpi-cycles/edit.blade.php:155` มี `<form action="open">` ซ้อนใน outer `<form action="update">`. HTML5 spec ไม่ยอม nested forms → browser ปิด outer form ตอน parse inner → Save button line 171 หลุดออกนอก form → คลิก submit เงียบ ไม่ส่ง PUT. **Fix:** เปลี่ยน 2 inner forms (open + close) เป็น `<button type="button" onclick="JS-build form append body">` ตาม pattern ของ `_form-action-buttons.blade.php:24-39` Create Report fix
+- **Dropdown user แสดง "—" หลัง save** *(แก้แล้ว 2026-06-04)*: Alpine x-model + dynamic `<template x-for>` options race condition (pattern เดียวกับ Phase 5 rule field bug). DB เก็บค่าถูก แต่ select.value ค้างที่ placeholder "" ตอน render ครั้งแรก. **Fix:** เพิ่ม `x-init="$nextTick(() => { if (row.X) $el.value = row.X })"` บน 2 selects (target line 119 + evaluator line 125)
+- **"สถานะ submission = —"** = by-design (draft submission ยังไม่ถูกกรอก)
 
-**UAT check:** ☐
+**UAT check:** (done) — `รอบประเมิน Q1 2026` (form_id=3 q1_2026_evaluation, period 2026-01-01 → 2026-03-31) + 2 assignments + status=open + 2 draft submissions spawned (user_id=1 evaluator)
 
 ### Step 6.2 — Dashboards
 **ที่:** `/settings/dashboards`  ·  **เมนู:** "แดชบอร์ด"  ·  **Permission:** `manage_settings`
@@ -1066,8 +1069,9 @@ echo "physical=".(\Illuminate\Support\Facades\Schema::hasTable($form->submission
 **Pitfall:**
 - Data source ต้องมีอยู่ใน `App\Support\DataSourceRegistry` — ถ้า source ใหม่ต้องเพิ่มใน registry ก่อน
 - widget ของ form data source อ้าง `form:<form_key>` — ถ้าเปลี่ยน form_key dashboard จะพัง
+- ปุ่ม **"เพิ่มแดชบอร์ด"** (TH) / "Add Dashboard" (EN) อยู่ที่ **มุมขวาบนของหน้า** — ไม่ใช่ "เพิ่ม Dashboard" ตามที่ doc เก่าเรียก
 
-**UAT check:** ☐
+**UAT check:** (done) — `report_dashboards=2` (#1 auto-gen ใบแจ้งซ่อม + #2 `KPI Evaluation Q1 2026`), `widgets=4` (3 จาก #1 + 1 metric บน #2 ที่ data_source=`form:q1_2026_evaluation`)
 
 ### Step 6.3 — Notifications (Email + LINE)
 **ที่:** `/settings/notifications`  ·  **เมนู:** "การแจ้งเตือน"  ·  **Permission:** `manage_settings`
@@ -1107,8 +1111,12 @@ echo "physical=".(\Illuminate\Support\Facades\Schema::hasTable($form->submission
 - LINE Notify (api.notify-bot.line.me) **ถูกยกเลิก 2025-03-31** — ระบบใช้ Messaging API แทน (`api.line.me/v2/bot/message/push`) ตั้งแต่ commit `6116d82`
 - การตั้ง LINE Login ครบ — ดู `doc/line-oa-setup.md` 5 ขั้น (ต้องมี LINE Business account จริง)
 - user คนที่จะรับ LINE notification ต้อง link OA แล้ว (`users.line_user_id` ไม่ว่าง) — ทำที่ `/myprofile` ปุ่ม "ผูก LINE"
+- **`mail.use_db_settings=0` หรือ `mail.mailer=log` → email log ไป `storage/logs/laravel.log` ไม่ส่งจริง** — ติ๊ก "ใช้ค่า DB" ☑ + ตั้ง mailer=`smtp` (ไม่ใช่ log) เพื่อ override config จาก `.env`
+- **ปุ่มทดสอบ LINE** อยู่**ใต้ปุ่ม "บันทึก"** หลัก แยก form (เพราะ nested form ห้าม). Label TH = "ทดสอบส่งไปยัง LINE ของฉัน" (ไม่ใช่ "ส่งข้อความทดสอบ")
+- **Toggle keys ใน DB เก็บ prefix `notifications.*`** ไม่ใช่ key เปล่า — ตรวจ `Setting::get('notifications.email_enabled')` ไม่ใช่ `Setting::get('email_enabled')`
+- **UAT shortcut: ผูก LINE manual ผ่าน webhook.site** — Add OA เป็นเพื่อน → ส่งข้อความ → webhook event JSON มี `source.userId` → ใช้ tinker `User::find(N)->update(['line_user_id' => 'U...'])` ไม่ต้องตั้ง OAuth Login Channel
 
-**UAT check:** ☐
+**UAT check:** (done) — Email Mailtrap dev SMTP ส่งจริงเข้า inbox + LINE push test ผ่าน Channel Access Token เข้า admin LINE OA + 10 notification toggles ON ครบ (`notifications.* = 9` + `line_messaging.enabled = 1`)
 
 ### Step 6.4 — Outgoing Webhooks
 **ที่:** `/settings/integrations`  ·  **เมนู:** "Webhook ขาออก"  ·  **Permission:** `manage_settings`
@@ -1125,23 +1133,27 @@ echo "physical=".(\Illuminate\Support\Facades\Schema::hasTable($form->submission
 
 **Pitfall:** หาก endpoint ปลายทางตอบ non-2xx → webhook log แสดง error; outbound retry policy ดู `App\Jobs\DispatchWebhook` (ถ้ามี)
 
-**UAT check:** ☐
+**UAT check:** (done) — `webhooks=1` (`Test Webhook` → webhook.site URL + events=["approval.completed"])
 
 ### Step 6.5 — Incoming Webhooks
 **ที่:** `/settings/inbound-webhooks`  ·  **เมนู:** "Webhook ขาเข้า"  ·  **Permission:** `manage_settings`
 
 **ทำอะไร:**
 1. คลิก **"เพิ่ม Endpoint"** → กรอก:
-   - **slug** (path segment, unique)
+   - **ชื่อ + slug** (path segment, unique — auto-gen ถ้าเว้นว่าง)
    - **bind form:** เลือก document_form ที่จะรับ payload เป็น submission
    - **token:** auto-generate (สำหรับ Bearer header)
-   - **field mapping:** map payload JSON → form fields
+   - ☑ Active
 2. บันทึก → endpoint live ที่ `/api/inbound/<slug>` (ดู api routes)
 3. **ทดสอบรับ:** ปุ่ม **"Test"** (`POST /settings/inbound-webhooks/{id}/test`) — ใช้ sample payload
 
-**Pitfall:** Form fields ที่ map ต้อง active; ถ้าฟอร์มเปลี่ยน field_key หลังตั้ง mapping → fail แบบ silent (ดู log)
+**Pitfall:**
+- **ไม่มี UI field mapping** — `InboundController::receive()` (`api inbound endpoint`) ใช้ **automatic key matching**: `array_intersect_key($payload, array_flip($form->fields->pluck('field_key')))`. payload key ที่ตรงกับ `field_key` → save; ไม่ตรง → return ใน `ignored_keys`. ไม่ต้องตั้ง mapping เอง
+- Form fields ที่ map ต้อง active; ถ้าฟอร์มเปลี่ยน field_key หลังสร้าง endpoint → fail แบบ silent (key ใหม่ถูก ignore)
+- **ปุ่ม Test ในหน้า edit ใช้ cURL loopback ไป localhost → ติด single-thread bug ของ `php artisan serve` → timeout 10s** (request แรกค้างรอ request ที่ 2 loopback ที่ block อยู่ → deadlock). production server (nginx/Apache) ไม่เจอ. **UAT workaround:** ทดสอบจาก terminal `curl -X POST http://localhost:8000/api/inbound/<slug> -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d '{...}'`
+- **Gap: payload save แต่ `fdata_*` ไม่ sync** — `InboundController::receive()` line 36 update `submission.payload` (JSON column legacy) **แต่ไม่เขียนลง dedicated table `fdata_<form_key>`** → query/dashboard ที่อ้างคอลัมน์ fdata จะไม่เห็นข้อมูล inbound. ดู `doc/backlog.md` item ใหม่
 
-**UAT check:** ☐
+**UAT check:** (done — via curl) — `incoming_webhooks=1` slug=`repair-from-monitoring-xqcqur`, payload `{title, description, report_status}` ส่งสำเร็จ HTTP 201, submission #4 created (received_count=2)
 
 ### Step 6.6 — Branding (โลโก้/พื้นหลัง)
 **ที่:** `/settings/branding`  ·  **เมนู:** "โลโก้และพื้นหลัง"  ·  **Permission:** `manage_settings`
@@ -1157,9 +1169,13 @@ echo "physical=".(\Illuminate\Support\Facades\Schema::hasTable($form->submission
 
 **ผลที่ควรเห็น:** หน้า login + sidebar logo แสดงตามที่อัปโหลด (อาจต้อง refresh ด้วย Ctrl+Shift+R เพื่อ bypass browser cache)
 
-**Pitfall:** ต้อง `php artisan storage:link` ครั้งเดียวก่อน เพื่อให้ public access; CLAUDE.md ไม่ระบุ — ถ้า login bg ไม่ขึ้นให้ตรวจตรงนี้
+**Pitfall:**
+- ต้อง `php artisan storage:link` ครั้งเดียวก่อน เพื่อให้ public access; CLAUDE.md ไม่ระบุ — ถ้า login bg ไม่ขึ้นให้ตรวจตรงนี้
+- **File preview ก่อน save** *(แก้แล้ว 2026-06-04)*: เดิม file inputs ไม่มี JS preview → ต้อง save แล้ว reload ถึงเห็นรูปใหม่. **Fix:** เพิ่ม `x-data="{ preview: null }"` + `@change="preview = URL.createObjectURL($event.target.files[0])"` + `<img :src="preview" x-show="preview">` บน 3 cards (logo / bg / illustration) ใน `branding.blade.php` + i18n key `branding.preview_new_image` "รูปใหม่ (ยังไม่บันทึก)"
+- **`login_illustration` disconnect** *(แก้แล้ว 2026-06-04)*: เดิม upload ได้แต่ไม่ render ในหน้า login. **Fix:** เพิ่ม `<img src="storage/{$loginIllustration}">` ใน `layouts/auth-guest.blade.php:72-75` ใต้ welcome desc ในแผงซ้าย (`max-h-40 w-auto object-contain mt-6 opacity-95`)
+- **Recommended resolution** *(เพิ่มใน help text 2026-06-04)*: logo 200×80 หรือ 120×120 PNG/SVG, login_background 1920×1080 JPG, login_illustration 400×400 PNG transparent
 
-**UAT check:** ☐
+**UAT check:** (done) — logo + login_background + login_illustration + login_background_color บันทึกครบใน `settings` table; login page render รูปตามที่ตั้ง
 
 ### Step 6.7 — Menu Manager
 **ที่:** `/settings/navigation`  ·  **เมนู:** "จัดการเมนู"  ·  **Permission:** `manage_settings`
@@ -1180,8 +1196,10 @@ echo "physical=".(\Illuminate\Support\Facades\Schema::hasTable($form->submission
 - เมนูที่ permission=`null` = ไม่ล็อกสิทธิ์ที่ menu (อาจถูกจำกัดด้วย super-admin route middleware)
 - cache 3600s — ล้างเมื่อ model save/delete (event listener)
 - super-admin จะเห็นเมนูบางตัวที่คนอื่นไม่เห็น (เช่น `/settings/*`)
+- **Drag reorder behavior:** `Sortable.onEnd` ส่ง PATCH `/settings/navigation/reorder` → controller update sort_order + `Cache::forget('navigation_menus_tree')`. **List table อัปเดต inline** (order column updated via JS callback) — **แต่ sidebar DOM ไม่ re-render auto** → ต้อง **F5 refresh** หรือ navigate ไปหน้าอื่นเพื่อเห็นลำดับใหม่. ดู backlog item "Sidebar auto-refresh"
+- **Auto-created menu สำหรับ document_form ใหม่:** `DocumentForm::syncNavigationMenu()` (line 100-125) สร้าง menu `/forms/{form_key}/submissions` parent_id=48 อัตโนมัติทุกครั้งที่ save form ใหม่ — ดังนั้น count เพิ่ม > จำนวน menu ที่ admin manual add
 
-**UAT check:** ☐
+**UAT check:** (done) — `navigation_menus=37` (seed 35 + 1 auto จาก Phase 5.1 form + 1 user manual add #68 `แดชบอร์ดแจ้งซ่อม → /reports/dashboards/1`) + drag reorder ทำงานใน list
 
 ### Step 6.8 — Evaluation Form
 **ที่:** `/settings/evaluation-form`  ·  **เมนู:** "ฟอร์มประเมิน"  ·  **Permission:** `manage_settings`
@@ -1194,10 +1212,12 @@ echo "physical=".(\Illuminate\Support\Facades\Schema::hasTable($form->submission
 
 **Pitfall:**
 - หน้านี้เป็นแค่ **listing** ของฟอร์มประเมิน — CRUD จริงผ่าน `/settings/document-forms` route ปกติ
-- ตั้ง `evaluation_enabled=true` ใน form หากต้องการให้ลิงก์กับ approval workflow (ตอน close cycle)
-- ฟอร์มประเมินมี `target_document_types` (array) เลือกได้ว่าฟอร์มประเมินตัวนี้ใช้ประเมินใคร — เฉพาะเมื่อ document_type=evaluation
+- **ต้องสร้าง `document_type` code=`evaluation` ใน Phase 3.1 ก่อน** — ไม่งั้น dropdown ประเภทเอกสารไม่มี option ให้เลือก (Phase 3.1 ที่ทำตอนต้น UAT อาจ skip evaluation — ต้องย้อนกลับมาเพิ่ม)
+- ตั้ง `evaluation_enabled=true` ใน form **บังคับ!** หากต้องการให้ KPI Cycle (6.1) เห็นฟอร์มใน dropdown — `evaluation_enabled=false` → cycle สร้างไม่ได้
+- ฟอร์มประเมินมี `target_document_types` (array) เลือกได้ว่าฟอร์มประเมินตัวนี้ใช้ประเมินใคร — เฉพาะเมื่อ document_type=evaluation. Card UI ซ่อนด้วย `x-show="currentDocumentType === 'evaluation'"` → โผล่เฉพาะตอนเลือก doc_type evaluation
+- **Form create dropdown auto-default Evaluation** *(แก้แล้ว 2026-06-04)*: `DocumentType::allActive()` orderBy sort_order tie → alphabetical `code` → `evaluation` (e) มาก่อน → browser auto-select first option = evaluation แต่ Alpine `currentDocumentType=''` (เพราะ `$initialDocumentType` ไม่ fall back ไป `$preset`) → mismatch → card target_document_types ไม่โผล่. **Fix:** เพิ่ม `<option value="">{{ __('common.please_select') }}</option>` placeholder บน dropdown + fall back `$preset['document_type']` ใน `$initialDocumentType` + `@selected($initialDocumentType === $dt->code)` บน options (`_form.blade.php:52, 130-133`)
 
-**UAT check:** ☐
+**UAT check:** (done) — `document_types=3` (เพิ่ม evaluation code=evaluation) + `document_forms=4` (#3 `q1_2026_evaluation` แบบประเมิน Q1 2026, doc_type=evaluation, evaluation_enabled=true, target=`["repair_request"]`) + 2 fields (rating select 1-5 + comment textarea) + table `fdata_q1_eval` สร้าง
 
 ### ผลรวมหลัง Phase 6
 

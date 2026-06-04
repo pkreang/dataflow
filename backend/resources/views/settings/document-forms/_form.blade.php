@@ -49,7 +49,7 @@
 @endphp
 
 @php
-    $initialDocumentType = old('document_type', $documentForm?->document_type ?? '');
+    $initialDocumentType = old('document_type', $documentForm?->document_type ?? (($preset ?? [])['document_type'] ?? ''));
     $roleLabels = [
         'requester' => __('common.role_requester'),
         'step_prefix' => __('common.role_step_prefix'),
@@ -128,8 +128,9 @@
             <div>
                 <label class="form-label">{{ __('common.document_type') }}</label>
                 <select name="document_type" x-model="currentDocumentType" class="form-input mt-1">
+                    <option value="">{{ __('common.please_select') }}</option>
                     @foreach(\App\Models\DocumentType::allActive() as $dt)
-                        <option value="{{ $dt->code }}">{{ $dt->label() }}</option>
+                        <option value="{{ $dt->code }}" @selected($initialDocumentType === $dt->code)>{{ $dt->label() }}</option>
                     @endforeach
                 </select>
                 {{-- Running-number link: surfaces the prefix/format/next-value the

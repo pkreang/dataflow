@@ -69,6 +69,10 @@
                 @endif
                 <h2 class="login-welcome-title">{{ $welcomeTitle ?? __('common.login_welcome', ['app' => config('app.name')]) }}</h2>
                 <p class="login-welcome-desc">{{ $welcomeSubtitle ?? __('common.login_welcome_subtitle') }}</p>
+                @if ($loginIllustration ?? null)
+                    <img src="{{ asset('storage/' . $loginIllustration) }}" alt="Login illustration"
+                         class="max-h-40 w-auto object-contain mt-6 opacity-95">
+                @endif
             </div>
 
             <div class="login-form-pane flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-10 bg-white dark:bg-gray-900 min-w-0">

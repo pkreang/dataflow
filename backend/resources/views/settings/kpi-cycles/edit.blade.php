@@ -116,13 +116,19 @@
                         <template x-for="(row, idx) in rows" :key="idx">
                             <tr class="border-t border-slate-200 dark:border-slate-700">
                                 <td class="py-2 pr-2">
-                                    <select :name="`assignments[${idx}][target_user_id]`" x-model.number="row.target_user_id" class="form-input text-sm" :disabled="!{{ $isDraft ? 'true' : 'false' }}">
+                                    <select :name="`assignments[${idx}][target_user_id]`"
+                                            x-model.number="row.target_user_id"
+                                            x-init="$nextTick(() => { if (row.target_user_id) $el.value = row.target_user_id })"
+                                            class="form-input text-sm" :disabled="!{{ $isDraft ? 'true' : 'false' }}">
                                         <option value="">—</option>
                                         <template x-for="u in users" :key="u.id"><option :value="u.id" x-text="u.label"></option></template>
                                     </select>
                                 </td>
                                 <td class="py-2 pr-2">
-                                    <select :name="`assignments[${idx}][evaluator_user_id]`" x-model.number="row.evaluator_user_id" class="form-input text-sm" :disabled="!{{ $isDraft ? 'true' : 'false' }}">
+                                    <select :name="`assignments[${idx}][evaluator_user_id]`"
+                                            x-model.number="row.evaluator_user_id"
+                                            x-init="$nextTick(() => { if (row.evaluator_user_id) $el.value = row.evaluator_user_id })"
+                                            class="form-input text-sm" :disabled="!{{ $isDraft ? 'true' : 'false' }}">
                                         <option value="">—</option>
                                         <template x-for="u in users" :key="u.id"><option :value="u.id" x-text="u.label"></option></template>
                                     </select>
@@ -151,16 +157,36 @@
 
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
+                {{-- Open/Close: JS-built forms appended to body — nesting a <form> inside the
+                     outer update form closes the outer one in HTML5 (every input after this
+                     point becomes orphaned), so the Save button silently does nothing.
+                     Same pattern as _form-action-buttons.blade.php Create Report fix. --}}
                 @if($isDraft)
-                    <form method="POST" action="{{ route('settings.kpi-cycles.open', $cycle) }}" onsubmit="return confirm('{{ __('common.kpi_cycle_open_confirm') }}')">
-                        @csrf
-                        <button type="submit" class="btn-primary text-sm">{{ __('common.kpi_cycle_open_button') }}</button>
-                    </form>
+                    <button type="button"
+                            onclick="if (confirm('{{ __('common.kpi_cycle_open_confirm') }}')) {
+                                const f = document.createElement('form');
+                                f.method = 'POST';
+                                f.action = '{{ route('settings.kpi-cycles.open', $cycle) }}';
+                                const t = document.createElement('input');
+                                t.type = 'hidden'; t.name = '_token'; t.value = '{{ csrf_token() }}';
+                                f.appendChild(t);
+                                document.body.appendChild(f);
+                                f.submit();
+                            }"
+                            class="btn-primary text-sm">{{ __('common.kpi_cycle_open_button') }}</button>
                 @elseif($isOpen)
-                    <form method="POST" action="{{ route('settings.kpi-cycles.close', $cycle) }}" onsubmit="return confirm('{{ __('common.kpi_cycle_close_confirm') }}')">
-                        @csrf
-                        <button type="submit" class="btn-danger text-sm">{{ __('common.kpi_cycle_close_button') }}</button>
-                    </form>
+                    <button type="button"
+                            onclick="if (confirm('{{ __('common.kpi_cycle_close_confirm') }}')) {
+                                const f = document.createElement('form');
+                                f.method = 'POST';
+                                f.action = '{{ route('settings.kpi-cycles.close', $cycle) }}';
+                                const t = document.createElement('input');
+                                t.type = 'hidden'; t.name = '_token'; t.value = '{{ csrf_token() }}';
+                                f.appendChild(t);
+                                document.body.appendChild(f);
+                                f.submit();
+                            }"
+                            class="btn-danger text-sm">{{ __('common.kpi_cycle_close_button') }}</button>
                 @endif
                 @if($cycle->assignments->isNotEmpty())
                     <a href="{{ route('settings.kpi-cycles.report', $cycle) }}" class="btn-secondary text-sm">
