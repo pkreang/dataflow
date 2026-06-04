@@ -1267,12 +1267,6 @@ parameters:
 			path: app/Support/DataSourceRegistry.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:toBase\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Support/DataSourceRegistry.php
-
-		-
 			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
 			identifier: larastan.relationExistence
 			count: 1

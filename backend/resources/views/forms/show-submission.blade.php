@@ -82,50 +82,122 @@
 
     {{-- Workflow status — compact horizontal bar on top --}}
     @if($submission->instance)
-        @php $instance = $submission->instance; @endphp
-        <div class="card p-4 mb-6">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
-                <div class="flex items-center gap-3">
-                    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $instance->workflow?->name ?? '—' }}</h3>
-                    @if($instance->status === 'pending')
-                        <span class="badge-blue">{{ __('common.approval_status_' . $instance->status) }}</span>
-                    @elseif($instance->status === 'approved')
-                        <span class="badge-green">{{ __('common.approval_status_' . $instance->status) }}</span>
-                    @elseif($instance->status === 'rejected')
-                        <span class="badge-red">{{ __('common.approval_status_' . $instance->status) }}</span>
-                    @else
-                        <span class="badge-gray">{{ __('common.approval_status_' . $instance->status) }}</span>
-                    @endif
-                </div>
+        @php
+            $instance = $submission->instance;
+            // Build stepper data: submit → workflow stages → final outcome
+            $isApproved = $instance->status === 'approved';
+            $isRejected = $instance->status === 'rejected';
+            $isPending  = $instance->status === 'pending';
+
+            // step 0: submitted
+            $submitTs = optional($submission->submittedActivity?->created_at ?? $submission->created_at);
+            $stepperSteps = [[
+                'label'     => __('common.workflow_stepper_submitted'),
+                'icon'      => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'state'     => 'completed',
+                'timestamp' => $submitTs ? $submitTs->format('d M Y H:i') : null,
+            ]];
+
+            // step 1..N: workflow stages
+            $rejectedAtStep = null;
+            foreach ($instance->steps as $i => $step) {
+                $isStepApproved = $step->action === 'approved';
+                $isStepRejected = $step->action === 'rejected';
+                $isStepCurrent  = $isPending && (int) $step->step_no === (int) $instance->current_step_no;
+                if ($isStepRejected) $rejectedAtStep = $i;
+
+                $state = $isStepApproved ? 'completed' : ($isStepRejected ? 'rejected' : ($isStepCurrent ? 'active' : 'pending'));
+
+                // pick representative timestamp
+                $stepTs = null;
+                if ($isStepApproved && !empty($step->approved_by)) {
+                    $last = end($step->approved_by);
+                    $stepTs = $last['at'] ?? null;
+                } elseif ($isStepRejected) {
+                    $stepTs = optional($step->updated_at)->format('d M Y H:i');
+                }
+                if ($stepTs && !str_contains($stepTs, ':')) {
+                    try { $stepTs = \Carbon\Carbon::parse($stepTs)->format('d M Y H:i'); } catch (\Throwable $e) {}
+                }
+
+                $stepperSteps[] = [
+                    'label'     => $step->stage_name,
+                    'icon'      => $isStepRejected
+                        ? 'M6 18L18 6M6 6l12 12'
+                        : 'M5 13l4 4L19 7',
+                    'state'     => $state,
+                    'timestamp' => $stepTs,
+                ];
+            }
+
+            // final step: completion
+            $finalState = $isApproved ? 'completed' : ($isRejected ? 'rejected' : 'pending');
+            $stepperSteps[] = [
+                'label'     => $isRejected
+                    ? __('common.workflow_stepper_rejected')
+                    : __('common.workflow_stepper_completed'),
+                'icon'      => $isRejected
+                    ? 'M6 18L18 6M6 6l12 12'
+                    : 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+                'state'     => $finalState,
+                'timestamp' => $isApproved && optional($instance->updated_at)
+                    ? $instance->updated_at->format('d M Y H:i')
+                    : null,
+            ];
+        @endphp
+        <div class="card p-5 sm:p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100">{{ $instance->workflow?->name ?? '—' }}</h3>
+                @if($isPending)
+                    <span class="badge-blue">{{ __('common.approval_status_' . $instance->status) }}</span>
+                @elseif($isApproved)
+                    <span class="badge-green">{{ __('common.approval_status_' . $instance->status) }}</span>
+                @elseif($isRejected)
+                    <span class="badge-red">{{ __('common.approval_status_' . $instance->status) }}</span>
+                @else
+                    <span class="badge-gray">{{ __('common.approval_status_' . $instance->status) }}</span>
+                @endif
             </div>
 
-            @if($instance->steps->count())
-                <div class="flex flex-wrap items-center gap-2">
-                    @foreach($instance->steps as $step)
-                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm
-                            {{ $step->action === 'approved' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' :
-                               ($step->action === 'rejected' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
-                                'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400') }}">
-                            <span class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold
-                                {{ $step->action === 'approved' ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' :
-                                   ($step->action === 'rejected' ? 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200' :
-                                    'bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-300') }}">
-                                {{ $step->step_no }}
-                            </span>
-                            <span class="font-medium">{{ $step->stage_name }}</span>
-                            @if(($step->min_approvals ?? 1) > 1)
-                                <span class="opacity-75">({{ count($step->approved_by ?? []) }}/{{ $step->min_approvals }})</span>
+            {{-- Horizontal stepper (desktop) / vertical stack (mobile via overflow-x-auto) --}}
+            <div class="overflow-x-auto -mx-2 px-2 pb-1">
+                <div class="flex items-start min-w-max sm:min-w-0" style="--step-count: {{ count($stepperSteps) }}">
+                    @foreach($stepperSteps as $i => $st)
+                        @php
+                            $circleClass = match($st['state']) {
+                                'completed' => 'bg-blue-600 text-white border-blue-600',
+                                'active'    => 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border-blue-500 dark:border-blue-400 ring-4 ring-blue-100 dark:ring-blue-900/40 animate-pulse',
+                                'rejected'  => 'bg-red-500 text-white border-red-500',
+                                default     => 'bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-300 dark:border-slate-600',
+                            };
+                            $labelClass = match($st['state']) {
+                                'completed', 'rejected' => 'text-slate-700 dark:text-slate-200',
+                                'active'                => 'text-slate-900 dark:text-slate-50 font-semibold',
+                                default                 => 'text-slate-400 dark:text-slate-500',
+                            };
+                            // Connector to next step: green when this step is completed
+                            $connectorClass = match($st['state']) {
+                                'completed', 'rejected' => ($st['state'] === 'rejected' ? 'bg-red-500' : 'bg-blue-500'),
+                                default                 => 'bg-slate-200 dark:bg-slate-700',
+                            };
+                        @endphp
+                        <div class="flex flex-col items-center text-center px-2" style="flex: 1 1 0; min-width: 96px">
+                            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 flex items-center justify-center transition-all {{ $circleClass }}">
+                                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $st['icon'] }}"/>
+                                </svg>
+                            </div>
+                            <div class="mt-2 text-xs sm:text-sm leading-tight {{ $labelClass }}">{{ $st['label'] }}</div>
+                            @if(!empty($st['timestamp']))
+                                <div class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5">{{ $st['timestamp'] }}</div>
                             @endif
-                            <span class="text-xs opacity-75">{{ __('common.approval_status_' . $step->action) }}</span>
                         </div>
                         @if(!$loop->last)
-                            <svg class="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
+                            <div class="h-0.5 mt-6 sm:mt-7 {{ $connectorClass }}" style="flex: 1 1 0; min-width: 32px"></div>
                         @endif
                     @endforeach
                 </div>
-            @endif
+            </div>
         </div>
     @endif
 
@@ -196,20 +268,46 @@
         </div>
     @endif
 
-    {{-- Activity log (audit trail) --}}
+    {{-- Activity log (audit trail) — timeline style with action-typed icons + color border --}}
     @if(isset($activity) && $activity->isNotEmpty())
         <div class="card p-4 mb-6">
-            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">{{ __('common.submission_activity') }}</h3>
-            <ul class="divide-y divide-slate-100 dark:divide-slate-700 text-sm">
+            <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                {{ __('common.submission_activity') }}
+            </h3>
+            <ul class="space-y-2">
                 @foreach($activity as $log)
-                    <li class="py-2 flex items-center justify-between gap-3">
-                        <div>
-                            <span class="font-medium text-slate-700 dark:text-slate-200">{{ __('common.activity_'.$log->action) }}</span>
-                            @if($log->user)
-                                <span class="text-slate-500 dark:text-slate-400"> — {{ $log->user->full_name }}</span>
-                            @endif
+                    @php
+                        // Map action → icon SVG path + color theme
+                        $iconMap = match($log->action) {
+                            'submitted' => ['M3 8l9 6 9-6M3 8v8a2 2 0 002 2h14a2 2 0 002-2V8', 'blue'],
+                            'approved' => ['M5 13l4 4L19 7', 'green'],
+                            'rejected' => ['M6 18L18 6M6 6l12 12', 'red'],
+                            'returned', 'sent_back' => ['M11 17l-5-5m0 0l5-5m-5 5h12', 'amber'],
+                            'cancelled' => ['M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636', 'slate'],
+                            'draft_created', 'created' => ['M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z', 'slate'],
+                            default => ['M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'slate'],
+                        };
+                        [$iconPath, $color] = $iconMap;
+                    @endphp
+                    <li class="flex items-start gap-3 p-2 rounded-lg border-l-4 border-{{ $color }}-400 dark:border-{{ $color }}-500 bg-{{ $color }}-50/40 dark:bg-{{ $color }}-900/10">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-{{ $color }}-100 dark:bg-{{ $color }}-900/50 flex items-center justify-center text-{{ $color }}-600 dark:text-{{ $color }}-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $iconPath }}"/>
+                            </svg>
                         </div>
-                        <span class="text-xs text-slate-400">{{ $log->created_at->diffForHumans() }}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-slate-800 dark:text-slate-100">{{ __('common.activity_'.$log->action) }}</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                @if($log->user)
+                                    <span>{{ $log->user->full_name }}</span>
+                                    <span class="opacity-60"> · </span>
+                                @endif
+                                <span title="{{ $log->created_at->format('Y-m-d H:i:s') }}">{{ $log->created_at->diffForHumans() }}</span>
+                            </div>
+                        </div>
                     </li>
                 @endforeach
             </ul>
