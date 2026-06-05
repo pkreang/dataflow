@@ -11,6 +11,7 @@ use App\Listeners\Approval\SendApprovalPendingNotification;
 use App\Listeners\Approval\SendPartialApprovalNotification;
 use App\Listeners\Approval\SendWorkflowOutcomeNotification;
 use App\Listeners\SendStockLowNotification;
+use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflowStage;
 use App\Models\DocumentType;
 use App\Models\Setting;
@@ -20,12 +21,14 @@ use App\Observers\RoleObserver;
 use App\Observers\SettingObserver;
 use App\Observers\WorkflowStageObserver;
 use App\Policies\RolePolicy;
+use App\Services\ApproverIdentity;
 use App\Services\Auth\PasswordCapabilityService;
 use App\Services\EvaluationFormResolver;
 use App\Services\Mail\ApplyDatabaseMailConfig;
 use App\Services\NavigationService;
 use App\Support\OrganizationTranslations;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -85,9 +88,28 @@ class AppServiceProvider extends ServiceProvider
                 $menus = $navService->getMenus($perms, $isSuperAdmin, $userDeptId);
                 $view->with('navigationMenus', $menus);
                 $view->with('pinnedMenus', $userId > 0 ? $navService->getPinnedMenus($userId, $menus) : collect());
+
+                // Sidebar badges: route => count. Generic map so future menus can
+                // opt in without re-plumbing. Today only the approval inbox is
+                // badged with the user's pending-approval count (same predicate as
+                // /approvals/my). 60s TTL keeps it cheap; nav-badge staleness ≤60s
+                // is acceptable — no cross-user event invalidation needed.
+                $menuBadges = [];
+                if ($userId > 0) {
+                    $identity = app(ApproverIdentity::class)->fromSession();
+                    $menuBadges['/approvals/my'] = Cache::remember(
+                        "pending_approvals_count:{$userId}",
+                        60,
+                        fn () => ApprovalInstance::query()
+                            ->pendingForApprover($identity['userId'], $identity['roles'], $identity['positionId'])
+                            ->count()
+                    );
+                }
+                $view->with('menuBadges', $menuBadges);
             } else {
                 $view->with('navigationMenus', collect());
                 $view->with('pinnedMenus', collect());
+                $view->with('menuBadges', []);
             }
 
             $layoutUser = session('user', []);

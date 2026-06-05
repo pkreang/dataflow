@@ -113,11 +113,11 @@
                         <p class="px-3 text-[10px] font-semibold uppercase tracking-wider text-blue-200/70 mb-1">
                             ★ {{ __('common.pinned_favorites') ?? 'Pinned' }}
                         </p>
-                        <x-sidebar-menu :menus="$pinnedMenus" :is-pinned-section="true" />
+                        <x-sidebar-menu :menus="$pinnedMenus" :is-pinned-section="true" :menu-badges="$menuBadges ?? []" />
                         <div class="border-t border-white/10 mt-2"></div>
                     </div>
                 @endif
-                <x-sidebar-menu :menus="$navigationMenus ?? collect()" />
+                <x-sidebar-menu :menus="$navigationMenus ?? collect()" :menu-badges="$menuBadges ?? []" />
             </nav>
 
             <div class="p-4 border-t border-white/10"

@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalInstance;
+use App\Models\ApprovalInstanceStep;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormSubmission;
 use App\Models\SubmissionActivityLog;
 use App\Models\User;
 use App\Services\ApprovalFlowService;
+use App\Services\ApproverIdentity;
 use App\Services\FormSchemaService;
 use App\Support\DateExpressionResolver;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,7 +27,10 @@ class DocumentFormSubmissionController extends Controller
 {
     use HasPerPage;
 
-    public function __construct(private readonly FormSchemaService $schemaService) {}
+    public function __construct(
+        private readonly FormSchemaService $schemaService,
+        private readonly ApprovalFlowService $approvalFlow,
+    ) {}
 
     public function index(): View
     {
@@ -61,11 +67,12 @@ class DocumentFormSubmissionController extends Controller
         return view('forms.my-submissions', compact('submissions'));
     }
 
-    public function listByForm(DocumentForm $documentForm, Request $request): View
+    public function listByForm(DocumentForm $documentForm, Request $request, ApproverIdentity $approverIdentity): View
     {
         $userId = (int) (session('user.id') ?? 0);
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
+        $identity = $approverIdentity->fromSession();
 
         abort_if(! $documentForm->is_active, 404);
         // Super-admins bypass the department-scope check so they can monitor /
@@ -76,20 +83,56 @@ class DocumentFormSubmissionController extends Controller
             404
         );
 
-        $searchable = $documentForm->fields()->where('is_searchable', true)->orderBy('sort_order')->get();
+        // Drop searchable columns the viewer can't see by department, mirroring
+        // the field-level visibility in dynamic-field.blade.php. Without this the
+        // approver-pending rows below would surface restricted searchable values
+        // in the list columns (the list renderer doesn't honor visible_to_departments).
+        $searchable = $documentForm->fields()
+            ->where('is_searchable', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->filter(fn ($field) => $isSuperAdmin || $this->fieldVisibleToDept($field, $userDeptId))
+            ->values();
         $filters = $this->extractFilters($request, $searchable);
+
+        // Instances of this form related to the viewer: (a) currently awaiting
+        // their approval, PLUS (b) ones they have already acted on (approved /
+        // rejected any step) — so an approver keeps sight of requests they
+        // handled, not only the ones still pending. Two cheap queries (a user's
+        // pending + acted sets are tiny), merged and fed into the main query via
+        // whereIn so the paginated query stays single and counts stay correct.
+        $relatedInstanceIds = $isSuperAdmin
+            ? []
+            : array_values(array_unique(array_merge(
+                ApprovalInstance::query()
+                    ->pendingForApprover($identity['userId'], $identity['roles'], $identity['positionId'])
+                    ->pluck('id')
+                    ->all(),
+                // Query the steps table directly (not whereHas) to dodge the
+                // larastan custom-relation-return-type false positive.
+                ApprovalInstanceStep::query()
+                    ->where('acted_by_user_id', $identity['userId'])
+                    ->pluck('approval_instance_id')
+                    ->all()
+            )));
 
         $showCancelled = (bool) $request->query('show_cancelled');
         $query = DocumentFormSubmission::query()
             ->when($showCancelled, fn ($q) => $q->withTrashed())
             ->where('document_form_submissions.form_id', $documentForm->id)
             // Super-admins see every submission for the form (monitoring/support).
-            // Everyone else is scoped to their own submissions plus drafts where
-            // they were granted edit access via assigned_editor_user_ids.
-            ->when(! $isSuperAdmin, function ($q) use ($userId) {
-                $q->where(function ($inner) use ($userId) {
+            // Everyone else is scoped to their own submissions, drafts where they
+            // were granted edit access (assigned_editor_user_ids), plus any
+            // submission of this form awaiting their approval OR one they already
+            // acted on — so approvers find both pending work and their handled
+            // requests in the form's own list, not only the /approvals/my inbox.
+            ->when(! $isSuperAdmin, function ($q) use ($userId, $relatedInstanceIds) {
+                $q->where(function ($inner) use ($userId, $relatedInstanceIds) {
                     $inner->where('document_form_submissions.user_id', $userId)
                           ->orWhereJsonContains('document_form_submissions.assigned_editor_user_ids', $userId);
+                    if (! empty($relatedInstanceIds)) {
+                        $inner->orWhereIn('document_form_submissions.approval_instance_id', $relatedInstanceIds);
+                    }
                 });
             });
 
@@ -533,6 +576,30 @@ class DocumentFormSubmissionController extends Controller
         $userId = (int) (session('user.id') ?? 0);
         $isOwner = (int) $submission->user_id === $userId;
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
+
+        // Approver inline-edit: when this viewer is the current pending approver,
+        // resolve their step token so fields tagged editable_by=['step_N'] (or
+        // 'user:{id}') render editable on the submission view. Everyone else —
+        // owner, prior/next-step approvers, non-pending — gets 'view_only'
+        // (read-only, no regression). The PATCH route re-filters server-side.
+        $editorRole = $this->resolveEditorRole($submission, $userId);
+        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $editorUserId = $userId ?: null;
+
+        // Whether this viewer may act (approve/reject) on the document right now.
+        // Distinct from $editorRole (field-edit): $canAct ALSO requires the
+        // approval.approve permission so the action card never renders for a user
+        // whose POST to approvals.act would 403. Mirrors RepairRequestController::show.
+        $canAct = false;
+        $instance = $submission->instance;
+        if ($instance && $instance->status === 'pending'
+            && in_array('approval.approve', session('user_permissions', []), true)) {
+            $currentStep = $instance->steps->firstWhere('step_no', $instance->current_step_no);
+            if ($currentStep && $currentStep->action === 'pending') {
+                $canAct = $this->approvalFlow->canUserActOnStep($instance, $currentStep, $userId);
+            }
+        }
+
         // Only the owner / super-admin can manage assigned editors, and only
         // while the submission is still a draft (post-submit, the workflow
         // owns who-can-edit).
@@ -567,7 +634,34 @@ class DocumentFormSubmissionController extends Controller
             'canManageAssignedEditors',
             'assignedEditorRows',
             'assignableUsers',
+            'editorRole',
+            'userDeptId',
+            'editorUserId',
+            'canAct',
         ));
+    }
+
+    /**
+     * Approver edit-context resolver: returns 'step_N' when the viewer is the
+     * approver currently able to act on this submission's pending instance, else
+     * 'view_only'. Mirrors PurchaseRequestController::resolveEditorRole so the
+     * dynamic-form view honors the same field-level editable_by step tokens.
+     */
+    private function resolveEditorRole(DocumentFormSubmission $submission, int $userId): string
+    {
+        $instance = $submission->instance;
+        if (! $instance || $instance->status !== 'pending') {
+            return 'view_only';
+        }
+
+        $currentStep = $instance->steps->firstWhere('step_no', $instance->current_step_no);
+        if ($currentStep
+            && $currentStep->action === 'pending'
+            && $this->approvalFlow->canUserActOnStep($instance, $currentStep, $userId)) {
+            return 'step_'.$instance->current_step_no;
+        }
+
+        return 'view_only';
     }
 
     /**
@@ -794,6 +888,23 @@ class DocumentFormSubmissionController extends Controller
      * blanket `approval.approve` permission (which exposed every pending submission to
      * every approver) while still letting auditors who handled the doc look back at it.
      */
+    /**
+     * Department-based field visibility — same predicate as dynamic-field.blade.php:
+     * a field with no visible_to_departments is visible to all; otherwise only to
+     * users whose department is listed. Used to drop restricted columns from the
+     * searchable list before rendering.
+     */
+    private function fieldVisibleToDept(DocumentFormField $field, int|string|null $userDeptId): bool
+    {
+        $depts = $field->visible_to_departments;
+        if (empty($depts)) {
+            return true;
+        }
+
+        return $userDeptId !== null
+            && in_array((int) $userDeptId, array_map('intval', $depts), true);
+    }
+
     private function isApproverForSubmission(DocumentFormSubmission $submission, int $userId): bool
     {
         $instance = $submission->instance;

@@ -18,7 +18,7 @@
 
 <div class="signature-pad mt-1"
      x-data="{
-        signatureData: '{{ $initialValue }}',
+        signatureData: @js($initialValue ?: ($savedDataUrl ?? '')),
         savedUrl: @js($savedDataUrl),
         mode: '{{ $initialValue ? 'kept' : ($savedDataUrl ? 'saved' : 'draw') }}',
         _inited: false,
@@ -40,18 +40,44 @@
         },
         startDraw($event) {
             const canvas = this.$refs.padCanvas;
-            if (!this._inited) { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; this._inited = true; }
+            // Ensure the drawing buffer matches the on-screen size. A pad first
+            // shown while its container had no layout would otherwise stay at
+            // width 0 — strokes would land off-canvas and nothing is captured.
+            if (!this._inited || canvas.width !== canvas.offsetWidth) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                this._inited = true;
+            }
             const ctx = canvas.getContext('2d');
-            let drawing = true;
             ctx.strokeStyle = document.documentElement.classList.contains('dark') ? '#fff' : '#000';
             ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            const point = (e) => {
+                const r = canvas.getBoundingClientRect();
+                const cx = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+                const cy = e.clientY ?? (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+                return { x: cx - r.left, y: cy - r.top };
+            };
+            let drawing = true;
+            const p0 = point($event);
             ctx.beginPath();
-            const rect = canvas.getBoundingClientRect();
-            ctx.moveTo($event.clientX - rect.left, $event.clientY - rect.top);
-            const move = (e) => { if (drawing) { ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke(); } };
-            const up = () => { drawing = false; this.signatureData = canvas.toDataURL(); this.mode = 'drawn'; canvas.removeEventListener('mousemove', move); canvas.removeEventListener('mouseup', up); };
-            canvas.addEventListener('mousemove', move);
-            canvas.addEventListener('mouseup', up);
+            ctx.moveTo(p0.x, p0.y);
+            // Listen on window, not the canvas, so a stroke that leaves the pad
+            // (or releases outside it) is still drawn and captured.
+            const move = (e) => { if (! drawing) return; const p = point(e); ctx.lineTo(p.x, p.y); ctx.stroke(); if (e.cancelable) e.preventDefault(); };
+            const up = () => {
+                drawing = false;
+                this.signatureData = canvas.toDataURL();
+                this.mode = 'drawn';
+                window.removeEventListener('mousemove', move);
+                window.removeEventListener('mouseup', up);
+                window.removeEventListener('touchmove', move);
+                window.removeEventListener('touchend', up);
+            };
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', up);
+            window.addEventListener('touchmove', move, { passive: false });
+            window.addEventListener('touchend', up);
         },
      }"
      x-init="
@@ -79,9 +105,10 @@
     <template x-if="mode === 'draw' || mode === 'drawn'">
         <div>
             <canvas
-                class="w-full h-32 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 cursor-crosshair"
+                class="w-full h-32 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 cursor-crosshair touch-none"
                 x-ref="padCanvas"
                 @mousedown="startDraw($event)"
+                @touchstart.prevent="startDraw($event)"
             ></canvas>
             <div class="mt-1 flex items-center gap-3">
                 <button type="button" class="text-xs text-red-500 hover:underline" @click="clearPad()">{{ __('common.delete') }}</button>

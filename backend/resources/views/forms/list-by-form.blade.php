@@ -146,6 +146,10 @@
                     $rowHref = $viewMenuItem['href'] ?? ($plan['primary']['href'] ?? null);
                     $statusBadge = $statusBadgeMap[$status] ?? 'badge-gray';
                     $la = $submission->latestActivity;
+                    // Row surfaced because the viewer approves it (not owns/edits it).
+                    $isMineRow = (int) $submission->user_id === $viewer['id']
+                        || $submission->isAssignedEditor($viewer['id']);
+                    $awaitingMyApproval = ! $isMineRow && ! $viewer['is_super_admin'];
                 @endphp
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
                     @if($hasDrafts)
@@ -169,6 +173,9 @@
                             <span class="text-sm font-medium text-slate-900 dark:text-slate-100">
                                 {{ $submission->reference_no ?: ('#' . $submission->id) }}
                             </span>
+                        @endif
+                        @if($awaitingMyApproval)
+                            <span class="badge-blue ml-2 align-middle text-[10px]">{{ __('common.awaiting_my_approval') }}</span>
                         @endif
                     </td>
                     @if($isEvalList)

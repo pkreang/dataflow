@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
+use App\Models\ApprovalInstanceStep;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
+use App\Models\SubmissionActivityLog;
 use App\Models\User;
 use App\Services\ApprovalFlowService;
+use App\Services\ApproverIdentity;
+use App\Services\FormSchemaService;
+use App\Support\PayloadDiffer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,62 +22,53 @@ class ApprovalController extends Controller
 {
     public function __construct(
         protected ApprovalFlowService $approvalFlow,
+        protected FormSchemaService $schemaService,
     ) {}
 
-    public function myApprovals(): View
+    public function myApprovals(ApproverIdentity $approverIdentity): View
     {
-        $user = session('user');
-        $userId = (int) ($user['id'] ?? 0);
-        $rawRoles = $user['roles'] ?? [];
-        $roles = collect($rawRoles)
-            ->map(fn ($r) => is_array($r) ? ($r['name'] ?? '') : $r)
-            ->filter()
+        $identity = $approverIdentity->fromSession();
+        $userId = $identity['userId'];
+
+        // Inbox is now a per-document-type table; the act/sign happens on each
+        // document's detail page (forms.submission.show / legacy show views).
+        // Two zones: (a) pending = awaiting my action, (b) history = documents I
+        // already acted on (approved/rejected any step), so an approver keeps
+        // sight of work they handled after it leaves their pending queue.
+        //
+        // Resolve the two ID sets cheaply first (no eager-load → no larastan
+        // relation noise; the steps query also dodges the whereHas false
+        // positive), then hydrate ONCE so there is a single ->with() over
+        // ApprovalInstance. formSubmission stays eager-loaded so detailUrl()
+        // doesn't N+1.
+        $pendingIds = ApprovalInstance::query()
+            ->pendingForApprover($userId, $identity['roles'], $identity['positionId'])
+            ->orderByDesc('id')
+            ->pluck('id')
+            ->all();
+
+        $actedIds = ApprovalInstanceStep::query()
+            ->where('acted_by_user_id', $userId)
+            ->orderByDesc('approval_instance_id')
+            ->pluck('approval_instance_id')
+            ->unique()
+            ->reject(fn ($id) => in_array($id, $pendingIds, true))
             ->values()
             ->all();
 
-        $actorPositionId = User::query()->whereKey($userId)->value('position_id');
-
-        // Profile signature pre-fill — when present, the signature pad starts
-        // with this image loaded so approvers don't have to redraw every time.
-        // Always passed to the view; the pad ignores it when null.
-        $mySignatureDataUrl = $userId
-            ? User::query()->whereKey($userId)->value('signature_path')
-            : null;
-
         $instances = ApprovalInstance::query()
-            ->from('approval_instances')
             ->with(['steps', 'workflow', 'requester', 'formSubmission'])
-            ->where('approval_instances.status', 'pending')
-            ->where(function ($q) use ($userId) {
-                $q->where('approval_instances.requester_user_id', '!=', $userId)
-                    ->orWhereHas('workflow', fn ($w) => $w->where('allow_requester_as_approver', true));
-            })
-            ->whereHas('steps', function ($q) use ($userId, $roles, $actorPositionId) {
-                $q->where('approval_instance_steps.action', 'pending')
-                    ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
-                    ->where(function ($sq) use ($userId, $roles, $actorPositionId) {
-                        $sq->where(function ($uq) use ($userId) {
-                            $uq->where('approver_type', 'user')
-                                ->where('approver_ref', (string) $userId);
-                        });
-                        if (! empty($roles)) {
-                            $sq->orWhere(function ($rq) use ($roles) {
-                                $rq->where('approver_type', 'role')
-                                    ->whereIn('approver_ref', $roles);
-                            });
-                        }
-                        if ($actorPositionId) {
-                            $sq->orWhere(function ($pq) use ($actorPositionId) {
-                                $pq->where('approver_type', 'position')
-                                    ->where('approver_ref', (string) $actorPositionId);
-                            });
-                        }
-                    });
-            })
-            ->latest()
-            ->get();
+            ->whereKey(array_merge($pendingIds, $actedIds))
+            ->get()
+            ->keyBy('id');
 
-        return view('approvals.my-approvals', compact('instances', 'mySignatureDataUrl'));
+        $pending = collect($pendingIds)->map(fn ($id) => $instances->get($id))->filter()->values();
+        $acted   = collect($actedIds)->map(fn ($id) => $instances->get($id))->filter()->values();
+
+        $grouped = $pending->groupBy('document_type');
+        $actedGrouped = $acted->groupBy('document_type');
+
+        return view('approvals.my-approvals', compact('grouped', 'actedGrouped'));
     }
 
     public function act(Request $request, ApprovalInstance $instance, ApprovalFlowService $approvalFlowService): RedirectResponse
@@ -144,11 +140,19 @@ class ApprovalController extends Controller
 
         $stepRole = 'step_'.$instance->current_step_no;
 
-        $form = DocumentForm::query()
-            ->with('fields')
-            ->where('document_type', $instance->document_type)
-            ->where('is_active', true)
-            ->first();
+        // Dynamic-form submissions store field values in document_form_submissions
+        // (+ fdata_*), NOT in approval_instances.payload. Resolve the linked
+        // submission so we (a) pick the EXACT form even when several forms share a
+        // document_type, and (b) write back to where the view actually reads from.
+        $submission = DocumentFormSubmission::where('approval_instance_id', $instance->id)->first();
+
+        $form = $submission
+            ? $submission->form()->with('fields')->first()
+            : DocumentForm::query()
+                ->with('fields')
+                ->where('document_type', $instance->document_type)
+                ->where('is_active', true)
+                ->first();
 
         abort_unless($form, 404);
 
@@ -163,12 +167,42 @@ class ApprovalController extends Controller
         $submitted = $request->input('field_updates', []);
         $safeUpdates = array_intersect_key($submitted, array_flip($editableKeys));
 
-        $payload = $instance->payload ?? [];
-        foreach ($safeUpdates as $key => $value) {
-            $payload[$key] = $value;
-        }
+        if ($submission) {
+            // Dynamic form: dual-write submission.payload + fdata_* (mirrors
+            // DocumentFormSubmissionController::updateDraft) so the change shows
+            // on the submission view and stays consistent with the dedicated table.
+            $payload = $submission->payload ?? [];
+            foreach ($safeUpdates as $key => $value) {
+                $payload[$key] = $value;
+            }
 
-        $instance->update(['payload' => $payload]);
+            $changedFields = PayloadDiffer::diff(
+                $submission->payload ?? [],
+                $payload,
+                $form->fields->keyBy('field_key')->all(),
+            );
+
+            $submission->update(['payload' => $payload]);
+
+            if ($submission->fdata_row_id && $form->hasDedicatedTable()) {
+                $this->schemaService->updateRow($form, $submission->fdata_row_id, $payload);
+            }
+
+            SubmissionActivityLog::record(
+                $submission->id,
+                $userId,
+                'updated',
+                $changedFields ? ['changed_fields' => $changedFields] : [],
+            );
+        } else {
+            // Legacy form (purchase_request/spare_parts): values live in the
+            // instance payload itself.
+            $payload = $instance->payload ?? [];
+            foreach ($safeUpdates as $key => $value) {
+                $payload[$key] = $value;
+            }
+            $instance->update(['payload' => $payload]);
+        }
 
         return redirect()->back()->with('success', __('common.saved'));
     }

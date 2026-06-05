@@ -8,6 +8,7 @@ use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\ApproverIdentity;
 use App\Services\Auth\AuthModeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -41,30 +42,15 @@ class MobileController extends Controller
             ->first();
     }
 
-    public function home(): View
+    public function home(ApproverIdentity $approverIdentity): View
     {
-        $userId = (int) (session('user.id') ?? 0);
-        $rawRoles = collect(session('user.roles') ?? [])
-            ->map(fn ($r) => is_array($r) ? ($r['name'] ?? '') : $r)
-            ->filter()->values()->all();
-        $positionId = $userId ? User::query()->whereKey($userId)->value('position_id') : null;
+        $identity = $approverIdentity->fromSession();
+        $userId = $identity['userId'];
 
-        // Pending approvals waiting for this user (matches /approvals/my filter)
+        // Pending approvals waiting for this user — identical predicate to
+        // /approvals/my and the sidebar badge (incl. requester-exclusion).
         $pendingApprovalsCount = ApprovalInstance::query()
-            ->where('status', 'pending')
-            ->whereHas('steps', function ($q) use ($userId, $rawRoles, $positionId) {
-                $q->where('action', 'pending')
-                    ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
-                    ->where(function ($sq) use ($userId, $rawRoles, $positionId) {
-                        $sq->where(fn ($u) => $u->where('approver_type', 'user')->where('approver_ref', (string) $userId));
-                        if (! empty($rawRoles)) {
-                            $sq->orWhere(fn ($r) => $r->where('approver_type', 'role')->whereIn('approver_ref', $rawRoles));
-                        }
-                        if ($positionId) {
-                            $sq->orWhere(fn ($p) => $p->where('approver_type', 'position')->where('approver_ref', (string) $positionId));
-                        }
-                    });
-            })
+            ->pendingForApprover($userId, $identity['roles'], $identity['positionId'])
             ->count();
 
         $myDraftsCount = DocumentFormSubmission::query()
@@ -106,21 +92,8 @@ class MobileController extends Controller
 
         // Top 3 pending approvals (preview list on home)
         $pendingPreview = ApprovalInstance::query()
-            ->where('status', 'pending')
             ->with(['steps', 'requester', 'workflow', 'formSubmission.form'])
-            ->whereHas('steps', function ($q) use ($userId, $rawRoles, $positionId) {
-                $q->where('action', 'pending')
-                    ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
-                    ->where(function ($sq) use ($userId, $rawRoles, $positionId) {
-                        $sq->where(fn ($u) => $u->where('approver_type', 'user')->where('approver_ref', (string) $userId));
-                        if (! empty($rawRoles)) {
-                            $sq->orWhere(fn ($r) => $r->where('approver_type', 'role')->whereIn('approver_ref', $rawRoles));
-                        }
-                        if ($positionId) {
-                            $sq->orWhere(fn ($p) => $p->where('approver_type', 'position')->where('approver_ref', (string) $positionId));
-                        }
-                    });
-            })
+            ->pendingForApprover($userId, $identity['roles'], $identity['positionId'])
             ->latest()
             ->limit(3)
             ->get();
@@ -149,39 +122,19 @@ class MobileController extends Controller
         ]);
     }
 
-    public function approvals(): View
+    public function approvals(ApproverIdentity $approverIdentity): View
     {
         // Mirror the query from ApprovalController::myApprovals so the same
         // permission logic applies, but render the mobile.approvals view
         // directly (which uses mobile layout + glass cards + inline action form).
-        $userId = (int) (session('user.id') ?? 0);
-        $rawRoles = collect(session('user.roles') ?? [])
-            ->map(fn ($r) => is_array($r) ? ($r['name'] ?? '') : $r)
-            ->filter()->values()->all();
-        $actorPositionId = User::query()->whereKey($userId)->value('position_id');
+        $identity = $approverIdentity->fromSession();
+        $userId = $identity['userId'];
 
         $mySignatureDataUrl = $userId ? User::query()->whereKey($userId)->value('signature_path') : null;
 
         $instances = ApprovalInstance::query()
             ->with(['steps', 'workflow', 'requester', 'formSubmission'])
-            ->where('status', 'pending')
-            ->where(function ($q) use ($userId) {
-                $q->where('requester_user_id', '!=', $userId)
-                    ->orWhereHas('workflow', fn ($w) => $w->where('allow_requester_as_approver', true));
-            })
-            ->whereHas('steps', function ($q) use ($userId, $rawRoles, $actorPositionId) {
-                $q->where('approval_instance_steps.action', 'pending')
-                    ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
-                    ->where(function ($sq) use ($userId, $rawRoles, $actorPositionId) {
-                        $sq->where(fn ($u) => $u->where('approver_type', 'user')->where('approver_ref', (string) $userId));
-                        if (! empty($rawRoles)) {
-                            $sq->orWhere(fn ($r) => $r->where('approver_type', 'role')->whereIn('approver_ref', $rawRoles));
-                        }
-                        if ($actorPositionId) {
-                            $sq->orWhere(fn ($p) => $p->where('approver_type', 'position')->where('approver_ref', (string) $actorPositionId));
-                        }
-                    });
-            })
+            ->pendingForApprover($userId, $identity['roles'], $identity['positionId'])
             ->latest()
             ->get();
 

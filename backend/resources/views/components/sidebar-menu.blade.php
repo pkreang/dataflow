@@ -1,4 +1,4 @@
-@props(['menus', 'isPinnedSection' => false])
+@props(['menus', 'isPinnedSection' => false, 'menuBadges' => []])
 
 @foreach($menus as $menu)
     @if($menu->route === null && $menu->children->isNotEmpty())
@@ -46,6 +46,11 @@
                            @if(! $isPinnedSection) :class="sidebarCollapsed ? '' : 'pr-8'" @endif>
                             <x-nav-icon :name="$child->icon" class="w-4 h-4" />
                             <span x-show="!sidebarCollapsed" x-cloak>{{ $child->translated_label }}</span>
+                            @php $badge = (int) ($menuBadges[$child->route] ?? 0); @endphp
+                            @if($badge > 0)
+                                <span x-show="!sidebarCollapsed" x-cloak
+                                      class="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{{ $badge > 99 ? '99+' : $badge }}</span>
+                            @endif
                         </a>
                         @if(! $isPinnedSection && $child->id > 0 && $child->route)
                             <span x-show="!sidebarCollapsed" x-cloak>
@@ -66,6 +71,11 @@
                :class="sidebarCollapsed ? 'justify-center' : @js($isPinnedSection ? 'gap-3' : 'gap-3 pr-8')">
                 <x-nav-icon :name="$menu->icon" class="w-5 h-5 shrink-0 text-blue-200" />
                 <span x-show="!sidebarCollapsed" x-cloak>{{ $menu->translated_label }}</span>
+                @php $badge = (int) ($menuBadges[$menu->route] ?? 0); @endphp
+                @if($badge > 0)
+                    <span x-show="!sidebarCollapsed" x-cloak
+                          class="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{{ $badge > 99 ? '99+' : $badge }}</span>
+                @endif
             </a>
             @if(! $isPinnedSection && $menu->id > 0 && $menu->route)
                 <span x-show="!sidebarCollapsed" x-cloak>

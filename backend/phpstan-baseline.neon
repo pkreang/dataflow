@@ -157,12 +157,6 @@ parameters:
 			path: app/Http/Controllers/Web/ApprovalController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/ApprovalController.php
-
-		-
 			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
@@ -183,13 +177,13 @@ parameters:
 		-
 			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Web/ApprovalController.php
 
 		-
 			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Web/ApprovalController.php
 
 		-
@@ -279,8 +273,14 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$instance\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 3
 			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$formSubmission\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/ApprovalInstance.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
@@ -525,13 +525,13 @@ parameters:
 		-
 			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
 			identifier: larastan.relationExistence
-			count: 4
+			count: 1
 			path: app/Http/Controllers/Web/MobileController.php
 
 		-
 			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Web/MobileController.php
 
 		-

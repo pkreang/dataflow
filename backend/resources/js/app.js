@@ -693,6 +693,18 @@ document.addEventListener(
         if (!btn.matches('.btn-primary, .btn-secondary, .btn-danger')) return;
         if (btn.hasAttribute('data-no-submit-loading')) return;
         if (btn.disabled) return;
+        // Preserve the submitter's name/value before disabling. Disabling a submit
+        // button *during* the submit event drops it from the serialized form body,
+        // so a `<button name="action" value="approved">` would post no `action`.
+        // Mirror it into a hidden input so the value still reaches the server.
+        if (btn.name) {
+            const mirror = document.createElement('input');
+            mirror.type = 'hidden';
+            mirror.name = btn.name;
+            mirror.value = btn.value;
+            mirror.setAttribute('data-submitter-mirror', '');
+            form.appendChild(mirror);
+        }
         btn.disabled = true;
         btn.setAttribute('aria-busy', 'true');
         btn.classList.add('opacity-60', 'cursor-not-allowed');
