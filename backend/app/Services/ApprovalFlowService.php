@@ -36,7 +36,8 @@ class ApprovalFlowService
         ?string $referenceNo = null,
         array $payload = [],
         ?string $formKey = null,
-        ?float $amount = null
+        ?float $amount = null,
+        array $pickedApprovers = []
     ): ApprovalInstance {
         if ($departmentId === null) {
             $departmentId = User::find($requesterUserId)?->department_id;
@@ -67,7 +68,7 @@ class ApprovalFlowService
 
         $instanceDepartmentId = $departmentId ?? $binding?->department_id;
 
-        return DB::transaction(function () use ($workflow, $instanceDepartmentId, $requesterUserId, $documentType, $referenceNo, $payload) {
+        return DB::transaction(function () use ($workflow, $instanceDepartmentId, $requesterUserId, $documentType, $referenceNo, $payload, $pickedApprovers) {
             // Auto-generate running number if not provided
             if (empty($referenceNo)) {
                 $referenceNo = app(RunningNumberService::class)->generate($documentType);
@@ -85,12 +86,30 @@ class ApprovalFlowService
             ]);
 
             foreach ($workflow->stages as $stage) {
+                $stepType = $stage->approver_type;
+                $stepRef = $stage->approver_ref;
+
+                // requester_pick: the requester chose the approver at submit time.
+                // Resolve it to a concrete `user` step so the rest of the engine
+                // (canUserActOnStep) treats it exactly like a fixed-user stage.
+                // Validate server-side that the picked user actually holds
+                // approval.approve — never trust the submitted id.
+                if ($stage->approver_type === 'requester_pick') {
+                    $pickedId = (int) ($pickedApprovers[$stage->step_no] ?? 0);
+                    $picked = $pickedId ? User::find($pickedId) : null;
+                    if (! $picked || ! $picked->getAllPermissions()->pluck('name')->contains('approval.approve')) {
+                        throw new RuntimeException('requester_pick_invalid_approver');
+                    }
+                    $stepType = 'user';
+                    $stepRef = (string) $pickedId;
+                }
+
                 ApprovalInstanceStep::create([
                     'approval_instance_id' => $instance->id,
                     'step_no' => $stage->step_no,
                     'stage_name' => $stage->name,
-                    'approver_type' => $stage->approver_type,
-                    'approver_ref' => $stage->approver_ref,
+                    'approver_type' => $stepType,
+                    'approver_ref' => $stepRef,
                     'min_approvals' => $stage->min_approvals ?? 1,
                     'require_signature' => (bool) ($stage->require_signature ?? false),
                     'approved_by' => [],
@@ -102,6 +121,43 @@ class ApprovalFlowService
 
             return $instance->load(['steps', 'workflow']);
         });
+    }
+
+    /**
+     * Resolve which workflow WOULD apply to a submission, with its active stages,
+     * WITHOUT creating an instance. Used by the draft page to decide whether to
+     * show a "pick approver" UI for any `requester_pick` stages. Mirrors the
+     * resolution in start() but returns null (instead of throwing) when no
+     * workflow/binding is found — the caller just shows no picker.
+     */
+    public function previewWorkflow(
+        string $documentType,
+        ?int $departmentId,
+        int $requesterUserId,
+        ?string $formKey = null,
+        ?float $amount = null
+    ): ?ApprovalWorkflow {
+        if ($departmentId === null) {
+            $departmentId = User::find($requesterUserId)?->department_id;
+        }
+
+        $routingMode = $this->routingMode($documentType);
+        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode);
+
+        if ($resolvedWorkflowId === null) {
+            $binding = $this->resolveDepartmentBinding($documentType, $departmentId, $routingMode);
+            if (! $binding) {
+                return null;
+            }
+            $resolvedWorkflowId = (int) $binding->workflow_id;
+        }
+
+        // Caller queries stages separately (ApprovalWorkflowStage) — no eager-load
+        // needed here, which also avoids a larastan untyped-relation false positive.
+        return ApprovalWorkflow::query()
+            ->whereKey($resolvedWorkflowId)
+            ->where('is_active', true)
+            ->first();
     }
 
     public function routingMode(string $documentType = ''): string

@@ -9,6 +9,7 @@ use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
 use App\Models\DepartmentWorkflowBinding;
 use App\Models\Position;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,7 +56,9 @@ class WorkflowController extends Controller
                 'users' => $usersByPosition[$p->id] ?? [],
             ]);
 
-        return view('settings.workflow.create', compact('roles', 'users', 'positions'));
+        $allowRequesterPick = Setting::getBool('approval.allow_requester_pick', false);
+
+        return view('settings.workflow.create', compact('roles', 'users', 'positions', 'allowRequesterPick'));
     }
 
     public function edit(ApprovalWorkflow $workflow): View
@@ -95,7 +98,9 @@ class WorkflowController extends Controller
                 'users' => $usersByPosition[$p->id] ?? [],
             ]);
 
-        return view('settings.workflow.edit', compact('workflow', 'roles', 'users', 'positions'));
+        $allowRequesterPick = Setting::getBool('approval.allow_requester_pick', false);
+
+        return view('settings.workflow.edit', compact('workflow', 'roles', 'users', 'positions', 'allowRequesterPick'));
     }
 
     /**
@@ -124,8 +129,8 @@ class WorkflowController extends Controller
             'stages' => 'required|array|min:1',
             'stages.*.step_no' => 'required|integer|min:1',
             'stages.*.name' => 'required|string|max:255',
-            'stages.*.approver_type' => 'required|in:role,user,position',
-            'stages.*.approver_ref' => 'required|string|max:255',
+            'stages.*.approver_type' => 'required|in:role,user,position,requester_pick',
+            'stages.*.approver_ref' => ['required_unless:stages.*.approver_type,requester_pick', 'nullable', 'string', 'max:255'],
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
         ]);
@@ -148,7 +153,7 @@ class WorkflowController extends Controller
                     'step_no' => (int) $stage['step_no'],
                     'name' => $stage['name'],
                     'approver_type' => $stage['approver_type'],
-                    'approver_ref' => $stage['approver_ref'],
+                    'approver_ref' => $stage['approver_ref'] ?? '',
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'is_active' => true,
@@ -170,8 +175,8 @@ class WorkflowController extends Controller
             'stages' => 'required|array|min:1',
             'stages.*.step_no' => 'required|integer|min:1',
             'stages.*.name' => 'required|string|max:255',
-            'stages.*.approver_type' => 'required|in:role,user,position',
-            'stages.*.approver_ref' => 'required|string|max:255',
+            'stages.*.approver_type' => 'required|in:role,user,position,requester_pick',
+            'stages.*.approver_ref' => ['required_unless:stages.*.approver_type,requester_pick', 'nullable', 'string', 'max:255'],
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
         ]);
@@ -195,7 +200,7 @@ class WorkflowController extends Controller
                     'step_no' => (int) $stage['step_no'],
                     'name' => $stage['name'],
                     'approver_type' => $stage['approver_type'],
-                    'approver_ref' => $stage['approver_ref'],
+                    'approver_ref' => $stage['approver_ref'] ?? '',
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'is_active' => true,
@@ -211,8 +216,8 @@ class WorkflowController extends Controller
         $validated = $request->validate([
             'step_no' => 'required|integer|min:1',
             'name' => 'required|string|max:255',
-            'approver_type' => 'required|in:role,user,position',
-            'approver_ref' => 'required|string|max:255',
+            'approver_type' => 'required|in:role,user,position,requester_pick',
+            'approver_ref' => ['required_unless:approver_type,requester_pick', 'nullable', 'string', 'max:255'],
             'min_approvals' => 'required|integer|min:1',
             'is_active' => 'nullable|boolean',
         ]);
@@ -227,7 +232,7 @@ class WorkflowController extends Controller
             [
                 'name' => $validated['name'],
                 'approver_type' => $validated['approver_type'],
-                'approver_ref' => $validated['approver_ref'],
+                'approver_ref' => $validated['approver_ref'] ?? '',
                 'min_approvals' => (int) $validated['min_approvals'],
                 'is_active' => (bool) ($validated['is_active'] ?? true),
             ]

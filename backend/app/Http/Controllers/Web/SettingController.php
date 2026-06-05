@@ -167,8 +167,9 @@ class SettingController extends Controller
     public function approvalRouting(): View
     {
         $documentTypes = DocumentType::allActive();
+        $allowRequesterPick = Setting::getBool('approval.allow_requester_pick', false);
 
-        return view('settings.approval-routing', compact('documentTypes'));
+        return view('settings.approval-routing', compact('documentTypes', 'allowRequesterPick'));
     }
 
     public function saveApprovalRouting(Request $request): RedirectResponse
@@ -183,6 +184,10 @@ class SettingController extends Controller
                 ->where('code', $code)
                 ->update(['routing_mode' => $mode]);
         }
+
+        // Master toggle: lets admins enable the "requester picks the approver"
+        // option in the workflow stage editor + the picker at submit time.
+        Setting::set('approval.allow_requester_pick', $request->boolean('allow_requester_pick'));
 
         return redirect()
             ->route('settings.approval-routing')

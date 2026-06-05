@@ -70,6 +70,10 @@ Route::middleware('auth.web')->group(function () {
     Route::post('/auth/line/unlink', [ProfileController::class, 'lineUnlink'])->name('auth.line.unlink');
 });
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Graceful GET fallback: typing /logout in the address bar (a GET) should log
+// the user out instead of showing a 405. The named POST route above stays the
+// canonical target for the logout button/forms (route('logout') -> POST).
+Route::get('/logout', [AuthController::class, 'logout']);
 
 Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');

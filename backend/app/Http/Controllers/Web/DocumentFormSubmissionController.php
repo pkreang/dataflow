@@ -6,9 +6,11 @@ use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalInstanceStep;
+use App\Models\ApprovalWorkflowStage;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormSubmission;
+use App\Models\Setting;
 use App\Models\SubmissionActivityLog;
 use App\Models\User;
 use App\Services\ApprovalFlowService;
@@ -317,7 +319,43 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeOwnerDraft($submission);
         $submission->load('form.fields');
 
-        return view('forms.edit-draft', compact('submission'));
+        // requester_pick: if the admin feature is on AND this submission's resolved
+        // workflow has any stage where the requester chooses the approver, surface
+        // those stages + the eligible approvers (users holding approval.approve) so
+        // the submit form can render a picker.
+        $requesterPickStages = collect();
+        $eligibleApprovers = collect();
+        if (Setting::getBool('approval.allow_requester_pick', false)) {
+            $form = $submission->form()->first();
+            $workflow = $form ? $this->approvalFlow->previewWorkflow(
+                $form->document_type,
+                $submission->department_id,
+                (int) (session('user.id') ?? 0),
+                $form->form_key,
+            ) : null;
+            // Query stages directly (not via relation property) — dodges the
+            // larastan untyped-relation false positive on ApprovalWorkflow::$stages.
+            $requesterPickStages = $workflow
+                ? ApprovalWorkflowStage::query()
+                    ->where('workflow_id', $workflow->id)
+                    ->where('is_active', true)
+                    ->where('approver_type', 'requester_pick')
+                    ->orderBy('step_no')
+                    ->get()
+                : collect();
+            if ($requesterPickStages->isNotEmpty()) {
+                $eligibleApprovers = User::permission('approval.approve')
+                    ->orderBy('first_name')
+                    ->get()
+                    ->map(fn (User $u) => [
+                        'id' => $u->id,
+                        'label' => trim($u->first_name.' '.$u->last_name).' ('.$u->email.')',
+                    ])
+                    ->values();
+            }
+        }
+
+        return view('forms.edit-draft', compact('submission', 'requesterPickStages', 'eligibleApprovers'));
     }
 
     public function updateDraft(Request $request, DocumentFormSubmission $submission): RedirectResponse
@@ -521,13 +559,19 @@ class DocumentFormSubmissionController extends Controller
         }
     }
 
-    public function submit(DocumentFormSubmission $submission, ApprovalFlowService $approvalFlowService): RedirectResponse
+    public function submit(DocumentFormSubmission $submission, Request $request, ApprovalFlowService $approvalFlowService): RedirectResponse
     {
         $this->authorizeOwnerOnlyDraft($submission);
         $submission->load('form');
 
         $form = $submission->form;
         $userId = (int) (session('user.id') ?? 0);
+
+        // requester_pick: map[step_no => chosen user_id]. start() validates that
+        // the chosen user actually holds approval.approve before trusting it.
+        $pickedApprovers = collect($request->input('picked_approvers', []))
+            ->mapWithKeys(fn ($uid, $stepNo) => [(int) $stepNo => (int) $uid])
+            ->all();
 
         try {
             $instance = $approvalFlowService->start(
@@ -537,9 +581,14 @@ class DocumentFormSubmissionController extends Controller
                 referenceNo: null,
                 payload: $submission->payload ?? [],
                 formKey: $form->form_key,
+                pickedApprovers: $pickedApprovers,
             );
         } catch (RuntimeException $e) {
-            return redirect()->back()->withErrors(['submit' => $e->getMessage()]);
+            $message = $e->getMessage() === 'requester_pick_invalid_approver'
+                ? __('common.requester_pick_invalid_approver')
+                : $e->getMessage();
+
+            return redirect()->back()->withErrors(['submit' => $message]);
         }
 
         $submission->update([

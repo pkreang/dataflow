@@ -61,6 +61,19 @@
                 </table>
             </div>
 
+            {{-- Master toggle: let requesters pick the approver for stages an admin
+                 marks as "requester picks" in the workflow editor. --}}
+            <div class="mt-5 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="allow_requester_pick" value="1"
+                           @checked(old('allow_requester_pick', $allowRequesterPick ?? false)) class="mt-1">
+                    <span>
+                        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ __('common.approval_allow_requester_pick') }}</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ __('common.approval_allow_requester_pick_desc') }}</span>
+                    </span>
+                </label>
+            </div>
+
             <div class="mt-5 flex justify-end">
                 <button type="submit" class="btn-primary">
                     {{ __('common.save') }}
