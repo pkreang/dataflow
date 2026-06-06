@@ -90,6 +90,14 @@
                 </select>
             </div>
 
+            {{-- Amount Field Key --}}
+            <div x-show="useAmountCondition" x-cloak class="max-w-md">
+                <label class="form-label">{{ __('common.policy_amount_field_key') }}</label>
+                <input type="text" name="amount_field_key" value="{{ old('amount_field_key', $policy->amount_field_key) }}"
+                       class="form-input mt-1" placeholder="total_amount" maxlength="100">
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('common.policy_amount_field_key_hint') }}</p>
+            </div>
+
             {{-- Amount Ranges --}}
             <div x-show="useAmountCondition" x-cloak class="space-y-3">
                 <div class="flex items-center justify-between">

@@ -22,6 +22,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -319,13 +321,12 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeOwnerDraft($submission);
         $submission->load('form.fields');
 
-        // requester_pick: if the admin feature is on AND this submission's resolved
-        // workflow has any stage where the requester chooses the approver, surface
-        // those stages + the eligible approvers (users holding approval.approve) so
-        // the submit form can render a picker.
-        $requesterPickStages = collect();
+        // override: if the admin feature is on AND the resolved workflow has stages
+        // with allow_requester_override=true, surface those stages + eligible approvers
+        // so the submit form can render an optional substitute-approver picker.
+        $overrideStages = collect();
         $eligibleApprovers = collect();
-        if (Setting::getBool('approval.allow_requester_pick', false)) {
+        if (Setting::getBool('approval.allow_requester_override', false)) {
             $form = $submission->form()->first();
             $workflow = $form ? $this->approvalFlow->previewWorkflow(
                 $form->document_type,
@@ -333,17 +334,15 @@ class DocumentFormSubmissionController extends Controller
                 (int) (session('user.id') ?? 0),
                 $form->form_key,
             ) : null;
-            // Query stages directly (not via relation property) — dodges the
-            // larastan untyped-relation false positive on ApprovalWorkflow::$stages.
-            $requesterPickStages = $workflow
+            $overrideStages = $workflow
                 ? ApprovalWorkflowStage::query()
                     ->where('workflow_id', $workflow->id)
                     ->where('is_active', true)
-                    ->where('approver_type', 'requester_pick')
+                    ->where('allow_requester_override', true)
                     ->orderBy('step_no')
                     ->get()
                 : collect();
-            if ($requesterPickStages->isNotEmpty()) {
+            if ($overrideStages->isNotEmpty()) {
                 $eligibleApprovers = User::permission('approval.approve')
                     ->orderBy('first_name')
                     ->get()
@@ -355,7 +354,7 @@ class DocumentFormSubmissionController extends Controller
             }
         }
 
-        return view('forms.edit-draft', compact('submission', 'requesterPickStages', 'eligibleApprovers'));
+        return view('forms.edit-draft', compact('submission', 'overrideStages', 'eligibleApprovers'));
     }
 
     public function updateDraft(Request $request, DocumentFormSubmission $submission): RedirectResponse
@@ -559,7 +558,7 @@ class DocumentFormSubmissionController extends Controller
         }
     }
 
-    public function submit(DocumentFormSubmission $submission, Request $request, ApprovalFlowService $approvalFlowService): RedirectResponse
+    public function submit(DocumentFormSubmission $submission, Request $request, ApprovalFlowService $approvalFlowService, \App\Services\LeaveValidationService $leaveValidator): RedirectResponse
     {
         $this->authorizeOwnerOnlyDraft($submission);
         $submission->load('form');
@@ -573,14 +572,48 @@ class DocumentFormSubmissionController extends Controller
             ->mapWithKeys(fn ($uid, $stepNo) => [(int) $stepNo => (int) $uid])
             ->all();
 
+        // Extract amount for amount-based routing if policy configures an amount_field_key
+        $payload = (array) ($submission->payload ?? []);
+        $amount = null;
+        $amountPolicy = \App\Models\DocumentFormWorkflowPolicy::query()
+            ->where('form_id', $submission->form_id)
+            ->where('use_amount_condition', true)
+            ->whereNotNull('amount_field_key')
+            ->first();
+        if ($amountPolicy !== null && $amountPolicy->amount_field_key !== null) {
+            $rawAmount = $payload[$amountPolicy->amount_field_key] ?? null;
+            if (is_numeric($rawAmount)) {
+                $amount = (float) $rawAmount;
+            }
+        }
+
+        // Leave overlap guard: runs for any form that stores date_from / date_to
+        // (currently only leave_request forms). No-op for all other form types.
+        if (isset($payload['date_from'], $payload['date_to'])) {
+            try {
+                $leaveValidator->checkOverlap(
+                    userId: $userId,
+                    formId: $form->id,
+                    dateFrom: (string) $payload['date_from'],
+                    dateTo: (string) $payload['date_to'],
+                    excludeId: $submission->id,
+                );
+            } catch (\RuntimeException $e) {
+                return redirect()->back()->withErrors([
+                    'submit' => __('common.'.$e->getMessage()),
+                ]);
+            }
+        }
+
         try {
             $instance = $approvalFlowService->start(
                 documentType: $form->document_type,
                 departmentId: $submission->department_id,
                 requesterUserId: $userId,
                 referenceNo: null,
-                payload: $submission->payload ?? [],
+                payload: $payload,
                 formKey: $form->form_key,
+                amount: $amount,
                 pickedApprovers: $pickedApprovers,
             );
         } catch (RuntimeException $e) {
@@ -742,6 +775,26 @@ class DocumentFormSubmissionController extends Controller
         SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
 
         return view('forms.print-submission', compact('submission'));
+    }
+
+    public function downloadPdf(DocumentFormSubmission $submission): HttpResponse
+    {
+        $this->authorizeView($submission);
+        abort_if($submission->status === 'draft', 404);
+
+        $submission->load(['form.fields', 'instance.steps', 'department', 'user']);
+
+        $pdf = Pdf::loadView('pdf.submission', compact('submission'))
+            ->setPaper('a4', 'portrait')
+            ->setWarnings(false);
+
+        $filename = ($submission->reference_no
+            ? preg_replace('/[^A-Za-z0-9\-_]/', '-', $submission->reference_no)
+            : 'submission-' . $submission->id) . '.pdf';
+
+        SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
+
+        return $pdf->download($filename);
     }
 
     /**

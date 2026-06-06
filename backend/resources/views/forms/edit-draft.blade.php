@@ -148,15 +148,15 @@
                   action="{{ route('forms.draft.submit', $submission) }}"
                   onsubmit="return confirm('{{ __('common.confirm_submit_form') }}')" novalidate>
                 @csrf
-                @if(($requesterPickStages ?? collect())->isNotEmpty())
-                    {{-- requester_pick: requester chooses the approver for these stages --}}
+                @if(($overrideStages ?? collect())->isNotEmpty())
+                    {{-- override: requester may optionally substitute the approver for these stages --}}
                     <div class="mb-3 space-y-2 text-left rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10 p-3">
                         <p class="text-xs font-semibold text-blue-800 dark:text-blue-200">{{ __('common.submit_pick_approver_label') }}</p>
-                        @foreach($requesterPickStages as $pickStage)
+                        @foreach($overrideStages as $overrideStage)
                             <div>
-                                <label class="text-xs text-slate-500 dark:text-slate-400">{{ $pickStage->name }}</label>
-                                <select name="picked_approvers[{{ $pickStage->step_no }}]" required class="form-input mt-1">
-                                    <option value="">{{ __('common.submit_pick_approver_placeholder') }}</option>
+                                <label class="text-xs text-slate-500 dark:text-slate-400">{{ $overrideStage->name }}</label>
+                                <select name="picked_approvers[{{ $overrideStage->step_no }}]" class="form-input mt-1">
+                                    <option value="">{{ __('common.submit_pick_approver_use_default') }}</option>
                                     @foreach(($eligibleApprovers ?? collect()) as $appr)
                                         <option value="{{ $appr['id'] }}">{{ $appr['label'] }}</option>
                                     @endforeach

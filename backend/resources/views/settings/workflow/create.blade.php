@@ -96,9 +96,6 @@
                                     <option value="position">{{ __('common.workflow_approver_position') }}</option>
                                     <option value="user">{{ __('common.workflow_approver_user') }}</option>
                                     <option value="role">{{ __('common.workflow_approver_role') }}</option>
-                                    @if($allowRequesterPick ?? false)
-                                        <option value="requester_pick">{{ __('common.workflow_approver_requester_pick') }}</option>
-                                    @endif
                                 </select>
                             </div>
                             <div>
@@ -130,11 +127,6 @@
                                         <p x-show="stage.approver_ref" x-text="positionUsersPreview(stage.approver_ref)" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
                                     </div>
                                 </template>
-                                <template x-if="stage.approver_type === 'requester_pick'">
-                                    <p class="text-xs text-blue-700 dark:text-blue-300 mt-1 bg-blue-50 dark:bg-blue-900/10 rounded p-2">
-                                        {{ __('common.workflow_requester_pick_hint') }}
-                                    </p>
-                                </template>
                             </div>
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_min_approvals') }}</label>
@@ -150,6 +142,15 @@
                                 <span>{{ __('common.workflow_require_signature') }}</span>
                             </label>
                             <span class="text-xs text-slate-400">{{ __('common.workflow_require_signature_help') }}</span>
+                            @if($allowRequesterOverride ?? false)
+                            <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                                <input type="checkbox" :name="`stages[${idx}][allow_requester_override]`" value="1"
+                                       :checked="!!stage.allow_requester_override"
+                                       @change="stage.allow_requester_override = $event.target.checked"
+                                       class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                                <span>{{ __('common.workflow_allow_requester_override') }}</span>
+                            </label>
+                            @endif
                         </div>
                     </div>
                 </template>
@@ -285,8 +286,7 @@
             checkValidity() {
                 this.isValid = this.stages.length > 0 && this.stages.every((s) =>
                     String(s.name || '').trim() !== '' &&
-                    // requester_pick has no fixed approver_ref — it's chosen at submit time
-                    (s.approver_type === 'requester_pick' || String(s.approver_ref || '').trim() !== '') &&
+                    String(s.approver_ref || '').trim() !== '' &&
                     Number(s.min_approvals || 0) >= 1
                 );
             },

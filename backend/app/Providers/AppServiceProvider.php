@@ -13,12 +13,18 @@ use App\Listeners\Approval\SendWorkflowOutcomeNotification;
 use App\Listeners\SendStockLowNotification;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflowStage;
+use App\Models\Department;
 use App\Models\DocumentType;
+use App\Models\Position;
 use App\Models\Setting;
+use App\Models\User;
+use App\Observers\DepartmentObserver;
 use App\Observers\DocumentTypeObserver;
 use App\Observers\PermissionObserver;
+use App\Observers\PositionObserver;
 use App\Observers\RoleObserver;
 use App\Observers\SettingObserver;
+use App\Observers\UserObserver;
 use App\Observers\WorkflowStageObserver;
 use App\Policies\RolePolicy;
 use App\Services\ApproverIdentity;
@@ -71,6 +77,9 @@ class AppServiceProvider extends ServiceProvider
         DocumentType::observe(DocumentTypeObserver::class);
         Role::observe(RoleObserver::class);
         Permission::observe(PermissionObserver::class);
+        User::observe(UserObserver::class);
+        Department::observe(DepartmentObserver::class);
+        Position::observe(PositionObserver::class);
 
         Gate::before(function ($user, $ability) {
             if ($user?->is_super_admin ?? false) {

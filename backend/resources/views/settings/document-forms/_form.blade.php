@@ -80,10 +80,11 @@
             @method('PUT')
         @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] gap-4 lg:gap-6">
+        <div class="grid grid-cols-1 gap-4 lg:gap-6"
+             :class="showInlinePreview ? 'lg:grid-cols-[230px_1fr_360px]' : 'lg:grid-cols-[230px_minmax(0,1fr)]'">
             @include('settings.document-forms._form-palette')
 
-            <div class="min-w-0 max-w-3xl mx-auto w-full">
+            <div class="min-w-0 w-full" :class="showInlinePreview ? 'max-w-3xl' : 'max-w-3xl mx-auto'">
         @if($inlineToolbar ?? false)
             <div class="card p-6">
         @endif
@@ -192,6 +193,18 @@
                     <option value="4" @selected($layoutCols === 4)>▌▌▌▌ &nbsp; {{ __('common.form_layout_4col') }}</option>
                 </select>
                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ __('common.form_layout_hint') }}</p>
+                <button type="button"
+                        @click="showInlinePreview = !showInlinePreview"
+                        class="mt-2 hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                        :class="showInlinePreview
+                            ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300'
+                            : 'bg-white border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    <span x-text="showInlinePreview ? '{{ __('common.form_builder_hide_preview') }}' : '{{ __('common.form_builder_inline_preview') }}'"></span>
+                </button>
             </div>
             <div>
                 <label class="form-label">{{ __('common.table_name') }}</label>
@@ -784,6 +797,24 @@
                             <input type="hidden" :name="`fields[${idx}][editable_by]`" :value="JSON.stringify(field.editable_by || [])">
                         </div>
 
+                        {{-- Required at step: only visible when at least one step_N is in editable_by --}}
+                        <div x-show="stepRolesForRequiredAt(field).length > 0" x-cloak>
+                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{{ __('common.required_at_step') }}</p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 mb-2">{{ __('common.required_at_step_hint') }}</p>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1">
+                                <template x-for="role in stepRolesForRequiredAt(field)" :key="role.value">
+                                    <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                                        <input type="checkbox"
+                                               :checked="isRequiredAtStep(field, role.value)"
+                                               @change="toggleRequiredAtStep(field, role.value)"
+                                               class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                                        <span x-text="role.label"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            <input type="hidden" :name="`fields[${idx}][required_at_step]`" :value="JSON.stringify((field.required_at_step || []).map(n => 'step_' + n))">
+                        </div>
+
                         <div>
                             <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{{ __('common.field_visible_to_departments') }}</p>
                             @if(count($departmentsJs))
@@ -819,6 +850,23 @@
             </div>
         @endif
             </div>{{-- /center column --}}
+
+            {{-- Inline preview panel — 3rd grid column, only visible lg+ --}}
+            <div x-show="showInlinePreview" x-cloak
+                 class="hidden lg:flex flex-col sticky self-start"
+                 style="top: 5rem; max-height: calc(100vh - 6rem)">
+                <div class="card flex flex-col min-h-0 overflow-hidden">
+                    <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ __('common.form_builder_inline_preview') }}</span>
+                        <span class="text-xs text-slate-400 dark:text-slate-500"
+                              x-text="layoutColumns + ' {{ __('common.form_layout_cols_unit') }}'"></span>
+                    </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto">
+                        @include('settings.document-forms._form-preview-body')
+                    </div>
+                </div>
+            </div>{{-- /inline preview panel --}}
+
         </div>{{-- /grid --}}
 
     </form>
@@ -836,6 +884,7 @@
         if (!Array.isArray(f.editable_by)) f.editable_by = ['requester'];
         if (!Array.isArray(f.visible_to_departments)) f.visible_to_departments = [];
         if (!Array.isArray(f.required_rules)) f.required_rules = [];
+        if (!Array.isArray(f.required_at_step)) f.required_at_step = [];
         // Group fields need a populated options object so the editor's x-models bind cleanly.
         if (f.field_type === 'group') {
             const g = (typeof f.group_options === 'object' && f.group_options !== null) ? f.group_options : {};
@@ -903,6 +952,22 @@
                 }
                 return roles;
             },
+            stepRolesForRequiredAt(field) {
+                return this.availableRoles.filter(r =>
+                    r.value.startsWith('step_') && (field.editable_by || []).includes(r.value)
+                );
+            },
+            toggleRequiredAtStep(field, stepToken) {
+                const stepNo = parseInt(stepToken.replace('step_', ''), 10);
+                if (!Array.isArray(field.required_at_step)) field.required_at_step = [];
+                const idx = field.required_at_step.indexOf(stepNo);
+                if (idx === -1) field.required_at_step.push(stepNo);
+                else field.required_at_step.splice(idx, 1);
+            },
+            isRequiredAtStep(field, stepToken) {
+                const stepNo = parseInt(stepToken.replace('step_', ''), 10);
+                return (field.required_at_step || []).includes(stepNo);
+            },
             // Users currently selected for a field's editable_by (decoded from
             // 'user:{id}' tokens). Lookup against companyUsers gives display name.
             selectedEditableUsers(field) {
@@ -946,6 +1011,7 @@
                 }
             },
             showPreview: false,
+            showInlinePreview: false,
             showSaveConfirm: false,
             previewTitle: '',
             init() {

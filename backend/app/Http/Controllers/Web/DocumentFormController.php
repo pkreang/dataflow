@@ -267,6 +267,7 @@ class DocumentFormController extends Controller
             'fields.*.col_span' => ['nullable', 'integer', 'min:0', 'max:4'],
             'fields.*.visibility_rules' => ['nullable', 'string', 'max:65535'],
             'fields.*.required_rules' => ['nullable', 'string', 'max:65535'],
+            'fields.*.required_at_step' => ['nullable', 'string', 'max:500'],
             'fields.*.validation_rules' => ['nullable', 'string', 'max:65535'],
             'fields.*.editable_by' => ['nullable', 'string', 'max:2000'],
             'fields.*.visible_to_departments' => ['nullable', 'string', 'max:2000'],
@@ -456,6 +457,7 @@ class DocumentFormController extends Controller
                     'options' => $this->parseOptions($field),
                     'visibility_rules' => $this->parseJsonField($field['visibility_rules'] ?? null),
                     'required_rules' => $this->parseJsonField($field['required_rules'] ?? null),
+                    'required_at_step' => $this->parseRequiredAtStep($field),
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
                     'visible_to_departments' => $this->parseDepartmentIds($field),
@@ -518,6 +520,7 @@ class DocumentFormController extends Controller
                     'options' => $this->parseOptions($field),
                     'visibility_rules' => $this->parseJsonField($field['visibility_rules'] ?? null),
                     'required_rules' => $this->parseJsonField($field['required_rules'] ?? null),
+                    'required_at_step' => $this->parseRequiredAtStep($field),
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
                     'visible_to_departments' => $this->parseDepartmentIds($field),
@@ -670,6 +673,8 @@ class DocumentFormController extends Controller
                     'visible_to_departments' => $field->visible_to_departments,
                     'editable_by' => $field->editable_by,
                     'visibility_rules' => $field->visibility_rules,
+                    'required_rules' => $field->required_rules,
+                    'required_at_step' => $field->required_at_step ?? [],
                     'validation_rules' => $field->validation_rules,
                 ]);
             }
@@ -1010,6 +1015,33 @@ class DocumentFormController extends Controller
      * Normalise `visible_to_departments` into a list of integer IDs. Unknown
      * IDs are dropped silently. Empty list → null (visible to everyone).
      */
+    private function parseRequiredAtStep(array $field): ?array
+    {
+        $raw = $field['required_at_step'] ?? null;
+        if (! $raw) {
+            return null;
+        }
+        $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
+        if (! is_array($decoded) || empty($decoded)) {
+            return null;
+        }
+        $steps = array_values(array_filter(
+            array_map(function ($s) {
+                if (is_string($s) && str_starts_with($s, 'step_')) {
+                    return (int) substr($s, 5);
+                }
+                if (is_numeric($s)) {
+                    return (int) $s;
+                }
+
+                return null;
+            }, $decoded),
+            fn ($v) => $v !== null && $v > 0
+        ));
+
+        return $steps ?: null;
+    }
+
     private function parseDepartmentIds(array $field): ?array
     {
         $decoded = $this->decodeJsonList($field['visible_to_departments'] ?? null);

@@ -13,6 +13,7 @@ class DocumentFormWorkflowPolicy extends Model
         'form_id',
         'department_id',
         'use_amount_condition',
+        'amount_field_key',
         'workflow_id',
     ];
 

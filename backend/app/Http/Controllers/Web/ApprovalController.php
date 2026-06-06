@@ -89,6 +89,22 @@ class ApprovalController extends Controller
             $signature = null;
         }
 
+        // Validate required_at_step fields before allowing approve
+        if ($action === 'approved') {
+            $submission = $instance->formSubmission;
+            if ($submission) {
+                $stepNo = $instance->current_step_no;
+                $payload = (array) ($submission->payload ?? []);
+                $missing = $submission->form->fields
+                    ->filter(fn ($f) => in_array($stepNo, $f->required_at_step ?? []))
+                    ->filter(fn ($f) => ($payload[$f->field_key] ?? '') === '' || $payload[$f->field_key] === null)
+                    ->map(fn ($f) => $f->localized_label);
+                if ($missing->isNotEmpty()) {
+                    return back()->withErrors(['approve' => __('common.approver_fields_required', ['fields' => $missing->join(', ')])]);
+                }
+            }
+        }
+
         try {
             $approvalFlowService->act(
                 $instance->id,

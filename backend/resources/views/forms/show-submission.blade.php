@@ -12,15 +12,31 @@
 
 @section('content')
 <div style="width:100%;max-width:100%">
-    <div class="mb-6">
-        <a href="{{ route('forms.my-submissions') }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.my_submissions') }}</a>
-        <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mt-2">{{ $submission->form->name }}</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {{ $submission->reference_no ?: ('#' . $submission->id) }}
-            @if($submission->instance)
-                · {{ __('common.approval_status_' . $submission->instance->status) }}
-            @endif
-        </p>
+    <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+            <a href="{{ route('forms.my-submissions') }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.my_submissions') }}</a>
+            <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mt-2">{{ $submission->form->name }}</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {{ $submission->reference_no ?: ('#' . $submission->id) }}
+                @if($submission->instance)
+                    · {{ __('common.approval_status_' . $submission->instance->status) }}
+                @endif
+            </p>
+        </div>
+        @if($submission->status !== 'draft')
+        <div class="flex gap-2 shrink-0">
+            <a href="{{ route('forms.submission.print', $submission) }}" target="_blank"
+               class="btn-secondary text-sm flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                {{ __('common.action_print') }}
+            </a>
+            <a href="{{ route('forms.submission.pdf', $submission) }}"
+               class="btn-secondary text-sm flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                {{ __('common.download_pdf') ?? 'ดาวน์โหลด PDF' }}
+            </a>
+        </div>
+        @endif
     </div>
 
     @if (session('success'))
@@ -244,36 +260,103 @@
         </div>
     @endif
 
-    {{-- Form payload — read-only, OR editable for the current pending approver
-         on fields tagged editable_by=['step_N']/'user:{id}'. The PATCH route
-         re-filters server-side; the form gate here is convenience only. --}}
+    {{-- Form payload — split into approver section + main section when approver is editing --}}
     @php
-        // Editing mode only when the viewer is the current approver AND at least
-        // one field is actually editable by their step / user token (mirrors the
-        // server-side filter in ApprovalController::updateFields) — avoids showing
-        // an empty edit form + save button when nothing is editable.
+        $form = $submission->form;
         $isApproverEditing = ($editorRole ?? 'view_only') !== 'view_only'
             && $submission->instance
-            && $submission->form->fields->contains(fn ($f) =>
+            && $form->fields->contains(fn ($f) =>
                 $f->field_type !== 'file'
                 && (in_array($editorRole, $f->effective_editable_by, true)
                     || (($editorUserId ?? null) && in_array('user:'.$editorUserId, $f->effective_editable_by, true))));
+
+        // Partition fields: approver-editable vs read-only remainder
+        $approverEditableFieldIds = $isApproverEditing
+            ? $form->fields->filter(fn ($f) =>
+                $f->field_type !== 'file'
+                && (in_array($editorRole, $f->effective_editable_by, true)
+                    || (($editorUserId ?? null) && in_array('user:'.$editorUserId, $f->effective_editable_by, true))))
+                ->pluck('id')->all()
+            : [];
+
+        // Required fields for the current step (for server-side error display + client guard)
+        $currentStepNo = str_starts_with($editorRole ?? '', 'step_') ? (int) substr($editorRole, 5) : null;
+        $approverRequiredFields = $currentStepNo
+            ? $form->fields->filter(fn ($f) => in_array($currentStepNo, $f->required_at_step ?? []))
+                ->map(fn ($f) => ['key' => $f->field_key, 'label' => $f->localized_label])
+                ->values()->all()
+            : [];
     @endphp
-    <div class="card p-4 sm:p-6 lg:p-8">
-        @php $form = $submission->form; @endphp
-        @if($isApproverEditing)
+
+    @if($isApproverEditing)
+        {{-- Approver section — editable fields in a highlighted card --}}
+        <div class="approver-section-card card border-2 border-blue-200 dark:border-blue-700 bg-blue-50/40 dark:bg-blue-900/10 p-4 sm:p-6 mb-4">
+            <h3 class="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-0.5">{{ __('common.approver_section_title') }}</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">{{ __('common.approver_section_hint') }}</p>
+
+            @if($errors->has('approve'))
+                <div class="alert-error mb-3 text-sm">{{ $errors->first('approve') }}</div>
+            @endif
+
             <form method="POST" action="{{ route('approvals.update-fields', $submission->instance) }}" novalidate>
                 @csrf @method('PATCH')
-        @endif
+                <x-document-form-fields-grid :columns="$form->layout_columns ?? 1">
+                    @foreach($form->fields->filter(fn ($f) => in_array($f->id, $approverEditableFieldIds)) as $field)
+                        @php
+                            $fKey   = $field->field_key;
+                            $fValue = $submission->payload[$fKey] ?? null;
+                            $fSpan  = ($field->col_span && ($form->layout_columns ?? 1) > 1)
+                                ? min($field->col_span, $form->layout_columns)
+                                : 1;
+                            $isStepRequired = $currentStepNo && in_array($currentStepNo, $field->required_at_step ?? []);
+                        @endphp
+                        <div @if($fSpan > 1) style="grid-column: span {{ $fSpan }}" @endif>
+                            @if($field->field_type !== 'section')
+                                <label class="block text-sm text-slate-500 dark:text-slate-400 mb-1">
+                                    {{ $field->localized_label }}
+                                    @if($isStepRequired)
+                                        <span class="text-red-500 ml-0.5">*</span>
+                                    @endif
+                                </label>
+                            @endif
+                            @include('components.dynamic-field', [
+                                'field'        => $field,
+                                'name'         => "field_updates[{$fKey}]",
+                                'value'        => $fValue,
+                                'editorRole'   => $editorRole,
+                                'editorUserId' => $editorUserId ?? null,
+                                'userDeptId'   => $userDeptId ?? null,
+                                'referenceNo'  => $submission->reference_no,
+                                'qrPayload'    => null,
+                            ])
+                        </div>
+                    @endforeach
+                </x-document-form-fields-grid>
+                <div class="mt-4 flex justify-end">
+                    <button type="submit" class="btn-primary">{{ __('common.save_fields') }}</button>
+                </div>
+            </form>
+        </div>
+    @endif
+
+    {{-- Main form — all remaining fields (read-only) --}}
+    @php $remainingFields = $form->fields->filter(fn ($f) => !in_array($f->id, $approverEditableFieldIds)); @endphp
+    @if($remainingFields->isNotEmpty())
+    <div class="card p-4 sm:p-6 lg:p-8">
         <x-document-form-fields-grid :columns="$form->layout_columns ?? 1">
-            @foreach($form->fields as $field)
+            @foreach($remainingFields as $field)
                 @php
                     $fKey   = $field->field_key;
-                    $fName  = $isApproverEditing ? "field_updates[{$fKey}]" : "fields[{$fKey}]";
                     $fValue = $submission->payload[$fKey] ?? null;
                     $fSpan  = ($field->col_span && ($form->layout_columns ?? 1) > 1)
                         ? min($field->col_span, $form->layout_columns)
                         : 1;
+                    $qrPayloadForField = ($field->field_type === 'qr_code')
+                        ? \App\Support\QrTemplateResolver::resolve(
+                            (string) ((is_array($field->options) ? $field->options : [])['template'] ?? ''),
+                            $submission
+                        )
+                        : null;
                 @endphp
                 <div @if($fSpan > 1) style="grid-column: span {{ $fSpan }}" @endif>
                     @if($field->field_type !== 'section')
@@ -281,19 +364,11 @@
                             {{ $field->localized_label }}
                         </label>
                     @endif
-                    @php
-                        $qrPayloadForField = ($field->field_type === 'qr_code')
-                            ? \App\Support\QrTemplateResolver::resolve(
-                                (string) ((is_array($field->options) ? $field->options : [])['template'] ?? ''),
-                                $submission
-                            )
-                            : null;
-                    @endphp
                     @include('components.dynamic-field', [
                         'field'        => $field,
-                        'name'         => $fName,
+                        'name'         => "fields[{$fKey}]",
                         'value'        => $fValue,
-                        'editorRole'   => $editorRole ?? 'view_only',
+                        'editorRole'   => 'view_only',
                         'editorUserId' => $editorUserId ?? null,
                         'userDeptId'   => $userDeptId ?? null,
                         'referenceNo'  => $submission->reference_no,
@@ -302,13 +377,15 @@
                 </div>
             @endforeach
         </x-document-form-fields-grid>
-        @if($isApproverEditing)
-                <div class="mt-6 flex justify-end">
-                    <button type="submit" class="btn-primary">{{ __('common.save_fields') }}</button>
-                </div>
-            </form>
-        @endif
     </div>
+    @endif
+
+    {{-- Inject required-at-step metadata for client-side guard in approval-action --}}
+    @if(($canAct ?? false) && !empty($approverRequiredFields))
+    <script>
+        window.__approverRequiredFields__ = @json($approverRequiredFields);
+    </script>
+    @endif
 
     {{-- Approval action — comment + signature + approve/reject (+ send-back).
          Gated on $canAct (status pending + approval.approve permission + current

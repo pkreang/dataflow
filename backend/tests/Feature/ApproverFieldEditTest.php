@@ -111,8 +111,10 @@ class ApproverFieldEditTest extends TestCase
             ->get(route('forms.submission.show', $submission));
 
         $response->assertOk();
-        $response->assertDontSee('field_updates[', false);
+        // The PATCH edit form must not be present (approval-action JS also contains the
+        // input name pattern, so check the route URL and save-button label instead).
         $response->assertDontSee(route('approvals.update-fields', $instance), false);
+        $response->assertDontSee(__('common.save_fields'));
     }
 
     public function test_approver_update_syncs_dedicated_fdata_table(): void

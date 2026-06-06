@@ -26,7 +26,7 @@ class RequesterPickApproverTest extends TestCase
         $p = new Permission();
         $p->name = 'approval.approve';
         $p->guard_name = 'web';
-        $p->module = 'approval'; // app's permissions table has NOT NULL module + action columns
+        $p->module = 'approval';
         $p->action = 'approve';
         $p->save();
     }
@@ -43,10 +43,11 @@ class RequesterPickApproverTest extends TestCase
         ]);
     }
 
-    private function makeRequesterPickWorkflow(): ApprovalWorkflow
+    /** Build a workflow with one user-type stage that has allow_requester_override=true. */
+    private function makeOverrideWorkflow(int $defaultApproverId): ApprovalWorkflow
     {
         $workflow = ApprovalWorkflow::query()->create([
-            'name' => 'Requester pick wf',
+            'name' => 'Override wf',
             'document_type' => 'repair_request',
             'description' => null,
             'is_active' => true,
@@ -55,11 +56,12 @@ class RequesterPickApproverTest extends TestCase
         ApprovalWorkflowStage::query()->create([
             'workflow_id' => $workflow->id,
             'step_no' => 1,
-            'name' => 'Chosen approver',
-            'approver_type' => 'requester_pick',
-            'approver_ref' => '',
+            'name' => 'Override stage',
+            'approver_type' => 'user',
+            'approver_ref' => (string) $defaultApproverId,
             'min_approvals' => 1,
             'is_active' => true,
+            'allow_requester_override' => true,
         ]);
         $dept = Department::query()->create(['name' => 'Test Dept', 'code' => 'TST', 'is_active' => true]);
         DepartmentWorkflowBinding::query()->create([
@@ -71,15 +73,19 @@ class RequesterPickApproverTest extends TestCase
         return $workflow;
     }
 
-    public function test_requester_pick_resolves_chosen_user_as_step_approver(): void
+    public function test_override_resolves_chosen_user_as_step_approver(): void
     {
         $this->ensureApprovalPermission();
-        $approver = $this->makeUser('approver@example.test');
-        $approver->givePermissionTo('approval.approve');
+        $defaultApprover = $this->makeUser('default@example.test');
+        $defaultApprover->givePermissionTo('approval.approve');
+
+        $pickedApprover = $this->makeUser('picked@example.test');
+        $pickedApprover->givePermissionTo('approval.approve');
+
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $requester = $this->makeUser('requester@example.test');
-        $this->makeRequesterPickWorkflow();
+        $this->makeOverrideWorkflow($defaultApprover->id);
 
         $service = app(ApprovalFlowService::class);
         $instance = $service->start(
@@ -89,26 +95,29 @@ class RequesterPickApproverTest extends TestCase
             referenceNo: 'RP-1',
             payload: [],
             formKey: null,
-            pickedApprovers: [1 => $approver->id],
+            pickedApprovers: [1 => $pickedApprover->id],
         );
 
         $step = $instance->steps->firstWhere('step_no', 1);
 
-        // requester_pick is resolved to a concrete `user` step using the chosen id
+        // override replaces default approver with picked approver (still user-type)
         $this->assertSame('user', $step->approver_type);
-        $this->assertSame((string) $approver->id, $step->approver_ref);
+        $this->assertSame((string) $pickedApprover->id, $step->approver_ref);
 
-        // the chosen approver can act; an unrelated user cannot
-        $this->assertTrue($service->canUserActOnStep($instance, $step, $approver->id));
+        $this->assertTrue($service->canUserActOnStep($instance, $step, $pickedApprover->id));
         $this->assertFalse($service->canUserActOnStep($instance, $step, $requester->id));
     }
 
-    public function test_requester_pick_rejects_user_without_approval_permission(): void
+    public function test_override_rejects_user_without_approval_permission(): void
     {
         $this->ensureApprovalPermission();
+        $defaultApprover = $this->makeUser('default2@example.test');
+        $defaultApprover->givePermissionTo('approval.approve');
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $stranger = $this->makeUser('stranger@example.test'); // no approval.approve
         $requester = $this->makeUser('requester2@example.test');
-        $this->makeRequesterPickWorkflow();
+        $this->makeOverrideWorkflow($defaultApprover->id);
 
         $service = app(ApprovalFlowService::class);
 
@@ -124,5 +133,36 @@ class RequesterPickApproverTest extends TestCase
             formKey: null,
             pickedApprovers: [1 => $stranger->id],
         );
+    }
+
+    public function test_no_override_falls_back_to_default_routing(): void
+    {
+        $this->ensureApprovalPermission();
+        $defaultApprover = $this->makeUser('default3@example.test');
+        $defaultApprover->givePermissionTo('approval.approve');
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $requester = $this->makeUser('requester3@example.test');
+        $this->makeOverrideWorkflow($defaultApprover->id);
+
+        $service = app(ApprovalFlowService::class);
+        $instance = $service->start(
+            documentType: 'repair_request',
+            departmentId: null,
+            requesterUserId: $requester->id,
+            referenceNo: 'RP-3',
+            payload: [],
+            formKey: null,
+            pickedApprovers: [], // no override provided
+        );
+
+        $step = $instance->steps->firstWhere('step_no', 1);
+
+        // no override → default routing preserved (user-type with original approver_ref)
+        $this->assertSame('user', $step->approver_type);
+        $this->assertSame((string) $defaultApprover->id, $step->approver_ref);
+
+        $this->assertTrue($service->canUserActOnStep($instance, $step, $defaultApprover->id));
+        $this->assertFalse($service->canUserActOnStep($instance, $step, $requester->id));
     }
 }

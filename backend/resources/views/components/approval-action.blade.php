@@ -23,10 +23,26 @@
 <div class="card p-4 sm:p-6 mt-6" x-data="{
         sendBackOpen: false,
         sigError: false,
+        requiredFieldsError: '',
         guardSignature($event) {
-            // Block submit (and the wasted server round-trip) when this stage
-            // requires a signature but none was captured — instant feedback
-            // instead of a silent bounce-back.
+            // Check required-at-step fields before allowing approve
+            const required = window.__approverRequiredFields__ || [];
+            if (required.length && $event.submitter?.value === 'approved') {
+                const missing = required.filter(f => {
+                    const el = document.querySelector(`[name='field_updates[${f.key}]']`);
+                    const val = el ? el.value : '';
+                    return !val || !String(val).trim();
+                }).map(f => f.label);
+                if (missing.length) {
+                    $event.preventDefault();
+                    this.requiredFieldsError = missing.join(', ');
+                    document.querySelector('.approver-section-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return false;
+                }
+            }
+            this.requiredFieldsError = '';
+
+            // Block submit when signature required but not captured
             const sig = $event.target.querySelector('[data-required-signature]');
             if (sig && !sig.value) {
                 $event.preventDefault();
@@ -38,6 +54,10 @@
         },
      }">
     <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">{{ __('common.approval_actions_title') }}</h3>
+
+    <div x-show="requiredFieldsError" x-cloak class="alert-error mb-3 text-sm">
+        {{ __('common.approver_fields_required_prefix') }} <span x-text="requiredFieldsError"></span>
+    </div>
 
     @if($stepRequiresSig)
         <div x-show="sigError" x-cloak class="alert-error mb-3 text-sm">

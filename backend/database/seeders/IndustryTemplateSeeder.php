@@ -34,6 +34,11 @@ class IndustryTemplateSeeder extends Seeder
             DocumentFormSeeder::class,
             PositionDemoSeeder::class,
             SchoolEFormTemplateSeeder::class,
+            LeaveRequestTemplateSeeder::class,
+            PurchaseTemplateSeeder::class,
+            ExpenseClaimTemplateSeeder::class,
+            MemoTemplateSeeder::class,
+            ITRequestTemplateSeeder::class,
             HomeDashboardSeeder::class,
         ]);
     }

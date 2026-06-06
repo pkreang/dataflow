@@ -38,7 +38,6 @@ class SettingsMenuAccessTest extends TestCase
             'activity history' => ['settings.activity-history.index'],
             'navigation index' => ['settings.navigation.index'],
             'dashboards index' => ['settings.dashboards.index'],
-            'department workflow bindings' => ['settings.department-workflow-bindings.index'],
             // Settings list pages gated by their navigation menu's permission via
             // the EnforceMenuPermission middleware — a bare regular user (no
             // permissions) is forbidden, a super-admin bypasses. (The 19 above

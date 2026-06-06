@@ -25,6 +25,8 @@ use App\Http\Controllers\Web\PasswordResetController;
 use App\Http\Controllers\Web\PermissionController;
 use App\Http\Controllers\Web\PocSchemaFirstController;
 use App\Http\Controllers\Web\PositionController;
+use App\Http\Controllers\Web\PurchaseOrderController;
+use App\Http\Controllers\Web\PurchaseRequestController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\RepairRequestController;
 use App\Http\Controllers\Web\ReportController;
@@ -119,6 +121,7 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/forms/submissions/{submission}', [DocumentFormSubmissionController::class, 'showSubmission'])->name('forms.submission.show')->withTrashed();
     Route::get('/forms/{documentForm:form_key}/submissions', [DocumentFormSubmissionController::class, 'listByForm'])->name('forms.list-by-form');
     Route::get('/forms/submissions/{submission}/print', [DocumentFormSubmissionController::class, 'print'])->name('forms.submission.print');
+    Route::get('/forms/submissions/{submission}/pdf', [DocumentFormSubmissionController::class, 'downloadPdf'])->name('forms.submission.pdf');
     Route::post('/forms/submissions/{submission}/duplicate', [DocumentFormSubmissionController::class, 'duplicate'])->name('forms.submission.duplicate');
     Route::post('/forms/submissions/{submission}/return-to-draft', [DocumentFormSubmissionController::class, 'returnToDraft'])->name('forms.submission.return-to-draft');
     Route::post('/forms/submissions/{submission}/send-back', [DocumentFormSubmissionController::class, 'sendBack'])->name('forms.submission.send-back')->middleware('permission:approval.approve');
@@ -163,10 +166,14 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         ->name('spare-parts.requisition.issue')
         ->whereNumber('instance');
 
-    // Purchasing (PR/PO) routes are intentionally unregistered — see
-    // PurchaseWorkflowTest::test_purchase_request_web_route_removed_for_school_product.
-    // Controllers, views, tables and seeders exist; re-enable after a product
-    // decision (likely factory-only). Remove that test when re-wiring.
+    Route::get('/purchase-requests', [PurchaseRequestController::class, 'index'])->name('purchase-requests.index');
+    Route::get('/purchase-requests/create', [PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
+    Route::post('/purchase-requests', [PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
+    Route::get('/purchase-requests/{instance}', [PurchaseRequestController::class, 'show'])->name('purchase-requests.show')->whereNumber('instance');
+    Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+    Route::get('/purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('purchase-orders.create');
+    Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
+    Route::get('/purchase-orders/{instance}', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show')->whereNumber('instance');
 
     Route::get('/approvals/my', [ApprovalController::class, 'myApprovals'])
         ->middleware('permission:approval.approve')
@@ -290,8 +297,8 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/branding', [SettingController::class, 'branding'])->name('settings.branding');
         Route::post('/settings/branding', [SettingController::class, 'saveBranding'])->name('settings.branding.save');
         Route::get('/settings/departments', [DepartmentController::class, 'index'])->name('settings.departments.index');
-        Route::get('/settings/department-workflow-bindings', [DepartmentController::class, 'workflowBindingsMatrix'])->name('settings.department-workflow-bindings.index');
-        Route::post('/settings/department-workflow-bindings', [DepartmentController::class, 'bulkBindWorkflows'])->name('settings.department-workflow-bindings.bulk');
+        Route::get('/settings/department-workflow-bindings', fn () => redirect()->route('settings.approval-routing'))->name('settings.department-workflow-bindings.index');
+        Route::post('/settings/department-workflow-bindings', fn () => redirect()->route('settings.approval-routing'))->name('settings.department-workflow-bindings.bulk');
         Route::get('/settings/departments/create', [DepartmentController::class, 'create'])->name('settings.departments.create');
         Route::post('/settings/departments', [DepartmentController::class, 'store'])->name('settings.departments.store');
         Route::get('/settings/departments/{department}/edit', [DepartmentController::class, 'edit'])->name('settings.departments.edit');
@@ -382,6 +389,7 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::delete('/settings/running-numbers/{runningNumberConfig}', [RunningNumberController::class, 'destroy'])->name('settings.running-numbers.destroy');
         Route::post('/settings/running-numbers/{runningNumberConfig}/reset', [RunningNumberController::class, 'reset'])->name('settings.running-numbers.reset');
         Route::get('/settings/activity-history', [ActivityHistoryController::class, 'index'])->name('settings.activity-history.index');
+        Route::get('/settings/activity-history/export', [ActivityHistoryController::class, 'export'])->name('settings.activity-history.export');
         Route::get('/settings/navigation', [NavigationMenuController::class, 'index'])->name('settings.navigation.index');
         Route::get('/settings/navigation/create', [NavigationMenuController::class, 'create'])->name('settings.navigation.create');
         Route::post('/settings/navigation', [NavigationMenuController::class, 'store'])->name('settings.navigation.store');

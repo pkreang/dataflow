@@ -38,6 +38,7 @@ class DocumentFormField extends Model
         'editable_by',
         'visibility_rules',
         'required_rules',
+        'required_at_step',
         'validation_rules',
     ];
 
@@ -52,6 +53,7 @@ class DocumentFormField extends Model
             'editable_by' => 'array',
             'visibility_rules' => 'array',
             'required_rules' => 'array',
+            'required_at_step' => 'array',
             'validation_rules' => 'array',
         ];
     }

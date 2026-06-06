@@ -303,7 +303,7 @@ class NavigationMenuSeeder extends Seeder
                 'route' => '/settings/department-workflow-bindings',
                 'permission' => 'manage_settings',
                 'sort_order' => 14,
-                'is_active' => true,
+                'is_active' => false,
             ],
             [
                 'id' => 9,

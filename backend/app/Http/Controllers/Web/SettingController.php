@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalWorkflow;
+use App\Models\Department;
+use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentType;
 use App\Models\Setting;
 use App\Services\Auth\AuthModeService;
+use App\Support\WorkflowDocumentTypes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -166,28 +171,68 @@ class SettingController extends Controller
      */
     public function approvalRouting(): View
     {
-        $documentTypes = DocumentType::allActive();
-        $allowRequesterPick = Setting::getBool('approval.allow_requester_pick', false);
+        $allowRequesterOverride = Setting::getBool('approval.allow_requester_override', false);
+        $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
+        $documentTypes = WorkflowDocumentTypes::forBindings();
+        $workflows = ApprovalWorkflow::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('settings.approval-routing', compact('documentTypes', 'allowRequesterPick'));
+        $documentTypeLabels = DocumentType::allActive()
+            ->mapWithKeys(fn ($dt) => [$dt->code => $dt->label()])
+            ->toArray();
+
+        $departments->load(['workflowBindings']);
+        $initialBindings = [];
+        foreach ($departments as $dept) {
+            foreach ($documentTypes as $docType) {
+                $key = $dept->id.'|'.$docType;
+                $binding = $dept->workflowBindings->firstWhere('document_type', $docType);
+                $initialBindings[$key] = $binding ? (string) $binding->workflow_id : '';
+            }
+        }
+
+        return view('settings.approval-routing', compact(
+            'allowRequesterOverride',
+            'departments',
+            'documentTypes',
+            'workflows',
+            'documentTypeLabels',
+            'initialBindings'
+        ));
     }
 
     public function saveApprovalRouting(Request $request): RedirectResponse
     {
         $request->validate([
-            'routing_modes' => 'required|array',
-            'routing_modes.*' => 'required|in:hybrid,department_scoped,organization_wide',
+            'bindings' => 'nullable|array',
+            'bindings.*.department_id' => 'required|exists:departments,id',
+            'bindings.*.document_type' => 'required|string|max:50',
+            'bindings.*.workflow_id' => 'nullable',
         ]);
 
-        foreach ($request->input('routing_modes', []) as $code => $mode) {
-            DocumentType::query()
-                ->where('code', $code)
-                ->update(['routing_mode' => $mode]);
-        }
+        DB::transaction(function () use ($request) {
+            foreach ($request->input('bindings', []) as $entry) {
+                $deptId = (int) $entry['department_id'];
+                $docType = $entry['document_type'];
+                $workflowId = $entry['workflow_id'] ?? '';
 
-        // Master toggle: lets admins enable the "requester picks the approver"
-        // option in the workflow stage editor + the picker at submit time.
-        Setting::set('approval.allow_requester_pick', $request->boolean('allow_requester_pick'));
+                if ($workflowId === '' || $workflowId === null) {
+                    DepartmentWorkflowBinding::where('department_id', $deptId)
+                        ->where('document_type', $docType)
+                        ->delete();
+                } else {
+                    $workflow = ApprovalWorkflow::find((int) $workflowId);
+                    if (! $workflow || $workflow->document_type !== $docType) {
+                        continue;
+                    }
+                    DepartmentWorkflowBinding::updateOrCreate(
+                        ['department_id' => $deptId, 'document_type' => $docType],
+                        ['workflow_id' => (int) $workflowId]
+                    );
+                }
+            }
+        });
+
+        Setting::set('approval.allow_requester_override', $request->boolean('allow_requester_override'));
 
         return redirect()
             ->route('settings.approval-routing')

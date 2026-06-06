@@ -39,6 +39,7 @@ class DocumentFormWorkflowPolicyController extends Controller
         $validated = $request->validate([
             'department_id' => 'nullable|integer|exists:departments,id',
             'use_amount_condition' => 'nullable|boolean',
+            'amount_field_key' => 'nullable|string|max:100',
             'workflow_id' => 'nullable|integer|exists:approval_workflows,id',
             'ranges' => 'nullable|array',
             'ranges.*.min_amount' => 'required_with:ranges|numeric|min:0',
@@ -67,6 +68,7 @@ class DocumentFormWorkflowPolicyController extends Controller
                 ],
                 [
                     'use_amount_condition' => $useAmountCondition,
+                    'amount_field_key' => $useAmountCondition ? ($validated['amount_field_key'] ?? null) : null,
                     'workflow_id' => $useAmountCondition ? null : (int) $validated['workflow_id'],
                 ]
             );

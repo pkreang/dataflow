@@ -18,6 +18,7 @@
     'approver_ref' => (string) $s->approver_ref,
     'min_approvals' => $s->min_approvals,
     'require_signature' => (bool) $s->require_signature,
+    'allow_requester_override' => (bool) $s->allow_requester_override,
 ])->values()) }}, {{ Js::from($roles->values()) }}, {{ Js::from($users->values()) }}, {{ Js::from($positions->map(fn($p) => ['id' => (string) $p['id'], 'code' => $p['code'] ?? '', 'label' => $p['label'], 'users' => $p['users'] ?? []])->values()) }}, {{ Js::from([
     'untitled' => __('common.workflow_stage_untitled'),
     'minLabel' => __('common.workflow_preview_min_label'),
@@ -115,9 +116,6 @@
                                     <option value="position">{{ __('common.workflow_approver_position') }}</option>
                                     <option value="user">{{ __('common.workflow_approver_user') }}</option>
                                     <option value="role">{{ __('common.workflow_approver_role') }}</option>
-                                    @if(($allowRequesterPick ?? false) || $workflow->stages->contains('approver_type', 'requester_pick'))
-                                        <option value="requester_pick">{{ __('common.workflow_approver_requester_pick') }}</option>
-                                    @endif
                                 </select>
                             </div>
                             <div>
@@ -149,18 +147,13 @@
                                         <p x-show="stage.approver_ref" x-text="positionUsersPreview(stage.approver_ref)" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
                                     </div>
                                 </template>
-                                <template x-if="stage.approver_type === 'requester_pick'">
-                                    <p class="text-xs text-blue-700 dark:text-blue-300 mt-1 bg-blue-50 dark:bg-blue-900/10 rounded p-2">
-                                        {{ __('common.workflow_requester_pick_hint') }}
-                                    </p>
-                                </template>
                             </div>
                             <div>
                                 <label class="text-xs text-slate-500" title="{{ __('common.workflow_min_approvals') }}">ขั้นต่ำ</label>
                                 <input type="number" min="1" :name="`stages[${idx}][min_approvals]`" x-model="stage.min_approvals" @input="checkValidity()" required class="form-input mt-1 text-center" />
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 pt-1">
+                        <div class="flex flex-wrap items-center gap-4 pt-1">
                             <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                                 <input type="checkbox" :name="`stages[${idx}][require_signature]`" value="1"
                                        :checked="!!stage.require_signature"
@@ -169,6 +162,15 @@
                                 <span>{{ __('common.workflow_require_signature') }}</span>
                             </label>
                             <span class="text-xs text-slate-400">{{ __('common.workflow_require_signature_help') }}</span>
+                            @if($allowRequesterOverride ?? false)
+                            <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                                <input type="checkbox" :name="`stages[${idx}][allow_requester_override]`" value="1"
+                                       :checked="!!stage.allow_requester_override"
+                                       @change="stage.allow_requester_override = $event.target.checked"
+                                       class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                                <span>{{ __('common.workflow_allow_requester_override') }}</span>
+                            </label>
+                            @endif
                         </div>
                     </div>
                 </template>
@@ -215,6 +217,7 @@
                     approver_ref: String(s.approver_ref || ''),
                     min_approvals: Number(s.min_approvals || 1),
                     require_signature: !!s.require_signature,
+                    allow_requester_override: !!s.allow_requester_override,
                 }));
                 if (!this.stages.length) this.addStage();
                 this.normalize();
@@ -233,7 +236,7 @@
                 let approver_ref = '';
                 if (approver_type === 'position' && this.positions[0]) approver_ref = String(this.positions[0].id);
                 else if (approver_type === 'user' && this.users[0]) approver_ref = String(this.users[0].id);
-                this.stages.push({uuid: this.seq++, step_no: this.stages.length + 1, name: '', approver_type, approver_ref, min_approvals: 1, require_signature: false});
+                this.stages.push({uuid: this.seq++, step_no: this.stages.length + 1, name: '', approver_type, approver_ref, min_approvals: 1, require_signature: false, allow_requester_override: false});
                 this.normalize();
                 this.checkValidity();
             },
@@ -257,7 +260,7 @@
             },
             cloneStage(idx) {
                 const s = this.stages[idx];
-                this.stages.splice(idx + 1, 0, {uuid: this.seq++, step_no: s.step_no, name: s.name, approver_type: s.approver_type, approver_ref: s.approver_ref, min_approvals: s.min_approvals, require_signature: !!s.require_signature});
+                this.stages.splice(idx + 1, 0, {uuid: this.seq++, step_no: s.step_no, name: s.name, approver_type: s.approver_type, approver_ref: s.approver_ref, min_approvals: s.min_approvals, require_signature: !!s.require_signature, allow_requester_override: !!s.allow_requester_override});
                 this.normalize();
                 this.checkValidity();
             },
@@ -267,8 +270,7 @@
             checkValidity() {
                 this.isValid = this.stages.length > 0 && this.stages.every((s) =>
                     String(s.name || '').trim() !== '' &&
-                    // requester_pick has no fixed approver_ref — chosen at submit time
-                    (s.approver_type === 'requester_pick' || String(s.approver_ref || '').trim() !== '') &&
+                    String(s.approver_ref || '').trim() !== '' &&
                     Number(s.min_approvals || 0) >= 1
                 );
             },

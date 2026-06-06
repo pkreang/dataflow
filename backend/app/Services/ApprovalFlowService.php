@@ -48,10 +48,10 @@ class ApprovalFlowService
 
         $binding = null;
         if ($resolvedWorkflowId === null) {
-            $binding = $this->resolveDepartmentBinding($documentType, $departmentId, $routingMode);
+            $binding = $this->resolveDepartmentBinding($documentType, $departmentId);
 
             if (! $binding) {
-                throw new RuntimeException($this->bindingMissingMessage($documentType, $departmentId, $routingMode));
+                throw new RuntimeException($this->bindingMissingMessage($documentType, $departmentId));
             }
             $resolvedWorkflowId = (int) $binding->workflow_id;
         }
@@ -89,19 +89,19 @@ class ApprovalFlowService
                 $stepType = $stage->approver_type;
                 $stepRef = $stage->approver_ref;
 
-                // requester_pick: the requester chose the approver at submit time.
-                // Resolve it to a concrete `user` step so the rest of the engine
-                // (canUserActOnStep) treats it exactly like a fixed-user stage.
-                // Validate server-side that the picked user actually holds
-                // approval.approve — never trust the submitted id.
-                if ($stage->approver_type === 'requester_pick') {
+                // override: requester optionally substitutes a specific approver.
+                // If no pick is submitted the stage falls back to its default
+                // routing (position/user/role) unchanged.
+                if ($stage->allow_requester_override) {
                     $pickedId = (int) ($pickedApprovers[$stage->step_no] ?? 0);
-                    $picked = $pickedId ? User::find($pickedId) : null;
-                    if (! $picked || ! $picked->getAllPermissions()->pluck('name')->contains('approval.approve')) {
-                        throw new RuntimeException('requester_pick_invalid_approver');
+                    if ($pickedId) {
+                        $picked = User::find($pickedId);
+                        if (! $picked || ! $picked->getAllPermissions()->pluck('name')->contains('approval.approve')) {
+                            throw new RuntimeException('requester_pick_invalid_approver');
+                        }
+                        $stepType = 'user';
+                        $stepRef = (string) $pickedId;
                     }
-                    $stepType = 'user';
-                    $stepRef = (string) $pickedId;
                 }
 
                 ApprovalInstanceStep::create([
@@ -145,7 +145,7 @@ class ApprovalFlowService
         $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode);
 
         if ($resolvedWorkflowId === null) {
-            $binding = $this->resolveDepartmentBinding($documentType, $departmentId, $routingMode);
+            $binding = $this->resolveDepartmentBinding($documentType, $departmentId);
             if (! $binding) {
                 return null;
             }
@@ -162,23 +162,7 @@ class ApprovalFlowService
 
     public function routingMode(string $documentType = ''): string
     {
-        $mode = '';
-
-        if ($documentType !== '') {
-            $mode = (string) DocumentType::query()
-                ->where('code', $documentType)
-                ->value('routing_mode');
-        }
-
-        if ($mode === '') {
-            $mode = self::ROUTING_HYBRID;
-        }
-
-        return in_array($mode, [
-            self::ROUTING_HYBRID,
-            self::ROUTING_DEPARTMENT_SCOPED,
-            self::ROUTING_ORGANIZATION_WIDE,
-        ], true) ? $mode : self::ROUTING_HYBRID;
+        return self::ROUTING_HYBRID;
     }
 
     private function resolveWorkflowId(
@@ -205,18 +189,12 @@ class ApprovalFlowService
             ->with('ranges')
             ->where('form_id', $form->id);
 
-        match ($routingMode) {
-            self::ROUTING_ORGANIZATION_WIDE => $policyQuery->whereNull('department_id'),
-            self::ROUTING_DEPARTMENT_SCOPED => $departmentId
-                ? $policyQuery->where('department_id', $departmentId)
-                : $policyQuery->whereNull('department_id'),
-            default => $policyQuery->where(function ($query) use ($departmentId) {
-                $query->whereNull('department_id');
-                if ($departmentId) {
-                    $query->orWhere('department_id', $departmentId);
-                }
-            })->orderByRaw('department_id IS NULL ASC'),
-        };
+        $policyQuery->where(function ($query) use ($departmentId) {
+            $query->whereNull('department_id');
+            if ($departmentId) {
+                $query->orWhere('department_id', $departmentId);
+            }
+        })->orderByRaw('department_id IS NULL ASC');
 
         $policy = $policyQuery->first();
 
@@ -243,27 +221,17 @@ class ApprovalFlowService
         throw new RuntimeException("No matching amount range for form {$formKey}");
     }
 
-    private function resolveDepartmentBinding(string $documentType, ?int $departmentId, string $routingMode): ?DepartmentWorkflowBinding
+    private function resolveDepartmentBinding(string $documentType, ?int $departmentId): ?DepartmentWorkflowBinding
     {
         $q = DepartmentWorkflowBinding::query()->where('document_type', $documentType);
 
-        return match ($routingMode) {
-            self::ROUTING_ORGANIZATION_WIDE => $q->orderBy('id')->first(),
-            self::ROUTING_DEPARTMENT_SCOPED => $departmentId
-                ? $q->where('department_id', $departmentId)->first()
-                : null,
-            default => $departmentId
-                ? $q->where('department_id', $departmentId)->first()
-                : $q->orderBy('id')->first(),
-        };
+        return $departmentId
+            ? $q->where('department_id', $departmentId)->first()
+            : $q->orderBy('id')->first();
     }
 
-    private function bindingMissingMessage(string $documentType, ?int $departmentId, string $routingMode): string
+    private function bindingMissingMessage(string $documentType, ?int $departmentId): string
     {
-        if ($routingMode === self::ROUTING_DEPARTMENT_SCOPED && ! $departmentId) {
-            return "Department is required for workflow binding (routing mode: department_scoped) for {$documentType}";
-        }
-
         return "No workflow binding found for {$documentType}";
     }
 

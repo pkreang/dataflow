@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Models\ApprovalWorkflow;
+use App\Models\Department;
+use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentType;
 use App\Models\Setting;
 use Database\Seeders\PermissionSeeder;
@@ -96,32 +99,45 @@ class SingletonSettingsTest extends TestCase
     public function test_super_admin_can_save_approval_routing(): void
     {
         $admin = $this->makeSuperAdmin();
-        $type = DocumentType::create([
-            'code' => 'sample_routing',
-            'label_en' => 'Sample',
-            'label_th' => 'ตัวอย่าง',
-            'sort_order' => 0,
-            'is_active' => true,
-            'routing_mode' => 'hybrid',
+        $dept = Department::factory()->create();
+        $workflow = ApprovalWorkflow::create(['name' => 'Test WF', 'document_type' => 'repair_request', 'is_active' => true]);
+
+        $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
+            'bindings' => [
+                ['department_id' => $dept->id, 'document_type' => 'repair_request', 'workflow_id' => $workflow->id],
+            ],
+            'allow_requester_override' => '1',
+        ])->assertRedirect(route('settings.approval-routing'));
+
+        $this->assertDatabaseHas('department_workflow_bindings', [
+            'department_id' => $dept->id,
+            'document_type' => 'repair_request',
+            'workflow_id' => $workflow->id,
+        ]);
+        $this->assertTrue(Setting::getBool('approval.allow_requester_override'));
+    }
+
+    public function test_approval_routing_deletes_binding_when_workflow_id_empty(): void
+    {
+        $admin = $this->makeSuperAdmin();
+        $dept = Department::factory()->create();
+        $workflow = ApprovalWorkflow::create(['name' => 'Test WF2', 'document_type' => 'repair_request', 'is_active' => true]);
+        DepartmentWorkflowBinding::create([
+            'department_id' => $dept->id,
+            'document_type' => 'repair_request',
+            'workflow_id' => $workflow->id,
         ]);
 
         $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
-            'routing_modes' => [
-                $type->code => 'department_scoped',
+            'bindings' => [
+                ['department_id' => $dept->id, 'document_type' => 'repair_request', 'workflow_id' => ''],
             ],
         ])->assertRedirect(route('settings.approval-routing'));
 
-        $this->assertSame('department_scoped', $type->fresh()->routing_mode);
-    }
-
-    public function test_approval_routing_rejects_invalid_mode(): void
-    {
-        $admin = $this->makeSuperAdmin();
-        $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
-            'routing_modes' => [
-                'something' => 'bogus_mode',
-            ],
-        ])->assertSessionHasErrors('routing_modes.something');
+        $this->assertDatabaseMissing('department_workflow_bindings', [
+            'department_id' => $dept->id,
+            'document_type' => 'repair_request',
+        ]);
     }
 
     public function test_super_admin_can_save_notifications(): void
