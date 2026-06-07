@@ -217,6 +217,11 @@ class CompanyController extends Controller
 
     public function update(Request $request, Company $company): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $company->update(['is_active' => ! $company->is_active]);
+            return redirect()->route('companies.index')->with('success', __('common.saved'));
+        }
+
         $validated = $request->validate(array_merge([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50|unique:companies,code,'.$company->id,

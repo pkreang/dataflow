@@ -102,26 +102,10 @@
                             @endif
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap text-right">
-                            <div class="relative inline-block text-left" x-data="{ open: false }">
-                                <button @click="open = !open" type="button" class="table-action-btn">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/></svg>
-                                </button>
-                                <div x-show="open" @click.outside="open = false" x-cloak
-                                     class="absolute right-0 bottom-full mb-2 w-44 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
-                                    <a href="{{ route('settings.webhooks.edit', $webhook) }}"
-                                       class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
-                                        {{ __('common.edit') }}
-                                    </a>
-                                    <form method="POST" action="{{ route('settings.webhooks.destroy', $webhook) }}"
-                                          onsubmit="return confirm('{{ __('common.delete_confirm_msg', ['name' => $webhook->name]) }}')" novalidate>
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700">
-                                            {{ __('common.delete') }}
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
+                            <x-row-actions :items="[
+                                ['label' => __('common.edit'), 'href' => route('settings.webhooks.edit', $webhook), 'icon' => 'edit'],
+                                ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.webhooks.destroy', $webhook), 'icon' => 'delete', 'confirm' => __('common.delete_confirm_msg', ['name' => $webhook->name]), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
+                            ]" />
                         </td>
                     </tr>
                 @endforeach

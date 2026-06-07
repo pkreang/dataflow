@@ -69,6 +69,7 @@
                     @php
                         $actions = [
                             ['label' => __('common.edit'), 'href' => route('settings.lookups.edit', $list), 'icon' => 'edit'],
+                            ['label' => $list->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.lookups.update', $list), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ];
                         if (! $list->is_system) {
                             $actions[] = [

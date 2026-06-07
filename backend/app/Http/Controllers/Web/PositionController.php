@@ -60,6 +60,11 @@ class PositionController extends Controller
 
     public function update(Request $request, Position $position): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $position->update(['is_active' => ! $position->is_active]);
+            return redirect()->route('settings.positions.index')->with('success', __('common.saved'));
+        }
+
         $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
 
         $validated = $request->validate([

@@ -74,8 +74,11 @@ Route::prefix('v1')->group(function () {
             Route::get('/forms',                        [MobileFormController::class, 'index']);
             Route::get('/forms/{formKey}',              [MobileFormController::class, 'show'])->where('formKey', '[a-z0-9_]+');
             Route::post('/forms/{formKey}',             [MobileFormController::class, 'submit'])->where('formKey', '[a-z0-9_]+');
+            Route::post('/forms/{formKey}/draft',       [MobileFormController::class, 'saveDraft'])->where('formKey', '[a-z0-9_]+');
             Route::get('/submissions',                  [MobileSubmissionController::class, 'index']);
             Route::get('/submissions/{id}',             [MobileSubmissionController::class, 'show'])->whereNumber('id');
+            Route::put('/submissions/{id}/draft',       [MobileSubmissionController::class, 'updateDraft'])->whereNumber('id');
+            Route::delete('/submissions/{id}',          [MobileSubmissionController::class, 'destroy'])->whereNumber('id');
             Route::get('/approvals',                    [MobileApprovalController::class, 'index']);
             Route::get('/approvals/{id}',               [MobileApprovalController::class, 'show'])->whereNumber('id');
             Route::post('/approvals/{id}/act',          [MobileApprovalController::class, 'act'])->whereNumber('id');

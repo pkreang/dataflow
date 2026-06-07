@@ -82,6 +82,11 @@ class PmPlanController extends Controller
 
     public function update(Request $request, PmPlan $plan): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $plan->update(['is_active' => ! $plan->is_active]);
+            return redirect()->route('cmms.pm.plans.index')->with('success', __('common.saved'));
+        }
+
         $validated = $this->validatePayload($request);
 
         DB::transaction(function () use ($plan, $validated) {

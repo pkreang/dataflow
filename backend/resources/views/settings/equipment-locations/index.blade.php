@@ -66,6 +66,7 @@
                 <td class="px-4 py-2 whitespace-nowrap text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.equipment-locations.edit', $location), 'icon' => 'edit'],
+                        ['label' => $location->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.equipment-locations.update', $location), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.equipment-locations.destroy', $location), 'icon' => 'delete', 'confirm' => __('common.are_you_sure'), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
                     ]" />
                 </td>

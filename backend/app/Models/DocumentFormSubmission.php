@@ -188,7 +188,7 @@ class DocumentFormSubmission extends Model
     {
         $isOwner = (int) $this->user_id === (int) $viewer['id'];
         $isAssignee = $this->isAssignedEditor((int) $viewer['id']);
-        $canView = $isOwner || $isAssignee || $viewer['can_approve'] || $viewer['is_super_admin'];
+        $canView = $isOwner || $isAssignee || ($viewer['is_related_approver'] ?? false) || $viewer['is_super_admin'];
         $canEditDraft = ($isOwner || $isAssignee) && $this->status === 'draft';
         $canDeleteDraft = $isOwner && $this->status === 'draft';
         $canDuplicate = $isOwner;

@@ -156,10 +156,51 @@ class FormulaEvaluatorTest extends TestCase
         $this->eval('');
     }
 
-    public function test_disallowed_character_throws(): void
+    public function test_unknown_function_throws(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        // Function-call syntax is not supported in v1
-        $this->eval('sum(a, b)');
+        $this->eval('sum(a, b)', ['a' => 1, 'b' => 2]);
+    }
+
+    // ---- DAYS() built-in ----
+
+    public function test_days_same_day_returns_one(): void
+    {
+        $this->assertSame(1.0, $this->eval('DAYS(date_from, date_to)', [
+            'date_from' => '2026-06-10',
+            'date_to'   => '2026-06-10',
+        ]));
+    }
+
+    public function test_days_inclusive_count(): void
+    {
+        $this->assertSame(3.0, $this->eval('DAYS(date_from, date_to)', [
+            'date_from' => '2026-06-10',
+            'date_to'   => '2026-06-12',
+        ]));
+    }
+
+    public function test_days_missing_value_returns_zero(): void
+    {
+        $this->assertSame(0.0, $this->eval('DAYS(date_from, date_to)', [
+            'date_from' => '2026-06-10',
+        ]));
+    }
+
+    public function test_days_invalid_date_returns_zero(): void
+    {
+        $this->assertSame(0.0, $this->eval('DAYS(date_from, date_to)', [
+            'date_from' => 'not-a-date',
+            'date_to'   => '2026-06-12',
+        ]));
+    }
+
+    public function test_days_usable_in_arithmetic(): void
+    {
+        // DAYS(d1, d2) + 0 = 3
+        $this->assertSame(5.0, $this->eval('DAYS(date_from, date_to) + 2', [
+            'date_from' => '2026-06-10',
+            'date_to'   => '2026-06-12',
+        ]));
     }
 }

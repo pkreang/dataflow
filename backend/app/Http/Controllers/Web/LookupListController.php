@@ -68,6 +68,11 @@ class LookupListController extends Controller
 
     public function update(Request $request, LookupList $lookup): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $lookup->update(['is_active' => ! $lookup->is_active]);
+            return redirect()->route('settings.lookups.index')->with('success', __('common.saved'));
+        }
+
         $validated = $this->validatedPayload($request, $lookup);
 
         DB::transaction(function () use ($validated, $lookup) {

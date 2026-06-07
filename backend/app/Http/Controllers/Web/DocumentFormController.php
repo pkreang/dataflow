@@ -90,20 +90,22 @@ class DocumentFormController extends Controller
         $companyUsers = $this->companyUsersForPicker();
         $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
         $preset = ['document_type' => $request->query('document_type')];
+        $allowedDepartmentIds = [];
 
-        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs', 'preset'));
+        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs', 'preset', 'allowedDepartmentIds'));
     }
 
     public function edit(DocumentForm $documentForm): View
     {
-        $documentForm->load('fields');
+        $documentForm->load(['fields', 'departments']);
         $lookupSources = LookupRegistry::sources();
         $workflowStepsByDocType = $this->workflowStepsByDocType();
         $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
         $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
+        $allowedDepartmentIds = $documentForm->departments->pluck('id')->all();
 
-        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs'));
+        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs', 'allowedDepartmentIds'));
     }
 
     /**
@@ -239,6 +241,8 @@ class DocumentFormController extends Controller
             'target_document_types' => ['nullable', 'array'],
             'target_document_types.*' => ['string', 'max:50'],
             'layout_columns' => ['nullable', 'integer', Rule::in([1, 2, 3, 4])],
+            'allowed_departments'   => ['nullable', 'array'],
+            'allowed_departments.*' => ['integer', 'exists:departments,id'],
             'table_name' => [
                 'required', 'string', 'max:64',
                 'regex:/^[a-z][a-z0-9_]*$/',
@@ -463,6 +467,8 @@ class DocumentFormController extends Controller
                     'visible_to_departments' => $this->parseDepartmentIds($field),
                 ]);
             }
+
+            $form->departments()->sync($validated['allowed_departments'] ?? []);
         });
 
         // DDL outside DB::transaction — MySQL implicit-commits on CREATE TABLE,
@@ -485,6 +491,11 @@ class DocumentFormController extends Controller
 
     public function update(Request $request, DocumentForm $documentForm): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $documentForm->update(['is_active' => ! $documentForm->is_active]);
+            return redirect()->route('settings.document-forms.index')->with('success', __('common.saved'));
+        }
+
         $validated = $this->validatedDocumentFormPayload($request, $documentForm);
 
         $needsCreateTable = false;
@@ -526,6 +537,8 @@ class DocumentFormController extends Controller
                     'visible_to_departments' => $this->parseDepartmentIds($field),
                 ]);
             }
+
+            $documentForm->departments()->sync($validated['allowed_departments'] ?? []);
 
             // First-time table creation for forms that had no dedicated table yet
             if (! $documentForm->hasDedicatedTable() && ! empty($validated['table_name'])) {

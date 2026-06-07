@@ -74,6 +74,14 @@
                     <textarea name="description" rows="2" class="form-input mt-1 resize-y">{{ $workflow->description }}</textarea>
                 </div>
 
+                <div class="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900/20 px-4 py-3">
+                    <input type="hidden" name="is_active" value="0">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $workflow->is_active)) class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ __('common.active') }}</span>
+                    </label>
+                </div>
+
                 <div class="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900/20 px-4 py-3 space-y-1">
                     <input type="hidden" name="allow_requester_as_approver" value="0">
                     <label class="flex items-start gap-3 cursor-pointer">

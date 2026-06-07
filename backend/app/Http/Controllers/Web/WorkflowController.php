@@ -168,6 +168,11 @@ class WorkflowController extends Controller
 
     public function update(Request $request, ApprovalWorkflow $workflow): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $workflow->update(['is_active' => ! $workflow->is_active]);
+            return redirect()->route('settings.workflow.index')->with('success', __('common.saved'));
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'document_type' => 'required|string|max:50',

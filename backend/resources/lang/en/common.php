@@ -488,6 +488,8 @@ return [
     'workflow_template_stage_director' => 'Director approval',
     'workflow_placeholder_select_workflow' => '— Select workflow —',
     'document_form_key' => 'Form key',
+    'document_form_allowed_departments' => 'Departments with access',
+    'document_form_allowed_departments_hint' => 'If no departments are selected, all departments can see this form',
     'document_form_fields' => 'Fields',
     'document_form_add_field' => 'Add field',
     'document_form_field_short' => 'Field',
@@ -1113,6 +1115,7 @@ return [
     'approval_signature_required_error' => 'A signature is required for this step.',
     'signature_pad_use_saved' => 'Use my saved signature',
     'signature_pad_draw_new' => 'Draw new',
+    'signature_pad_clear' => 'Clear',
 
     // Print + show signature table
     'authorized_signatures' => 'Authorized signatures',

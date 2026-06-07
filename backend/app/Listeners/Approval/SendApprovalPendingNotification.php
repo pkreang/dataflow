@@ -8,6 +8,7 @@ use App\Models\ApprovalInstanceStep;
 use App\Notifications\ApprovalPendingNotification;
 use App\Services\ApproverResolverService;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 class SendApprovalPendingNotification implements ShouldQueue
@@ -25,6 +26,17 @@ class SendApprovalPendingNotification implements ShouldQueue
             : $instance->steps->firstWhere('step_no', $instance->current_step_no);
 
         if (! $step instanceof ApprovalInstanceStep) {
+            return;
+        }
+
+        $recentDuplicate = DB::table('notifications')
+            ->where('type', ApprovalPendingNotification::class)
+            ->whereJsonContains('data->instance_id', $instance->id)
+            ->whereJsonContains('data->step_no', $step->step_no)
+            ->where('created_at', '>', now()->subMinutes(2))
+            ->exists();
+
+        if ($recentDuplicate) {
             return;
         }
 

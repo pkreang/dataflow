@@ -109,6 +109,11 @@ class DepartmentController extends Controller
 
     public function update(Request $request, Department $department): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $department->update(['is_active' => ! $department->is_active]);
+            return redirect()->route('settings.departments.index')->with('success', __('common.saved'));
+        }
+
         $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
 
         $validated = $request->validate([

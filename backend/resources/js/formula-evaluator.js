@@ -125,13 +125,53 @@ class FormulaEvaluator {
         }
         const name = this.expr.substring(start, this.pos);
 
-        // Function-call syntax is reserved for a future extension.
         this.skipWhitespace();
         if (this.peek() === '(') {
-            throw new Error(`Function calls are not supported: ${name}`);
+            this.pos++; // consume '('
+            return this.callBuiltin(name);
         }
 
         return FormulaEvaluator.coerceNumeric(this.values[name]);
+    }
+
+    callBuiltin(name) {
+        const argKeys = [];
+        this.skipWhitespace();
+        while (this.peek() !== ')' && this.peek() !== null) {
+            const argStart = this.pos;
+            while (this.pos < this.len) {
+                const c = this.expr[this.pos];
+                if (FormulaEvaluator.isAlnum(c) || c === '_') this.pos++;
+                else break;
+            }
+            if (this.pos > argStart) {
+                argKeys.push(this.expr.substring(argStart, this.pos));
+            }
+            this.skipWhitespace();
+            if (this.peek() === ',') {
+                this.pos++;
+                this.skipWhitespace();
+            } else {
+                break;
+            }
+        }
+        this.skipWhitespace();
+        if (this.peek() !== ')') throw new Error(`Expected ) to close function call: ${name}`);
+        this.pos++;
+
+        const upper = name.toUpperCase();
+        if (upper === 'DAYS') return this.fnDays(argKeys);
+        throw new Error(`Unknown function: ${name}`);
+    }
+
+    fnDays(argKeys) {
+        if (argKeys.length < 2) return 0;
+        const a = String(this.values[argKeys[0]] ?? '').trim();
+        const b = String(this.values[argKeys[1]] ?? '').trim();
+        if (!a || !b) return 0;
+        const d1 = new Date(a), d2 = new Date(b);
+        if (isNaN(d1) || isNaN(d2)) return 0;
+        return Math.round((d2 - d1) / 86400000) + 1; // inclusive
     }
 
     static coerceNumeric(raw) {

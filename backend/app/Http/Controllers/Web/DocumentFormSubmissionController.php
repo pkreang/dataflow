@@ -162,12 +162,13 @@ class DocumentFormSubmissionController extends Controller
             ->withQueryString();
 
         return view('forms.list-by-form', [
-            'form' => $documentForm,
-            'submissions' => $submissions,
-            'searchable' => $searchable,
-            'filters' => $filters,
-            'showCancelled' => $showCancelled,
-            'perPage' => $perPage,
+            'form'               => $documentForm,
+            'submissions'        => $submissions,
+            'searchable'         => $searchable,
+            'filters'            => $filters,
+            'showCancelled'      => $showCancelled,
+            'perPage'            => $perPage,
+            'relatedInstanceIds' => $relatedInstanceIds,
         ]);
     }
 
@@ -312,6 +313,10 @@ class DocumentFormSubmissionController extends Controller
         }
 
         SubmissionActivityLog::record($submission->id, $userId, 'created');
+
+        if ($request->input('_intent') === 'submit') {
+            return redirect()->route('forms.draft.edit', $submission)->with('autosubmit', true);
+        }
 
         return redirect()->route('forms.draft.edit', $submission)->with('success', __('common.saved'));
     }

@@ -196,4 +196,33 @@ class MobileFormController extends Controller
             ],
         ], 201);
     }
+
+    public function saveDraft(string $formKey, Request $request): JsonResponse
+    {
+        $form = DocumentForm::query()
+            ->where('form_key', $formKey)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $user     = $request->user();
+        $payload  = (array) $request->input('fields', []);
+
+        $submission = DocumentFormSubmission::create([
+            'form_id'       => $form->id,
+            'user_id'       => $user->id,
+            'department_id' => $user->department_id,
+            'payload'       => $payload,
+            'status'        => 'draft',
+        ]);
+
+        SubmissionActivityLog::record($submission->id, $user->id, 'created');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'submission_id' => $submission->id,
+                'status'        => $submission->status,
+            ],
+        ], 201);
+    }
 }

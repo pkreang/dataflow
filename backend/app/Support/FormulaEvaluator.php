@@ -179,13 +179,69 @@ class FormulaEvaluator
         }
         $name = substr($this->expr, $start, $this->pos - $start);
 
-        // Reject function-call syntax (`foo(...)`) in v1.
         $this->skipWhitespace();
         if ($this->peek() === '(') {
-            throw new InvalidArgumentException('Function calls are not supported: '.$name);
+            $this->pos++; // consume '('
+            return $this->callBuiltin($name);
         }
 
         return self::coerceNumeric($this->values[$name] ?? null);
+    }
+
+    private function callBuiltin(string $name): float
+    {
+        $argKeys = [];
+        $this->skipWhitespace();
+        while ($this->peek() !== ')' && $this->peek() !== null) {
+            $argStart = $this->pos;
+            while ($this->pos < $this->len) {
+                $c = $this->expr[$this->pos];
+                if (ctype_alnum($c) || $c === '_') {
+                    $this->pos++;
+                } else {
+                    break;
+                }
+            }
+            if ($this->pos > $argStart) {
+                $argKeys[] = substr($this->expr, $argStart, $this->pos - $argStart);
+            }
+            $this->skipWhitespace();
+            if ($this->peek() === ',') {
+                $this->pos++;
+                $this->skipWhitespace();
+            } else {
+                break;
+            }
+        }
+        $this->skipWhitespace();
+        if ($this->peek() !== ')') {
+            throw new InvalidArgumentException('Expected ) to close function call: '.$name);
+        }
+        $this->pos++;
+
+        return match(strtoupper($name)) {
+            'DAYS' => $this->fnDays($argKeys),
+            default => throw new InvalidArgumentException('Unknown function: '.$name),
+        };
+    }
+
+    private function fnDays(array $argKeys): float
+    {
+        if (count($argKeys) < 2) {
+            return 0.0;
+        }
+        $a = trim((string) ($this->values[$argKeys[0]] ?? ''));
+        $b = trim((string) ($this->values[$argKeys[1]] ?? ''));
+        if ($a === '' || $b === '') {
+            return 0.0;
+        }
+        try {
+            $d1 = new \DateTimeImmutable($a);
+            $d2 = new \DateTimeImmutable($b);
+            return (float) ($d1->diff($d2)->days + 1);
+        } catch (\Exception) {
+            return 0.0;
+        }
     }
 
     /**

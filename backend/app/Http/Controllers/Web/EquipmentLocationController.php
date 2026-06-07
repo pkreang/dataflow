@@ -81,6 +81,11 @@ class EquipmentLocationController extends Controller
 
     public function update(Request $request, EquipmentLocation $equipmentLocation): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $equipmentLocation->update(['is_active' => ! $equipmentLocation->is_active]);
+            return redirect()->route('settings.equipment-locations.index')->with('success', __('common.saved'));
+        }
+
         $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
 
         $validated = $request->validate([

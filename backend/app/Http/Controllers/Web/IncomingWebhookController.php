@@ -70,6 +70,11 @@ class IncomingWebhookController extends Controller
 
     public function update(Request $request, IncomingWebhook $inbound_webhook): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $inbound_webhook->update(['is_active' => ! $inbound_webhook->is_active]);
+            return redirect()->route('settings.inbound-webhooks.index')->with('success', __('common.saved'));
+        }
+
         $validated = $this->validateRequest($request, $inbound_webhook->id);
 
         $inbound_webhook->update([

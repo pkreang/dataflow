@@ -83,6 +83,7 @@
                 <td class="px-4 py-3 text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.running-numbers.edit', $config), 'icon' => 'edit'],
+                        ['label' => $config->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.running-numbers.update', $config), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.running_number_reset_counter'), 'method' => 'POST', 'action' => route('settings.running-numbers.reset', $config), 'confirm' => __('common.running_number_reset_confirm'), 'class' => 'text-orange-600 dark:text-orange-400 hover:bg-slate-100 dark:hover:bg-slate-700'],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.running-numbers.destroy', $config), 'icon' => 'delete', 'confirm' => __('common.delete_confirm'), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
                     ]" />

@@ -26,9 +26,15 @@ return [
 
     // Document types
     'document_types' => [
-        'repair_request' => 'ใบแจ้งซ่อม',
-        'pm_am_plan' => 'แผน PM/AM',
+        'repair_request'          => 'ใบแจ้งซ่อม',
+        'pm_am_plan'              => 'แผน PM/AM',
         'spare_parts_requisition' => 'ใบเบิกอะไหล่',
+        'leave_request'           => 'ใบลา',
+        'expense_claim'           => 'ใบเบิกค่าใช้จ่าย',
+        'memo'                    => 'บันทึกข้อความ',
+        'it_request'              => 'แบบฟอร์ม IT',
+        'purchase_request'        => 'ใบขอซื้อ',
+        'purchase_order'          => 'ใบสั่งซื้อ',
     ],
 
     // Settings

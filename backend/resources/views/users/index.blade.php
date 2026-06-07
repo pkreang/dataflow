@@ -10,12 +10,14 @@
 @endsection
 
 @section('content')
+@php $viewerIsSuperAdmin = (bool) session('user.is_super_admin', false); @endphp
 <div x-data="userIndex({{ json_encode(request('search', '')) }})">
     <div class="flex items-center justify-between mb-2">
         <div>
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.all_users') }}</h2>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ $totalUsers }} {{ Str::plural('user', $totalUsers) }} total</p>
         </div>
+        @if($viewerIsSuperAdmin)
         <div class="flex items-center gap-2">
             <a href="{{ route('users.import') }}" class="btn-secondary inline-flex items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -26,6 +28,7 @@
                 {{ __('common.add_user') }}
             </a>
         </div>
+        @endif
     </div>
 
     {{-- Search (AJAX — Alpine query model + loading spinner) --}}
@@ -53,9 +56,9 @@
                     <th class="table-header px-6 py-3 text-left">{{ __('common.departments') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.positions') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.roles') }}</th>
-                    <th class="table-header px-6 py-3 text-left">{{ __('common.status') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.last_active') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('users.phone') }}</th>
+                    <th class="table-header px-6 py-3 text-left">{{ __('common.status') }}</th>
                     <th class="table-header px-6 py-3 text-right">{{ __('common.actions') }}</th>
                 </tr>
             </thead>
@@ -103,6 +106,12 @@
                                 <span class="badge-blue mr-1">{{ $role->name }}</span>
                             @endforeach
                         </td>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                            {{ $lastActiveText }}
+                        </td>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                            {{ $user->phone ?? '-' }}
+                        </td>
                         <td class="px-6 py-3 whitespace-nowrap">
                             @if ($user->is_active ?? true)
                                 <span class="badge-green">{{ __('common.active') }}</span>
@@ -110,41 +119,39 @@
                                 <span class="badge-red">{{ __('common.inactive') }}</span>
                             @endif
                         </td>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                            {{ $lastActiveText }}
-                        </td>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                            {{ $user->phone ?? '-' }}
-                        </td>
                         <td class="px-6 py-3 whitespace-nowrap text-right">
                             @php
-                                $rowActions = [
-                                    ['label' => __('common.edit'), 'href' => route('users.edit', $user->id), 'icon' => 'edit'],
-                                    [
+                                $rowActions = [];
+                                if ($viewerIsSuperAdmin) {
+                                    $rowActions[] = ['label' => __('common.edit'), 'href' => route('users.edit', $user->id), 'icon' => 'edit'];
+                                    $rowActions[] = [
                                         'label' => ($user->is_active ?? true) ? __('common.disable') : __('common.enable'),
                                         'method' => 'PUT',
                                         'action' => route('users.update', $user->id),
                                         'icon' => 'toggle',
                                         'hidden' => ['toggle_active' => '1'],
-                                    ],
-                                ];
-                                if (!$isSuperAdmin) {
-                                    $rowActions[] = [
-                                        'label' => __('common.delete'),
-                                        'method' => 'DELETE',
-                                        'action' => route('users.destroy', $user->id),
-                                        'icon' => 'delete',
-                                        'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20',
-                                        'confirm' => __('common.confirm_delete_user'),
                                     ];
+                                    if (!$isSuperAdmin) {
+                                        $rowActions[] = [
+                                            'label' => __('common.delete'),
+                                            'method' => 'DELETE',
+                                            'action' => route('users.destroy', $user->id),
+                                            'icon' => 'delete',
+                                            'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20',
+                                            'confirm' => __('common.confirm_delete_user'),
+                                        ];
+                                    }
                                 }
                             @endphp
-                            <x-row-actions :items="$rowActions" />
+                            @if(!empty($rowActions))
+                                <x-row-actions :items="$rowActions" />
+                            @endif
                         </td>
                     </tr>
                 @empty
                     <x-table-empty-state :colspan="8" :message="__('common.no_users_found')"
-                        :cta-href="route('users.create')" :cta-label="__('common.add_user')" />
+                        :cta-href="$viewerIsSuperAdmin ? route('users.create') : null"
+                        :cta-label="$viewerIsSuperAdmin ? __('common.add_user') : null" />
                 @endforelse
             </tbody>
         </table>

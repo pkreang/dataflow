@@ -107,6 +107,7 @@
                         @php
                             $rowActions = [
                                 ['label' => __('common.edit'), 'href' => route('companies.edit', $company), 'icon' => 'edit'],
+                                ['label' => $company->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('companies.update', $company), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                             ];
                             if (($company->branches_count ?? 0) === 0) {
                                 $rowActions[] = [

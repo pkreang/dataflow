@@ -68,8 +68,8 @@
                 <tr>
                     <th class="table-header">{{ __('common.name') }}</th>
                     <th class="table-header">{{ __('common.widgets') }}</th>
-                    <th class="table-header">{{ __('common.status') }}</th>
                     <th class="table-header">{{ __('common.updated_at') }}</th>
+                    <th class="table-header">{{ __('common.status') }}</th>
                     <th class="table-header text-right">{{ __('common.actions') }}</th>
                 </tr>
             </thead>
@@ -99,6 +99,9 @@
                         <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                             {{ $dashboard->widgets_count }}
                         </td>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                            {{ $dashboard->updated_at ? $dashboard->updated_at->format('M d, Y') : '-' }}
+                        </td>
                         <td class="px-6 py-3 whitespace-nowrap">
                             @if ($dashboard->is_active)
                                 <span class="badge-green">{{ __('common.active') }}</span>
@@ -106,13 +109,11 @@
                                 <span class="badge-red">{{ __('common.inactive') }}</span>
                             @endif
                         </td>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                            {{ $dashboard->updated_at ? $dashboard->updated_at->format('M d, Y') : '-' }}
-                        </td>
                         <td class="px-6 py-3 whitespace-nowrap text-right">
                             <x-row-actions :items="[
                                 ['label' => __('common.view'), 'href' => route('reports.dashboards.show', $dashboard), 'icon' => 'view'],
                                 ['label' => __('common.edit'), 'href' => route('my-reports.edit', $dashboard), 'icon' => 'edit'],
+                                ['label' => $dashboard->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('my-reports.update', $dashboard), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                                 [
                                     'label' => __('common.delete'),
                                     'method' => 'DELETE',

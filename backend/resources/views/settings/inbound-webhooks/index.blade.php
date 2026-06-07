@@ -92,6 +92,7 @@
                             <td class="px-6 py-3 whitespace-nowrap text-right">
                                 <x-row-actions :items="[
                                     ['label' => __('common.edit'), 'href' => route('settings.inbound-webhooks.edit', $webhook), 'icon' => 'edit'],
+                                    ['label' => $webhook->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.inbound-webhooks.update', $webhook), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                                     ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.inbound-webhooks.destroy', $webhook), 'icon' => 'delete', 'confirm' => __('common.delete_confirm_msg', ['name' => $webhook->name]), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
                                 ]" />
                             </td>

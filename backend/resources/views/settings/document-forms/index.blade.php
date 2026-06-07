@@ -52,8 +52,8 @@
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'fields', 'label' => __('common.fields')],
             ['key' => 'workflow_policy', 'label' => __('common.workflow_policy')],
-            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'updated_at', 'label' => __('common.updated_at')],
+            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'actions', 'label' => __('common.actions'), 'class' => 'text-right'],
         ]"
         :rows="$forms"
@@ -98,6 +98,9 @@
                         <span class="badge-gray">{{ __('common.policy_summary_not_configured') }}</span>
                     @endif
                 </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                    {{ $form->updated_at ? $form->updated_at->format('M d, Y') : '-' }}
+                </td>
                 <td class="px-4 py-3 whitespace-nowrap">
                     @if ($form->is_active)
                         <span class="badge-green">{{ __('common.active') }}</span>
@@ -105,12 +108,10 @@
                         <span class="badge-red">{{ __('common.inactive') }}</span>
                     @endif
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                    {{ $form->updated_at ? $form->updated_at->format('M d, Y') : '-' }}
-                </td>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.document-forms.edit', $form), 'icon' => 'edit'],
+                        ['label' => $form->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.document-forms.update', $form), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.workflow_policy'), 'href' => route('settings.document-forms.policy.edit', $form)],
                         ['label' => __('common.clone'), 'method' => 'POST', 'action' => route('settings.document-forms.clone', $form)],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.document-forms.destroy', $form), 'icon' => 'delete', 'confirm' => __('common.delete_confirm_msg', ['name' => $form->name]), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],

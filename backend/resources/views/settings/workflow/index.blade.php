@@ -29,6 +29,7 @@
             ['key' => 'name', 'label' => __('common.workflow_col_name')],
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'stages', 'label' => __('common.workflow_col_stages')],
+            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'actions', 'label' => __('common.actions'), 'class' => 'text-right'],
         ]"
         :rows="$workflows"
@@ -49,9 +50,13 @@
                     </span>
                 </td>
                 <td class="table-sub">{{ $workflow->stages_count }}</td>
+                <td class="px-[var(--cell-pad-x)] py-[var(--cell-pad-y)]">
+                    <x-status-badge :status="$workflow->is_active ? 'active' : 'inactive'" />
+                </td>
                 <td class="px-4 py-3 text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.workflow.edit', $workflow), 'icon' => 'edit'],
+                        ['label' => $workflow->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.workflow.update', $workflow), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.workflow.destroy', $workflow), 'icon' => 'delete', 'confirm' => __('common.delete_confirm_msg', ['name' => $workflow->name]), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
                     ]" />
                 </td>

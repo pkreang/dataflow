@@ -33,8 +33,8 @@
             ['key' => 'name', 'label' => __('common.kpi_cycle_name')],
             ['key' => 'form', 'label' => __('common.kpi_cycle_form')],
             ['key' => 'period', 'label' => __('common.kpi_cycle_period_start') . ' / ' . __('common.kpi_cycle_period_end')],
-            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'assignments', 'label' => __('common.kpi_cycle_assignments'), 'class' => 'text-right'],
+            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'actions', 'label' => __('common.actions'), 'class' => 'text-right'],
         ]"
         :rows="$cycles"
@@ -53,6 +53,9 @@
                     →
                     {{ optional($cycle->period_end)->format('d/m/Y') ?? '—' }}
                 </td>
+                <td class="px-4 py-3 text-right text-sm text-slate-500 dark:text-slate-400">
+                    {{ $cycle->assignments->count() }}
+                </td>
                 <td class="px-4 py-3 text-sm">
                     @php
                         $cls = match ($cycle->status) {
@@ -62,9 +65,6 @@
                         };
                     @endphp
                     <span class="{{ $cls }}">{{ __('common.kpi_cycle_status_' . $cycle->status) }}</span>
-                </td>
-                <td class="px-4 py-3 text-right text-sm text-slate-500 dark:text-slate-400">
-                    {{ $cycle->assignments->count() }}
                 </td>
                 <td class="px-4 py-3 text-right">
                     @php

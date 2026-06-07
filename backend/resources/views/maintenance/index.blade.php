@@ -44,7 +44,7 @@
                 <a href="{{ route('maintenance.show', $item) }}" class="block rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-white dark:bg-slate-900/20 hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
                     <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $item->reference_no ?: ('#' . $item->id) }}</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                        {{ __('common.approval_status_' . $item->status) }}
+                        <x-status-badge :status="$item->status" />
                         · {{ __('common.workflow_step_short') }} {{ $item->current_step_no }}
                         @if($item->department)
                             · {{ $item->department->name }}

@@ -2,15 +2,6 @@
 
 namespace App\Providers;
 
-use App\Events\Approval\WorkflowCompleted;
-use App\Events\Approval\WorkflowPartialApproval;
-use App\Events\Approval\WorkflowStarted;
-use App\Events\Approval\WorkflowStepAdvanced;
-use App\Events\SparePartStockLow;
-use App\Listeners\Approval\SendApprovalPendingNotification;
-use App\Listeners\Approval\SendPartialApprovalNotification;
-use App\Listeners\Approval\SendWorkflowOutcomeNotification;
-use App\Listeners\SendStockLowNotification;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflowStage;
 use App\Models\Department;
@@ -35,7 +26,6 @@ use App\Services\NavigationService;
 use App\Support\OrganizationTranslations;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -62,12 +52,6 @@ class AppServiceProvider extends ServiceProvider
         ResetPassword::createUrlUsing(function ($notifiable, $token) {
             return config('app.url').'/reset-password?token='.$token.'&email='.urlencode($notifiable->getEmailForPasswordReset());
         });
-
-        Event::listen(WorkflowStarted::class, SendApprovalPendingNotification::class);
-        Event::listen(WorkflowStepAdvanced::class, SendApprovalPendingNotification::class);
-        Event::listen(WorkflowCompleted::class, SendWorkflowOutcomeNotification::class);
-        Event::listen(WorkflowPartialApproval::class, SendPartialApprovalNotification::class);
-        Event::listen(SparePartStockLow::class, SendStockLowNotification::class);
 
         // System change-log observers — see SystemChangeLog + app/Observers/.
         // Observers swallow exceptions internally, so a logging failure can

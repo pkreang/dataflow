@@ -26,9 +26,15 @@ return [
 
     // Document types
     'document_types' => [
-        'repair_request' => 'Repair Request',
-        'pm_am_plan' => 'PM/AM Plan',
+        'repair_request'          => 'Repair Request',
+        'pm_am_plan'              => 'PM/AM Plan',
         'spare_parts_requisition' => 'Spare Parts Requisition',
+        'leave_request'           => 'Leave Request',
+        'expense_claim'           => 'Expense Claim',
+        'memo'                    => 'Memo',
+        'it_request'              => 'IT Request',
+        'purchase_request'        => 'Purchase Request',
+        'purchase_order'          => 'Purchase Order',
     ],
 
     // Settings

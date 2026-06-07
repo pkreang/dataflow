@@ -70,6 +70,11 @@ class DocumentTypeController extends Controller
 
     public function update(Request $request, DocumentType $documentType): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $documentType->update(['is_active' => ! $documentType->is_active]);
+            return redirect()->route('settings.document-types.index')->with('success', __('common.saved'));
+        }
+
         $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
 
         $validated = $request->validate([

@@ -249,7 +249,7 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::resource('permissions', PermissionController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::match(['GET', 'POST'], '/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
 

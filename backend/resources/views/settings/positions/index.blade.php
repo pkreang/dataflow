@@ -50,6 +50,7 @@
                 <td class="px-4 py-3 text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.positions.edit', $position), 'icon' => 'edit'],
+                        ['label' => $position->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.positions.update', $position), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.positions.destroy', $position), 'icon' => 'delete', 'confirm' => __('common.delete_confirm_msg', ['name' => $position->name]), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
                     ]" />
                 </td>

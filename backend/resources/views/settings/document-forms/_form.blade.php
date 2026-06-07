@@ -237,6 +237,25 @@
             <textarea name="description" rows="2" class="form-input mt-1 resize-y">{{ old('description', $documentForm?->description ?? '') }}</textarea>
         </div>
 
+        @if($departments->count())
+        <div>
+            <label class="form-label">{{ __('common.document_form_allowed_departments') }}</label>
+            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{{ __('common.document_form_allowed_departments_hint') }}</p>
+            <div class="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+                @foreach($departments as $dept)
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox"
+                            name="allowed_departments[]"
+                            value="{{ $dept->id }}"
+                            @checked(in_array($dept->id, old('allowed_departments', $allowedDepartmentIds ?? [])))
+                            class="rounded border-slate-300 text-blue-600 dark:border-slate-600">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">{{ $dept->name }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         @if($inlineToolbar ?? false)
             @include('settings.document-forms._form-inline-field-actions')
         @endif
@@ -257,13 +276,23 @@
         <template x-for="(field, idx) in fields" :key="field._rowId">
             <div class="form-field-card rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/20 p-4 space-y-3"
                  :data-field-index="idx">
-                <div class="flex justify-between items-center">
-                    <p class="font-medium">{{ __('common.document_form_field_short') }} <span x-text="idx + 1"></span></p>
-                    <div class="space-x-2">
-                        <button type="button" @click="moveUp(idx)" class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-xs">{{ __('common.move_up') }}</button>
-                        <button type="button" @click="moveDown(idx)" class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-xs">{{ __('common.move_down') }}</button>
-                        <button type="button" @click="removeField(idx)" class="px-2 py-1 rounded bg-red-600 text-white text-xs">{{ __('common.delete') }}</button>
+                <div class="flex items-center gap-2">
+                    <div class="drag-handle cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 shrink-0 touch-none select-none">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 6zm0 6a2 2 0 10.001 4.001A2 2 0 007 12zm6-8a2 2 0 10.001 4.001A2 2 0 0013 4zm0 6a2 2 0 10.001 4.001A2 2 0 0013 10zm0 6a2 2 0 10.001 4.001A2 2 0 0013 16z"/>
+                        </svg>
                     </div>
+                    <div class="flex-1 flex items-center gap-2 min-w-0">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide shrink-0" x-text="`#${idx + 1}`"></span>
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0" x-text="field.field_type"></span>
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-show="field.label_th" x-text="field.label_th"></span>
+                    </div>
+                    <button type="button" @click="removeField(idx)"
+                            class="shrink-0 p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div x-show="field.field_type !== 'section'">
@@ -1044,7 +1073,7 @@
                     Sortable.create(canvas, {
                         group: { name: 'form-fields', pull: true, put: true },
                         animation: 150,
-                        handle: '.form-field-card',
+                        handle: '.drag-handle',
                         ghostClass: 'opacity-30',
                         onAdd: (evt) => {
                             // Sortable inserted a cloned palette button into the DOM —

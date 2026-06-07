@@ -10,9 +10,9 @@
 @endsection
 
 @php
+    $relatedApproverSet = array_flip($relatedInstanceIds ?? []);
     $viewer = [
-        'id' => (int) (session('user.id') ?? 0),
-        'can_approve' => in_array('approval.approve', session('user_permissions', []), true),
+        'id'             => (int) (session('user.id') ?? 0),
         'is_super_admin' => (bool) session('user.is_super_admin', false),
     ];
 
@@ -139,7 +139,10 @@
                       :empty-message="$isEvalList ? __('common.evaluation_list_empty') : __('common.no_submissions_yet')">
             @foreach($submissions as $submission)
                 @php
-                    $plan = $submission->actionPlan($viewer);
+                    $rowIsRelatedApprover = $submission->approval_instance_id !== null
+                        && isset($relatedApproverSet[(int) $submission->approval_instance_id]);
+                    $rowViewer = array_merge($viewer, ['is_related_approver' => $rowIsRelatedApprover]);
+                    $plan = $submission->actionPlan($rowViewer);
                     $status = $submission->effective_status;
                     // Row link goes to the submission's view page regardless of primary button.
                     $viewMenuItem = collect($plan['menu'])->firstWhere('label', __('common.view'));

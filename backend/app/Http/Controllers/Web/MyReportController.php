@@ -122,6 +122,11 @@ class MyReportController extends Controller
     {
         $this->authorizeOwnership($dashboard);
 
+        if ($request->has('toggle_active')) {
+            $dashboard->update(['is_active' => ! $dashboard->is_active]);
+            return redirect()->route('my-reports.index')->with('success', __('common.saved'));
+        }
+
         $validated = $request->validate(array_merge([
             'name'           => 'required|string|max:255',
             'description'    => 'nullable|string',

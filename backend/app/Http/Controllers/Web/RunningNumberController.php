@@ -63,6 +63,11 @@ class RunningNumberController extends Controller
 
     public function update(Request $request, RunningNumberConfig $runningNumberConfig): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $runningNumberConfig->update(['is_active' => ! $runningNumberConfig->is_active]);
+            return redirect()->route('settings.running-numbers.index')->with('success', __('common.saved'));
+        }
+
         $rules = $this->rules();
         $rules['document_type'] = "required|string|max:50|unique:running_number_configs,document_type,{$runningNumberConfig->id}";
         $validated = $request->validate($rules);

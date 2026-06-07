@@ -488,6 +488,8 @@ return [
     'workflow_template_stage_director' => 'อนุมัติผู้อำนวยการ',
     'workflow_placeholder_select_workflow' => '— เลือกเวิร์กโฟลว์ —',
     'document_form_key' => 'รหัสฟอร์ม',
+    'document_form_allowed_departments' => 'แผนกที่มีสิทธิ์เข้าถึงฟอร์ม',
+    'document_form_allowed_departments_hint' => 'ถ้าไม่เลือกแผนกใด ทุกแผนกจะเห็นฟอร์มนี้',
     'document_form_fields' => 'ฟิลด์',
     'document_form_add_field' => 'เพิ่มฟิลด์',
     'document_form_field_short' => 'ฟิลด์',
@@ -1113,6 +1115,7 @@ return [
     'approval_signature_required_error' => 'ขั้นนี้ต้องลงลายเซ็นก่อนอนุมัติ',
     'signature_pad_use_saved' => 'ใช้ลายเซ็นที่บันทึกไว้',
     'signature_pad_draw_new' => 'วาดใหม่',
+    'signature_pad_clear' => 'ล้างลายเซ็น',
 
     // Print + show signature table
     'authorized_signatures' => 'ตารางลายเซ็นผู้มีอำนาจ',

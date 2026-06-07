@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DocumentFormSubmission;
+use App\Models\SubmissionActivityLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -84,5 +85,45 @@ class MobileSubmissionController extends Controller
                 'updated_at' => $submission->updated_at?->toIso8601String(),
             ],
         ]);
+    }
+
+    public function updateDraft(int $id, Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $submission = DocumentFormSubmission::query()
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->where('status', 'draft')
+            ->firstOrFail();
+
+        $payload = (array) $request->input('fields', []);
+        $submission->update(['payload' => $payload]);
+
+        SubmissionActivityLog::record($submission->id, $user->id, 'updated');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id'         => $submission->id,
+                'status'     => $submission->status,
+                'updated_at' => $submission->updated_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function destroy(int $id, Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $submission = DocumentFormSubmission::query()
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->where('status', 'draft')
+            ->firstOrFail();
+
+        $submission->delete();
+
+        return response()->json(['success' => true], 200);
     }
 }
