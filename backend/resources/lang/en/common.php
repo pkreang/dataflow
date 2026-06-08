@@ -935,6 +935,7 @@ return [
     'workflow_stepper_submitted' => 'Request Submitted',
     'workflow_stepper_completed' => 'Completed',
     'workflow_stepper_rejected' => 'Rejected',
+    'workflow_multi_approved' => 'approved',
     'delete_draft' => 'Delete Draft',
     'confirm_submit_form' => 'Submit this form for approval?',
     'no_forms_available' => 'No forms available at this time.',
@@ -943,6 +944,14 @@ return [
     'max_date' => 'Max date',
     'default_value' => 'Default value',
     'field_readonly' => 'Read-only (user cannot edit)',
+    'field_properties' => 'Properties',
+    'field_select_to_edit' => 'Click a field to edit',
+    'field_select_to_edit_hint' => 'Or drag a field from the left panel',
+    'field_tab_basic' => 'Basic',
+    'field_tab_rules' => 'Rules',
+    'field_tab_perms' => 'Perms',
+    'form_tab_settings' => 'Settings',
+    'form_tab_fields' => 'Fields',
 
     // CMMS / PM module
     'cmms' => 'CMMS',

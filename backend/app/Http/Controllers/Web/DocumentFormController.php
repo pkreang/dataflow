@@ -157,7 +157,7 @@ class DocumentFormController extends Controller
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get(['id', 'first_name', 'last_name'])
-            ->map(fn (User $u) => ['id' => (int) $u->id, 'name' => $u->name])
+            ->map(fn (User $u) => ['id' => (int) $u->id, 'name' => $u->full_name])
             ->all();
     }
 

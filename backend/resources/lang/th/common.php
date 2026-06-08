@@ -935,6 +935,7 @@ return [
     'workflow_stepper_submitted' => 'ส่งคำขอ',
     'workflow_stepper_completed' => 'เสร็จสมบูรณ์',
     'workflow_stepper_rejected' => 'ปฏิเสธ',
+    'workflow_multi_approved' => 'อนุมัติแล้ว',
     'delete_draft' => 'ลบฉบับร่าง',
     'confirm_submit_form' => 'ยืนยันการส่งฟอร์มนี้เพื่อขออนุมัติ?',
     'no_forms_available' => 'ยังไม่มีฟอร์มในขณะนี้',
@@ -943,6 +944,14 @@ return [
     'max_date' => 'วันที่สูงสุด',
     'default_value' => 'ค่าเริ่มต้น',
     'field_readonly' => 'ล็อก (ผู้ใช้แก้ไม่ได้)',
+    'field_properties' => 'คุณสมบัติ',
+    'field_select_to_edit' => 'คลิก field เพื่อแก้ไข',
+    'field_select_to_edit_hint' => 'หรือลาก field จากแผงซ้าย',
+    'field_tab_basic' => 'ทั่วไป',
+    'field_tab_rules' => 'กฎ',
+    'field_tab_perms' => 'สิทธิ์',
+    'form_tab_settings' => 'ตั้งค่า',
+    'form_tab_fields' => 'ฟิลด์',
 
     // CMMS / PM module
     'cmms' => 'CMMS',

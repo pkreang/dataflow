@@ -38,6 +38,7 @@
                     <x-data-table
                         :columns="[
                             ['key' => 'name', 'label' => __('common.name')],
+                            ['key' => 'status', 'label' => __('common.status')],
                             ['key' => 'actions', 'label' => __('common.actions'), 'class' => 'text-right'],
                         ]"
                         :rows="$group"
@@ -50,6 +51,9 @@
                                     @if($form->description)
                                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ $form->description }}</p>
                                     @endif
+                                </td>
+                                <td class="px-[var(--cell-pad-x)] py-[var(--cell-pad-y)]">
+                                    <x-status-badge :status="$form->is_active ? 'active' : 'inactive'" />
                                 </td>
                                 <td class="px-[var(--cell-pad-x)] py-[var(--cell-pad-y)] text-right">
                                     <x-row-actions :items="[

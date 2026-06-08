@@ -112,9 +112,9 @@
          Both bind reactively to fp (form-data Alpine scope). --}}
     <input type="text" readonly
            class="form-input mt-1 bg-slate-50 dark:bg-slate-800 cursor-not-allowed font-mono"
-           :value="(() => { const _v = window.evaluateFormula({!! json_encode($formulaExpression) !!}, fp); return _v === null ? '' : Number(_v).toFixed({{ $formulaDecimals }}); })()">
+           :value="(() => { const _v = window.evaluateFormula({{ json_encode($formulaExpression) }}, fp); return _v === null ? '' : Number(_v).toFixed({{ $formulaDecimals }}); })()">
     <input type="hidden" name="{{ $name }}"
-           :value="(() => { const _v = window.evaluateFormula({!! json_encode($formulaExpression) !!}, fp); return _v === null ? '' : _v; })()">
+           :value="(() => { const _v = window.evaluateFormula({{ json_encode($formulaExpression) }}, fp); return _v === null ? '' : _v; })()">
     @if($formulaExpression === '')
         <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">{{ __('common.formula_expression_empty') }}</p>
     @endif

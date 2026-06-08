@@ -22,6 +22,11 @@
         savedUrl: @js($savedDataUrl),
         mode: '{{ $initialValue ? 'kept' : ($savedDataUrl ? 'saved' : 'draw') }}',
         _inited: false,
+        get activeTab() { return (this.mode === 'draw' || this.mode === 'drawn') ? 'draw' : 'saved'; },
+        switchTab(tab) {
+            if (tab === 'saved') { this.useSaved(); }
+            else { this.clearPad(); }
+        },
         useSaved() {
             if (this.savedUrl) {
                 this.signatureData = this.savedUrl;
@@ -91,13 +96,32 @@
         }
      ">
 
+    {{-- Tab switcher (only when a saved signature exists) --}}
+    @if($savedDataUrl ?? false)
+    <div class="flex gap-0 mb-2 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden w-fit text-sm">
+        <button type="button"
+                class="px-3 py-1.5 transition-colors"
+                :class="activeTab === 'saved'
+                    ? 'bg-blue-600 text-white font-medium'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'"
+                @click="switchTab('saved')">
+            {{ __('common.signature_pad_use_saved') }}
+        </button>
+        <button type="button"
+                class="px-3 py-1.5 transition-colors border-l border-slate-200 dark:border-slate-700"
+                :class="activeTab === 'draw'
+                    ? 'bg-blue-600 text-white font-medium'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'"
+                @click="switchTab('draw')">
+            {{ __('common.signature_pad_draw_new') }}
+        </button>
+    </div>
+    @endif
+
     {{-- Pre-loaded signature preview (saved profile signature OR retained value) --}}
     <template x-if="mode === 'saved' || mode === 'kept'">
-        <div class="flex items-center gap-3">
+        <div>
             <img :src="signatureData" alt="" class="h-20 max-w-xs object-contain border border-slate-200 dark:border-slate-700 bg-white rounded">
-            <div class="flex flex-col gap-1">
-                <button type="button" class="text-xs text-blue-600 hover:underline" @click="clearPad()">{{ __('common.signature_pad_draw_new') }}</button>
-            </div>
         </div>
     </template>
 
@@ -110,11 +134,8 @@
                 @mousedown="startDraw($event)"
                 @touchstart.prevent="startDraw($event)"
             ></canvas>
-            <div class="mt-1 flex items-center gap-3">
-                <button type="button" class="text-xs text-red-500 hover:underline" @click="clearPad()">{{ __('common.delete') }}</button>
-                @if($savedDataUrl ?? false)
-                    <button type="button" class="text-xs text-blue-600 hover:underline" @click="useSaved()">{{ __('common.signature_pad_use_saved') }}</button>
-                @endif
+            <div class="mt-1">
+                <button type="button" class="text-xs text-red-500 hover:underline" @click="clearPad()">{{ __('common.signature_pad_clear') }}</button>
             </div>
         </div>
     </template>

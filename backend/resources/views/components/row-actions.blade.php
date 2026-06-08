@@ -14,8 +14,7 @@
 
     The dropdown is teleported to <body> and positioned with @alpinejs/anchor so it
     escapes overflow ancestors (e.g. .table-wrapper with overflow-x-auto). Default
-    placement is top-end with auto-flip — drops upward, flips to bottom-end on
-    rows that lack room above.
+    placement is bottom-end — drops downward below the trigger button.
 --}}
 
 <div class="relative inline-block text-left" x-data="{ open: false }">
@@ -27,7 +26,7 @@
 
     <template x-teleport="body">
         <div x-show="open"
-             x-anchor.top-end.offset.8="$refs.trigger"
+             x-anchor.bottom-end.offset.8="$refs.trigger"
              @click.outside="open = false"
              @keydown.escape.window="open = false"
              x-cloak
@@ -47,19 +46,26 @@
                 @endphp
 
                 @if($hasMethod)
-                    <form method="POST" action="{{ $item['action'] }}" class="block"
-                          @if(isset($item['confirm'])) onsubmit="return confirm('{{ $item['confirm'] }}')" @endif
-                          novalidate>
+                    <form method="POST" action="{{ $item['action'] }}" class="block" novalidate>
                         @csrf
                         @method($item['method'])
                         @foreach (($item['hidden'] ?? []) as $hiddenName => $hiddenValue)
                             <input type="hidden" name="{{ $hiddenName }}" value="{{ $hiddenValue }}">
                         @endforeach
-                        <button type="submit"
-                                class="flex items-center gap-2 w-full px-[var(--cell-pad-x)] py-[var(--cell-pad-y)] text-sm {{ $class }} text-left">
-                            @include('components._row-action-icon', ['icon' => $iconName])
-                            {{ $item['label'] }}
-                        </button>
+                        @if(isset($item['confirm']))
+                            <button type="button"
+                                    class="flex items-center gap-2 w-full px-[var(--cell-pad-x)] py-[var(--cell-pad-y)] text-sm {{ $class }} text-left"
+                                    @click="window.dispatchEvent(new CustomEvent('confirm-open', {detail:{message:'{{ addslashes($item['confirm']) }}', danger:true, form:$el.closest('form')}}))">
+                                @include('components._row-action-icon', ['icon' => $iconName])
+                                {{ $item['label'] }}
+                            </button>
+                        @else
+                            <button type="submit"
+                                    class="flex items-center gap-2 w-full px-[var(--cell-pad-x)] py-[var(--cell-pad-y)] text-sm {{ $class }} text-left">
+                                @include('components._row-action-icon', ['icon' => $iconName])
+                                {{ $item['label'] }}
+                            </button>
+                        @endif
                     </form>
                 @else
                     <a href="{{ $item['href'] }}"

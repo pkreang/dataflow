@@ -116,9 +116,15 @@
                 @endforeach
             </x-document-form-fields-grid>
 
-            <div class="mt-6 sm:flex sm:justify-end">
-                <button type="submit" class="btn-primary justify-center w-full sm:w-auto py-3 sm:py-2 text-base sm:text-sm">
+            <div class="mt-6 sm:flex sm:justify-end sm:gap-3" x-data="{ intent: 'draft' }">
+                <input type="hidden" name="_intent" :value="intent">
+                <button type="submit" class="btn-secondary justify-center w-full sm:w-auto py-3 sm:py-2 text-base sm:text-sm mb-2 sm:mb-0"
+                        @click="intent = 'draft'">
                     {{ __('common.save_draft') }}
+                </button>
+                <button type="button" class="btn-primary justify-center w-full sm:w-auto py-3 sm:py-2 text-base sm:text-sm"
+                        @click="intent = 'submit'; window.dispatchEvent(new CustomEvent('confirm-open', {detail:{message:'{{ addslashes(__('common.confirm_submit_form')) }}', okLabel:'{{ addslashes(__('common.submit_form')) }}', danger:false, form:$el.closest('form')}}))">
+                    {{ __('common.submit_form') }}
                 </button>
             </div>
         </div>

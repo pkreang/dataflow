@@ -27,15 +27,15 @@
 
         $state = $isStepApproved ? 'completed' : ($isStepRejected ? 'rejected' : ($isStepCurrent ? 'active' : 'pending'));
 
+        $approvedBy    = $step->approved_by ?? [];
+        $minApprovals  = $step->min_approvals ?? 1;
+        $approvedCount = count($approvedBy);
+        $isMulti       = $minApprovals > 1;
+
         // pick representative timestamp
         $stepTs = null;
-        if ($isStepApproved && ! empty($step->approved_by)) {
-            // Copy to a local var first — end() takes its arg by reference and
-            // can't modify a magic/overloaded model attribute in place.
-            $approvedBy = $step->approved_by;
+        if ($isStepApproved && ! empty($approvedBy)) {
             $last = end($approvedBy);
-            // `at` is stored as an ISO8601 string (now()->toIso8601String()) —
-            // always reformat it to the human format, same as the submit step.
             $rawAt = $last['at'] ?? null;
             if ($rawAt) {
                 try { $stepTs = \Illuminate\Support\Carbon::parse($rawAt)->format('d M Y H:i'); } catch (\Throwable $e) {}
@@ -44,11 +44,23 @@
             $stepTs = optional($step->updated_at)->format('d M Y H:i');
         }
 
+        // Names of partial approvers (multi-approval step, not yet complete)
+        $partialApprovers = [];
+        if ($isMulti && ! $isStepApproved && $approvedCount > 0) {
+            foreach ($approvedBy as $entry) {
+                $partialApprovers[] = $entry['name'] ?? '';
+            }
+        }
+
         $stepperSteps[] = [
-            'label'     => $step->stage_name,
-            'icon'      => $isStepRejected ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7',
-            'state'     => $state,
-            'timestamp' => $stepTs,
+            'label'            => $step->stage_name,
+            'icon'             => $isStepRejected ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7',
+            'state'            => $state,
+            'timestamp'        => $stepTs,
+            'is_multi'         => $isMulti,
+            'approved_count'   => $approvedCount,
+            'min_approvals'    => $minApprovals,
+            'partial_approvers' => $partialApprovers,
         ];
     }
 
@@ -92,11 +104,30 @@
             @endphp
             <div class="flex flex-col items-center text-center px-2" style="flex: 1 1 0; min-width: 96px">
                 <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 flex items-center justify-center transition-all {{ $circleClass }}">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $st['icon'] }}"/>
-                    </svg>
+                    @if(($st['is_multi'] ?? false) && $st['state'] === 'active')
+                        {{-- multi-approval in-progress: show N/M counter --}}
+                        <span class="text-sm font-bold leading-none">{{ $st['approved_count'] }}/{{ $st['min_approvals'] }}</span>
+                    @else
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $st['icon'] }}"/>
+                        </svg>
+                    @endif
                 </div>
                 <div class="mt-2 text-xs sm:text-sm leading-tight {{ $labelClass }}">{{ $st['label'] }}</div>
+                @if(($st['is_multi'] ?? false) && $st['state'] === 'active')
+                    <div class="text-[10px] sm:text-xs text-blue-500 dark:text-blue-400 mt-0.5 font-medium">
+                        {{ $st['approved_count'] }}/{{ $st['min_approvals'] }} {{ __('common.workflow_multi_approved') }}
+                    </div>
+                    @if(!empty($st['partial_approvers']))
+                        <div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                            {{ implode(', ', $st['partial_approvers']) }}
+                        </div>
+                    @endif
+                @elseif(($st['is_multi'] ?? false) && $st['state'] === 'completed')
+                    <div class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        {{ $st['min_approvals'] }}/{{ $st['min_approvals'] }} {{ __('common.workflow_multi_approved') }}
+                    </div>
+                @endif
                 @if(!empty($st['timestamp']))
                     <div class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5">{{ $st['timestamp'] }}</div>
                 @endif

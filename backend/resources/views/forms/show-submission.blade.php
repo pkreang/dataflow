@@ -5,7 +5,7 @@
 @section('breadcrumb')
     <x-breadcrumb :items="[
         ['label' => __('common.forms_index_title'), 'url' => route('forms.index')],
-        ['label' => __('common.my_submissions'), 'url' => route('forms.my-submissions')],
+        ['label' => $submission->form->name, 'url' => route('forms.list-by-form', $submission->form)],
         ['label' => __('common.view')],
     ]" />
 @endsection
@@ -14,7 +14,7 @@
 <div style="width:100%;max-width:100%">
     <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
-            <a href="{{ route('forms.my-submissions') }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.my_submissions') }}</a>
+            <a href="{{ route('forms.list-by-form', $submission->form) }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ $submission->form->name }}</a>
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mt-2">{{ $submission->form->name }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 {{ $submission->reference_no ?: ('#' . $submission->id) }}

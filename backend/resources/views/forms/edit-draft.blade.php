@@ -5,7 +5,7 @@
 @section('breadcrumb')
     <x-breadcrumb :items="[
         ['label' => __('common.forms_index_title'), 'url' => route('forms.index')],
-        ['label' => __('common.my_submissions'), 'url' => route('forms.my-submissions')],
+        ['label' => $submission->form->name, 'url' => route('forms.list-by-form', $submission->form)],
         ['label' => __('common.edit')],
     ]" />
 @endsection
@@ -13,7 +13,7 @@
 @section('content')
 <div style="width:100%;max-width:100%">
     <div class="mb-6">
-        <a href="{{ route('forms.my-submissions') }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.my_submissions') }}</a>
+        <a href="{{ route('forms.list-by-form', $submission->form) }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ $submission->form->name }}</a>
         <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mt-2">{{ $submission->form->name }}</h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
             <span class="badge-yellow">{{ __('common.draft') }}</span>
@@ -24,6 +24,15 @@
         <div class="alert-success mb-4">
             {{ session('success') }}
         </div>
+    @endif
+
+    @if (session('autosubmit'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const submitForm = document.getElementById('submit-draft-form');
+                if (submitForm) submitForm.submit();
+            });
+        </script>
     @endif
 
     @if($errors->any())
@@ -130,9 +139,10 @@
         {{-- Delete draft --}}
         <form method="POST"
               action="{{ route('forms.draft.destroy', $submission) }}"
-              onsubmit="return confirm('{{ __('common.confirm_delete') }}')" novalidate>
+              novalidate>
             @csrf @method('DELETE')
-            <button type="submit" class="btn-danger">
+            <button type="button" class="btn-danger"
+                    @click="window.dispatchEvent(new CustomEvent('confirm-open', {detail:{message:'{{ addslashes(__('common.confirm_delete')) }}', danger:true, form:$el.closest('form')}}))">
                 {{ __('common.delete_draft') }}
             </button>
         </form>
@@ -144,9 +154,10 @@
             </button>
 
             {{-- Submit to workflow --}}
-            <form method="POST"
+            <form id="submit-draft-form"
+                  method="POST"
                   action="{{ route('forms.draft.submit', $submission) }}"
-                  onsubmit="return confirm('{{ __('common.confirm_submit_form') }}')" novalidate>
+                  novalidate>
                 @csrf
                 @if(($overrideStages ?? collect())->isNotEmpty())
                     {{-- override: requester may optionally substitute the approver for these stages --}}
@@ -165,7 +176,8 @@
                         @endforeach
                     </div>
                 @endif
-                <button type="submit" class="btn-primary">
+                <button type="button" class="btn-primary"
+                        @click="window.dispatchEvent(new CustomEvent('confirm-open', {detail:{message:'{{ addslashes(__('common.confirm_submit_form')) }}', okLabel:'{{ addslashes(__('common.submit_form')) }}', danger:false, form:$el.closest('form')}}))">
                     {{ __('common.submit_form') }}
                 </button>
             </form>
