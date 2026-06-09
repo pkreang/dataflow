@@ -239,12 +239,11 @@ class SingletonSettingsTest extends TestCase
         $this->actingAsWebSession($admin)->put(route('settings.branch-scoping.update'), [
             'toggle' => [
                 'branches.enabled' => '1',
-                'branch_scoping.equipment' => '1',
+                'branch_scoping.enabled' => '1',
             ],
         ])->assertRedirect(route('settings.branch-scoping'));
 
         $this->assertSame('1', Setting::get('branches.enabled'));
-        $this->assertSame('1', Setting::get('branch_scoping.equipment'));
-        $this->assertSame('0', Setting::get('branch_scoping.spare_parts'));
+        $this->assertSame('1', Setting::get('branch_scoping.enabled'));
     }
 }

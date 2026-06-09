@@ -13,8 +13,6 @@ class BranchScopingController extends Controller
     private const KEYS = [
         'branches.enabled',
         'branch_scoping.enabled',
-        'branch_scoping.equipment',
-        'branch_scoping.spare_parts',
     ];
 
     public function edit(): View
