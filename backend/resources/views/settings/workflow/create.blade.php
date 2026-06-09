@@ -131,8 +131,67 @@
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_min_approvals') }}</label>
                                 <input type="number" min="1" :name="`stages[${idx}][min_approvals]`" x-model="stage.min_approvals" @input="checkValidity()" required class="form-input mt-1" />
+                                {{-- multi-source: show source count --}}
+                                <p x-show="stage.approver_rules.length > 0" class="text-xs mt-1 text-center"
+                                   :class="Number(stage.min_approvals) > stageSourceCount(stage) ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-400 dark:text-slate-500'">
+                                    <span x-text="Number(stage.min_approvals) > stageSourceCount(stage) ? 'เกินจำนวนแหล่ง (' + stageSourceCount(stage) + ' แหล่ง)' : 'จาก ' + stageSourceCount(stage) + ' แหล่ง'"></span>
+                                </p>
+                                {{-- single-source: show people pool count --}}
+                                <p x-show="stage.approver_rules.length === 0 && stagePoolSize(stage).known && stagePoolSize(stage).total > 0" class="text-xs mt-1 text-center"
+                                   :class="Number(stage.min_approvals) > stagePoolSize(stage).total ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-400 dark:text-slate-500'">
+                                    <span x-text="Number(stage.min_approvals) > stagePoolSize(stage).total ? '⚠ pool ' + stagePoolSize(stage).total + ' คน' : 'จาก ' + stagePoolSize(stage).total + ' คน'"></span>
+                                </p>
+                                {{-- single-source role: no people count --}}
+                                <p x-show="stage.approver_rules.length === 0 && !stagePoolSize(stage).known" class="text-xs mt-1 text-center text-slate-400 dark:text-slate-500">มีบทบาทใน pool</p>
                             </div>
                         </div>
+                        {{-- Extra approver rules (multi-source) --}}
+                        <template x-for="(rule, ri) in stage.approver_rules" :key="ri">
+                            <div class="grid grid-cols-4 gap-3 items-center">
+                                <div class="flex items-center">
+                                    <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full">หรือ</span>
+                                </div>
+                                <select x-model="rule.type" @change="rule.ref = ''" class="form-input text-sm">
+                                    <option value="role">บทบาท</option>
+                                    <option value="position">ตำแหน่ง</option>
+                                    <option value="user">คน</option>
+                                </select>
+                                <div class="min-w-0">
+                                    <select x-show="rule.type === 'role'" x-model="rule.ref" class="form-input text-sm w-full">
+                                        <option value="">-- เลือกบทบาท --</option>
+                                        <template x-for="r in roles" :key="r">
+                                            <option :value="r" x-text="r"></option>
+                                        </template>
+                                    </select>
+                                    <select x-show="rule.type === 'position'" x-model="rule.ref" class="form-input text-sm w-full">
+                                        <option value="">-- เลือกตำแหน่ง --</option>
+                                        <template x-for="p in positions" :key="p.id">
+                                            <option :value="String(p.id)" x-text="p.label"></option>
+                                        </template>
+                                    </select>
+                                    <select x-show="rule.type === 'user'" x-model="rule.ref" class="form-input text-sm w-full">
+                                        <option value="">-- เลือกคน --</option>
+                                        <template x-for="u in users" :key="u.id">
+                                            <option :value="String(u.id)" x-text="u.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="flex justify-center">
+                                    <button type="button" @click="stage.approver_rules.splice(ri, 1)"
+                                            class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 rounded">ลบ</button>
+                                </div>
+                            </div>
+                        </template>
+                        <div class="pt-1">
+                            <button type="button"
+                                    @click="if (!stage.approver_rules) stage.approver_rules = []; stage.approver_rules.push({type:'role', ref:''})"
+                                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                + เพิ่มแหล่งอนุมัติ (OR)
+                            </button>
+                        </div>
+                        <input type="hidden" :name="`stages[${idx}][approver_rules]`"
+                               :value="(stage.approver_rules && stage.approver_rules.length) ? JSON.stringify(stage.approver_rules) : ''">
+
                         <div class="flex items-center gap-2 pt-1">
                             <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                                 <input type="checkbox" :name="`stages[${idx}][require_signature]`" value="1"
@@ -236,6 +295,7 @@
                     name: data.name || '',
                     approver_type,
                     approver_ref,
+                    approver_rules: data.approver_rules || [],
                     min_approvals: data.min_approvals || 1,
                     require_signature: !!data.require_signature,
                 });
@@ -309,6 +369,24 @@
                 const count = users.length + ' ' + (this.i18n.people || '');
                 const preview = users.length > 5 ? users.slice(0, 5).join(', ') + '…' : users.join(', ');
                 return count + ': ' + preview;
+            },
+            stageSourceCount(stage) {
+                return 1 + (stage.approver_rules?.length ?? 0);
+            },
+            stagePoolSize(stage) {
+                let known = true, total = 0;
+                const primaryRules = [{ type: stage.approver_type, ref: stage.approver_ref }];
+                for (const r of primaryRules) {
+                    if (r.type === 'position') {
+                        const p = this.positions.find(p => String(p.id) === String(r.ref));
+                        total += p ? (p.users?.length ?? 0) : 0;
+                    } else if (r.type === 'user') {
+                        total += r.ref ? 1 : 0;
+                    } else {
+                        known = false;
+                    }
+                }
+                return { total, known };
             },
         };
     }

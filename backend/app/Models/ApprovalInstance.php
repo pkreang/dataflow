@@ -103,13 +103,32 @@ class ApprovalInstance extends Model
                 $q->where('approval_instance_steps.action', 'pending')
                     ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
                     ->where(function ($sq) use ($userId, $roleNames, $positionId) {
-                        $sq->where(fn ($u) => $u->where('approver_type', 'user')->where('approver_ref', (string) $userId));
-                        if (! empty($roleNames)) {
-                            $sq->orWhere(fn ($r) => $r->where('approver_type', 'role')->whereIn('approver_ref', $roleNames));
-                        }
-                        if ($positionId) {
-                            $sq->orWhere(fn ($p) => $p->where('approver_type', 'position')->where('approver_ref', (string) $positionId));
-                        }
+                        // Single-source steps (approver_rules is null)
+                        $sq->where(function ($single) use ($userId, $roleNames, $positionId) {
+                            $single->whereNull('approver_rules')
+                                ->where(function ($types) use ($userId, $roleNames, $positionId) {
+                                    $types->where(fn ($u) => $u->where('approver_type', 'user')->where('approver_ref', (string) $userId));
+                                    if (! empty($roleNames)) {
+                                        $types->orWhere(fn ($r) => $r->where('approver_type', 'role')->whereIn('approver_ref', $roleNames));
+                                    }
+                                    if ($positionId) {
+                                        $types->orWhere(fn ($p) => $p->where('approver_type', 'position')->where('approver_ref', (string) $positionId));
+                                    }
+                                });
+                        });
+                        // Multi-source steps (approver_rules JSON) — use LIKE for cross-DB compat
+                        $sq->orWhere(function ($multi) use ($userId, $roleNames, $positionId) {
+                            $multi->whereNotNull('approver_rules')
+                                ->where(function ($json) use ($userId, $roleNames, $positionId) {
+                                    $json->where('approver_rules', 'like', '%"type":"user","ref":"' . $userId . '"}%');
+                                    foreach ($roleNames as $role) {
+                                        $json->orWhere('approver_rules', 'like', '%"type":"role","ref":"' . addslashes($role) . '"}%');
+                                    }
+                                    if ($positionId) {
+                                        $json->orWhere('approver_rules', 'like', '%"type":"position","ref":"' . $positionId . '"}%');
+                                    }
+                                });
+                        });
                     });
             });
     }

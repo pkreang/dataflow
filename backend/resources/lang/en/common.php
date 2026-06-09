@@ -936,6 +936,7 @@ return [
     'workflow_stepper_completed' => 'Completed',
     'workflow_stepper_rejected' => 'Rejected',
     'workflow_multi_approved' => 'approved',
+    'workflow_source_label' => 'sources',
     'delete_draft' => 'Delete Draft',
     'confirm_submit_form' => 'Submit this form for approval?',
     'no_forms_available' => 'No forms available at this time.',

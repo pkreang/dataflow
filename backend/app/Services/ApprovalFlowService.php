@@ -110,6 +110,7 @@ class ApprovalFlowService
                     'stage_name' => $stage->name,
                     'approver_type' => $stepType,
                     'approver_ref' => $stepRef,
+                    'approver_rules' => $stage->allow_requester_override ? null : $stage->approver_rules,
                     'min_approvals' => $stage->min_approvals ?? 1,
                     'require_signature' => (bool) ($stage->require_signature ?? false),
                     'approved_by' => [],
@@ -302,8 +303,11 @@ class ApprovalFlowService
             $step->approved_by = $approvedBy;
 
             $minApprovals = $step->min_approvals ?? 1;
+            $isComplete = ! empty($step->approver_rules)
+                ? $this->countSatisfiedSources($step, $approvedBy) >= $minApprovals
+                : count($approvedBy) >= $minApprovals;
 
-            if (count($approvedBy) >= $minApprovals) {
+            if ($isComplete) {
                 // Enough approvals — mark step complete and advance
                 $step->update([
                     'approved_by' => $approvedBy,
@@ -430,6 +434,24 @@ class ApprovalFlowService
             return false;
         }
 
+        $rules = $step->approver_rules;
+        if (! empty($rules)) {
+            $user = User::find($actorUserId);
+            if (! $user) {
+                return false;
+            }
+            // check primary rule first (bug fix: was previously skipped)
+            if ($this->userMatchesApproverRule($step->approver_type ?? '', $step->approver_ref ?? '', $actorUserId, $user)) {
+                return true;
+            }
+            foreach ($rules as $rule) {
+                if ($this->userMatchesApproverRule($rule['type'] ?? '', $rule['ref'] ?? '', $actorUserId, $user)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         if ($step->approver_type === 'user') {
             return (int) $step->approver_ref === $actorUserId;
         }
@@ -445,5 +467,34 @@ class ApprovalFlowService
         }
 
         return $user->hasRole($step->approver_ref);
+    }
+
+    private function countSatisfiedSources(ApprovalInstanceStep $step, array $approvedBy): int
+    {
+        $allRules = array_merge(
+            [['type' => $step->approver_type, 'ref' => $step->approver_ref]],
+            $step->approver_rules ?? []
+        );
+        $satisfied = 0;
+        foreach ($allRules as $rule) {
+            foreach ($approvedBy as $ab) {
+                $u = User::find($ab['user_id']);
+                if ($u && $this->userMatchesApproverRule($rule['type'] ?? '', $rule['ref'] ?? '', $ab['user_id'], $u)) {
+                    $satisfied++;
+                    break;
+                }
+            }
+        }
+        return $satisfied;
+    }
+
+    private function userMatchesApproverRule(string $type, string $ref, int $actorUserId, User $user): bool
+    {
+        return match ($type) {
+            'user'     => (int) $ref === $actorUserId,
+            'position' => $user->position_id && (string) $user->position_id === $ref,
+            'role'     => $user->hasRole($ref),
+            default    => false,
+        };
     }
 }

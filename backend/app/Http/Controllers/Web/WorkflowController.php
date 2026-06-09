@@ -131,6 +131,7 @@ class WorkflowController extends Controller
             'stages.*.name' => 'required|string|max:255',
             'stages.*.approver_type' => 'required|in:role,user,position',
             'stages.*.approver_ref' => 'required|string|max:255',
+            'stages.*.approver_rules' => 'nullable|string',
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
             'stages.*.allow_requester_override' => 'nullable|boolean',
@@ -149,12 +150,14 @@ class WorkflowController extends Controller
             ]);
 
             foreach ($validated['stages'] as $stage) {
+                $rulesJson = $stage['approver_rules'] ?? null;
                 ApprovalWorkflowStage::create([
                     'workflow_id' => $workflow->id,
                     'step_no' => (int) $stage['step_no'],
                     'name' => $stage['name'],
                     'approver_type' => $stage['approver_type'],
                     'approver_ref' => $stage['approver_ref'] ?? '',
+                    'approver_rules' => ($rulesJson && $rulesJson !== '[]') ? json_decode($rulesJson, true) : null,
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'allow_requester_override' => (bool) ($stage['allow_requester_override'] ?? false),
@@ -184,6 +187,7 @@ class WorkflowController extends Controller
             'stages.*.name' => 'required|string|max:255',
             'stages.*.approver_type' => 'required|in:role,user,position',
             'stages.*.approver_ref' => 'required|string|max:255',
+            'stages.*.approver_rules' => 'nullable|string',
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
             'stages.*.allow_requester_override' => 'nullable|boolean',
@@ -203,12 +207,14 @@ class WorkflowController extends Controller
 
             $workflow->stages()->delete();
             foreach ($validated['stages'] as $stage) {
+                $rulesJson = $stage['approver_rules'] ?? null;
                 ApprovalWorkflowStage::create([
                     'workflow_id' => $workflow->id,
                     'step_no' => (int) $stage['step_no'],
                     'name' => $stage['name'],
                     'approver_type' => $stage['approver_type'],
                     'approver_ref' => $stage['approver_ref'] ?? '',
+                    'approver_rules' => ($rulesJson && $rulesJson !== '[]') ? json_decode($rulesJson, true) : null,
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'allow_requester_override' => (bool) ($stage['allow_requester_override'] ?? false),

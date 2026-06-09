@@ -29,8 +29,9 @@
 
         $approvedBy    = $step->approved_by ?? [];
         $minApprovals  = $step->min_approvals ?? 1;
-        $approvedCount = count($approvedBy);
         $isMulti       = $minApprovals > 1;
+        $isSourceMode  = ! empty($step->approver_rules);
+        $approvedCount = $isSourceMode ? $step->satisfiedSourcesCount() : count($approvedBy);
 
         // pick representative timestamp
         $stepTs = null;
@@ -58,6 +59,7 @@
             'state'            => $state,
             'timestamp'        => $stepTs,
             'is_multi'         => $isMulti,
+            'is_source_mode'   => $isSourceMode,
             'approved_count'   => $approvedCount,
             'min_approvals'    => $minApprovals,
             'partial_approvers' => $partialApprovers,
@@ -115,8 +117,13 @@
                 </div>
                 <div class="mt-2 text-xs sm:text-sm leading-tight {{ $labelClass }}">{{ $st['label'] }}</div>
                 @if(($st['is_multi'] ?? false) && $st['state'] === 'active')
+                    @php
+                        $unitLabel = ($st['is_source_mode'] ?? false)
+                            ? __('common.workflow_source_label')
+                            : __('common.workflow_multi_approved');
+                    @endphp
                     <div class="text-[10px] sm:text-xs text-blue-500 dark:text-blue-400 mt-0.5 font-medium">
-                        {{ $st['approved_count'] }}/{{ $st['min_approvals'] }} {{ __('common.workflow_multi_approved') }}
+                        {{ $st['approved_count'] }}/{{ $st['min_approvals'] }} {{ $unitLabel }}
                     </div>
                     @if(!empty($st['partial_approvers']))
                         <div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
@@ -124,8 +131,13 @@
                         </div>
                     @endif
                 @elseif(($st['is_multi'] ?? false) && $st['state'] === 'completed')
+                    @php
+                        $unitLabel = ($st['is_source_mode'] ?? false)
+                            ? __('common.workflow_source_label')
+                            : __('common.workflow_multi_approved');
+                    @endphp
                     <div class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                        {{ $st['min_approvals'] }}/{{ $st['min_approvals'] }} {{ __('common.workflow_multi_approved') }}
+                        {{ $st['min_approvals'] }}/{{ $st['min_approvals'] }} {{ $unitLabel }}
                     </div>
                 @endif
                 @if(!empty($st['timestamp']))

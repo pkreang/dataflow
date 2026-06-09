@@ -94,6 +94,12 @@
                 if (c) { c.width = c.offsetWidth; c.height = c.offsetHeight; _inited = true; }
             });
         }
+        $watch('signatureData', (val) => {
+            if ($refs.hiddenSig) {
+                $refs.hiddenSig.value = val;
+                $refs.hiddenSig.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
      ">
 
     {{-- Tab switcher (only when a saved signature exists) --}}
@@ -122,6 +128,9 @@
     <template x-if="mode === 'saved' || mode === 'kept'">
         <div>
             <img :src="signatureData" alt="" class="h-20 max-w-xs object-contain border border-slate-200 dark:border-slate-700 bg-white rounded">
+            <div class="mt-1">
+                <button type="button" class="text-xs text-red-500 hover:underline" @click="clearPad()">{{ __('common.signature_pad_clear') }}</button>
+            </div>
         </div>
     </template>
 
@@ -140,5 +149,5 @@
         </div>
     </template>
 
-    <input type="hidden" name="{{ $name }}" :value="signatureData" @if($required) data-required-signature="1" @endif>
+    <input type="hidden" name="{{ $name }}" x-ref="hiddenSig" :value="signatureData" @if($required) data-required-signature="1" @endif>
 </div>

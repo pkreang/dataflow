@@ -936,6 +936,7 @@ return [
     'workflow_stepper_completed' => 'เสร็จสมบูรณ์',
     'workflow_stepper_rejected' => 'ปฏิเสธ',
     'workflow_multi_approved' => 'อนุมัติแล้ว',
+    'workflow_source_label' => 'แหล่ง',
     'delete_draft' => 'ลบฉบับร่าง',
     'confirm_submit_form' => 'ยืนยันการส่งฟอร์มนี้เพื่อขออนุมัติ?',
     'no_forms_available' => 'ยังไม่มีฟอร์มในขณะนี้',
