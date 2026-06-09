@@ -125,6 +125,7 @@
                                     <option value="position">{{ __('common.workflow_approver_position') }}</option>
                                     <option value="user">{{ __('common.workflow_approver_user') }}</option>
                                     <option value="role">{{ __('common.workflow_approver_role') }}</option>
+                                    <option value="direct_manager">{{ __('common.workflow_approver_direct_manager') }}</option>
                                 </select>
                             </div>
                             <div>
@@ -154,6 +155,12 @@
                                             </template>
                                         </select>
                                         <p x-show="stage.approver_ref" x-text="positionUsersPreview(stage.approver_ref)" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
+                                    </div>
+                                </template>
+                                <template x-if="stage.approver_type === 'direct_manager'">
+                                    <div>
+                                        <input type="hidden" :name="`stages[${idx}][approver_ref]`" value="" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_direct_manager_note') }}</p>
                                     </div>
                                 </template>
                             </div>
@@ -339,7 +346,7 @@
             checkValidity() {
                 this.isValid = this.stages.length > 0 && this.stages.every((s) =>
                     String(s.name || '').trim() !== '' &&
-                    String(s.approver_ref || '').trim() !== '' &&
+                    (s.approver_type === 'direct_manager' || String(s.approver_ref || '').trim() !== '') &&
                     Number(s.min_approvals || 0) >= 1
                 );
             },
@@ -352,6 +359,7 @@
                 if (t === 'role') return i.typeRole;
                 if (t === 'user') return i.typeUser;
                 if (t === 'position') return i.typePosition;
+                if (t === 'direct_manager') return i.typeDirectManager || '{{ __('common.workflow_approver_direct_manager') }}';
                 return t || '—';
             },
             positionUsersPreview(positionId) {

@@ -86,9 +86,21 @@ class ApprovalFlowService
                 'status' => 'pending',
             ]);
 
+            $requesterUser = null;
             foreach ($workflow->stages as $stage) {
                 $stepType = $stage->approver_type;
                 $stepRef = $stage->approver_ref;
+
+                // Eager-resolve direct_manager: rewrite step to ('user', manager_id) so all
+                // downstream logic (inbox scope, canUserActOnStep, signatures) works unchanged.
+                if ($stage->approver_type === 'direct_manager') {
+                    $requesterUser ??= User::find($requesterUserId);
+                    if (! $requesterUser?->manager_id) {
+                        throw new \RuntimeException(__('common.workflow_no_manager_assigned'));
+                    }
+                    $stepType = 'user';
+                    $stepRef = (string) $requesterUser->manager_id;
+                }
 
                 // override: requester optionally substitutes a specific approver.
                 // If no pick is submitted the stage falls back to its default

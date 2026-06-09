@@ -39,6 +39,7 @@ class User extends Authenticatable implements HasLocalePreference
         'signature_path',
         'department_id',
         'position_id',
+        'manager_id',
         'phone',
         'line_notify_token',
         'line_user_id',
@@ -104,6 +105,11 @@ class User extends Authenticatable implements HasLocalePreference
     public function jobPosition(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'position_id');
+    }
+
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'manager_id');
     }
 
     public function homeDashboard(): BelongsTo

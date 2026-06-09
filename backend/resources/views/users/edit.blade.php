@@ -154,6 +154,24 @@
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <div>
+                    <label for="manager_id" class="form-label">{{ __('users.manager') }}</label>
+                    <select name="manager_id" id="manager_id"
+                            class="form-input @error('manager_id') form-input-error @enderror">
+                        <option value="">—</option>
+                        @foreach ($allUsers as $u)
+                            <option value="{{ $u->id }}" @selected(old('manager_id', $user->manager_id) == $u->id)>
+                                {{ $u->first_name }} {{ $u->last_name }} ({{ $u->email }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.manager_hint') }}</p>
+                    @error('manager_id')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <div>
                     <label for="phone" class="form-label">{{ __('users.phone') }}</label>
                     <input type="tel" name="phone" id="phone" value="{{ old('phone', $user->phone) }}" maxlength="50"

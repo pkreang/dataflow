@@ -129,8 +129,8 @@ class WorkflowController extends Controller
             'stages' => 'required|array|min:1',
             'stages.*.step_no' => 'required|integer|min:1',
             'stages.*.name' => 'required|string|max:255',
-            'stages.*.approver_type' => 'required|in:role,user,position',
-            'stages.*.approver_ref' => 'required|string|max:255',
+            'stages.*.approver_type' => 'required|in:role,user,position,direct_manager',
+            'stages.*.approver_ref' => 'nullable|string|max:255',
             'stages.*.approver_rules' => 'nullable|string',
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
@@ -185,8 +185,8 @@ class WorkflowController extends Controller
             'stages' => 'required|array|min:1',
             'stages.*.step_no' => 'required|integer|min:1',
             'stages.*.name' => 'required|string|max:255',
-            'stages.*.approver_type' => 'required|in:role,user,position',
-            'stages.*.approver_ref' => 'required|string|max:255',
+            'stages.*.approver_type' => 'required|in:role,user,position,direct_manager',
+            'stages.*.approver_ref' => 'nullable|string|max:255',
             'stages.*.approver_rules' => 'nullable|string',
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
@@ -231,8 +231,8 @@ class WorkflowController extends Controller
         $validated = $request->validate([
             'step_no' => 'required|integer|min:1',
             'name' => 'required|string|max:255',
-            'approver_type' => 'required|in:role,user,position',
-            'approver_ref' => 'required|string|max:255',
+            'approver_type' => 'required|in:role,user,position,direct_manager',
+            'approver_ref' => 'nullable|string|max:255',
             'min_approvals' => 'required|integer|min:1',
             'is_active' => 'nullable|boolean',
         ]);
@@ -287,6 +287,10 @@ class WorkflowController extends Controller
         foreach ($stages as $index => $stage) {
             $type = $stage['approver_type'] ?? null;
             $ref = (string) ($stage['approver_ref'] ?? '');
+
+            if ($type === 'direct_manager') {
+                continue; // resolved at submit time from requester's manager_id
+            }
 
             if ($type === 'role' && ! in_array($ref, $roleNames, true)) {
                 throw ValidationException::withMessages([

@@ -269,6 +269,12 @@ class UserController extends Controller implements HasMiddleware
             ->get();
 
         $canEditEmail = PasswordCapabilityService::canEditEmailInApp($user);
+        $allUsers = User::query()
+            ->where('is_active', true)
+            ->where('id', '!=', $user->id)
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get(['id', 'first_name', 'last_name', 'email']);
 
         return view('users.edit', [
             'user' => $user,
@@ -279,6 +285,7 @@ class UserController extends Controller implements HasMiddleware
             'positions' => $positions,
             'departments' => $departments,
             'canEditEmail' => $canEditEmail,
+            'allUsers' => $allUsers,
         ]);
     }
 
@@ -300,6 +307,11 @@ class UserController extends Controller implements HasMiddleware
             'last_name' => 'required|string|max:255',
             'department_id' => 'required|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
+            'manager_id' => ['nullable', 'exists:users,id', function ($attr, $value, $fail) use ($user) {
+                if ($value && (int) $value === (int) $user->id) {
+                    $fail(__('users.manager_cannot_be_self'));
+                }
+            }],
             'phone' => 'nullable|string|max:50',
             'remark' => 'nullable|string|max:1000',
         ];
@@ -313,6 +325,7 @@ class UserController extends Controller implements HasMiddleware
             'last_name' => $request->last_name,
             'department_id' => $request->department_id,
             'position_id' => $request->position_id,
+            'manager_id' => $request->filled('manager_id') ? (int) $request->manager_id : null,
             'phone' => $request->phone,
             'remark' => $request->remark,
             'is_active' => $request->boolean('is_active', true),
