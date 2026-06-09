@@ -120,6 +120,16 @@ class ApprovalController extends Controller
             return back()->withErrors(['approval' => $message]);
         }
 
+        // Log approval/rejection to submission activity trail (only on success)
+        $submissionId = $instance->formSubmission?->id;
+        if ($submissionId) {
+            $meta = [];
+            if (! empty($validated['comment'])) {
+                $meta['comment'] = $validated['comment'];
+            }
+            SubmissionActivityLog::record($submissionId, $userId, $action, $meta);
+        }
+
         $fresh = $instance->fresh(['steps']);
         $currentStep = $fresh->steps->firstWhere('step_no', $instance->current_step_no);
         $minApprovals = $currentStep?->min_approvals ?? 1;
