@@ -39,6 +39,8 @@ class IndustryTemplateSeeder extends Seeder
             ExpenseClaimTemplateSeeder::class,
             MemoTemplateSeeder::class,
             ITRequestTemplateSeeder::class,
+            QuotationTemplateSeeder::class,
+            MeetingRoomTemplateSeeder::class,
             HomeDashboardSeeder::class,
         ]);
     }
