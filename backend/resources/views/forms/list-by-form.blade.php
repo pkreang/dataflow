@@ -152,7 +152,10 @@
                     // Row surfaced because the viewer approves it (not owns/edits it).
                     $isMineRow = (int) $submission->user_id === $viewer['id']
                         || $submission->isAssignedEditor($viewer['id']);
-                    $awaitingMyApproval = ! $isMineRow && ! $viewer['is_super_admin'];
+                    $awaitingMyApproval = ! $isMineRow
+                        && ! $viewer['is_super_admin']
+                        && $rowIsRelatedApprover
+                        && ($submission->instance?->status === 'pending');
                 @endphp
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
                     @if($hasDrafts)
