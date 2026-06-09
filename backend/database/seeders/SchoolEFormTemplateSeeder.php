@@ -45,6 +45,7 @@ class SchoolEFormTemplateSeeder extends Seeder
             ->whereNotIn('document_type', self::SCHOOL_DOCUMENT_TYPE_CODES)
             ->delete();
 
+        $this->seedCompany();
         $this->seedDepartments();
 
         // Ensure the shared `leave_type` lookup list exists (idempotent — same key
@@ -273,6 +274,27 @@ class SchoolEFormTemplateSeeder extends Seeder
             [
                 'use_amount_condition' => false,
                 'workflow_id' => $workflow->id,
+            ]
+        );
+    }
+
+    private function seedCompany(): void
+    {
+        $company = \App\Models\Company::updateOrCreate(
+            ['code' => 'SCH_DEMO'],
+            [
+                'name'      => 'โรงเรียนสาธิต (Demo)',
+                'tax_id'    => '0000000000000',
+                'is_active' => true,
+            ]
+        );
+
+        \App\Models\Branch::updateOrCreate(
+            ['code' => 'SCH_MAIN'],
+            [
+                'company_id' => $company->id,
+                'name'       => 'สาขาหลัก',
+                'is_active'  => true,
             ]
         );
     }
