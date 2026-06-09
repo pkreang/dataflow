@@ -14,6 +14,7 @@ use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentType;
+use App\Models\OrgUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -100,6 +101,40 @@ class ApprovalFlowService
                     }
                     $stepType = 'user';
                     $stepRef = (string) $requesterUser->manager_id;
+                }
+
+                // Eager-resolve org_head: head of user's org unit.
+                if ($stage->approver_type === 'org_head') {
+                    $requesterUser ??= User::find($requesterUserId);
+                    $orgUnit = OrgUnit::find($requesterUser?->org_unit_id);
+                    if (! $orgUnit?->head_user_id) {
+                        throw new RuntimeException(__('common.workflow_no_org_head'));
+                    }
+                    $stepType = 'user';
+                    $stepRef = (string) $orgUnit->head_user_id;
+                }
+
+                // Eager-resolve org_parent_head: head of user's org unit's parent (1 level up).
+                if ($stage->approver_type === 'org_parent_head') {
+                    $requesterUser ??= User::find($requesterUserId);
+                    $parent = OrgUnit::find($requesterUser?->org_unit_id)?->parent;
+                    if (! $parent?->head_user_id) {
+                        throw new RuntimeException(__('common.workflow_no_org_parent'));
+                    }
+                    $stepType = 'user';
+                    $stepRef = (string) $parent->head_user_id;
+                }
+
+                // Eager-resolve org_n_up: head of ancestor N levels above user's org unit.
+                if ($stage->approver_type === 'org_n_up') {
+                    $n = max(1, (int) $stage->approver_ref);
+                    $requesterUser ??= User::find($requesterUserId);
+                    $unit = OrgUnit::find($requesterUser?->org_unit_id)?->nthAncestor($n);
+                    if (! $unit?->head_user_id) {
+                        throw new RuntimeException(__('common.workflow_no_org_unit_at_level'));
+                    }
+                    $stepType = 'user';
+                    $stepRef = (string) $unit->head_user_id;
                 }
 
                 // override: requester optionally substitutes a specific approver.

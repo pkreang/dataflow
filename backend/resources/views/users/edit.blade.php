@@ -173,6 +173,23 @@
                 </div>
 
                 <div>
+                    <label for="org_unit_id" class="form-label">{{ __('users.org_unit') }}</label>
+                    <select name="org_unit_id" id="org_unit_id"
+                            class="form-input @error('org_unit_id') form-input-error @enderror">
+                        <option value="">—</option>
+                        @foreach ($orgUnits as $unit)
+                            <option value="{{ $unit->id }}" @selected(old('org_unit_id', $user->org_unit_id) == $unit->id)>
+                                {{ $unit->name }} ({{ $unit->auto_code }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.org_unit_hint') }}</p>
+                    @error('org_unit_id')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
                     <label for="phone" class="form-label">{{ __('users.phone') }}</label>
                     <input type="tel" name="phone" id="phone" value="{{ old('phone', $user->phone) }}" maxlength="50"
                            placeholder="{{ __('users.placeholder_phone') }}"

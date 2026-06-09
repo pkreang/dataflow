@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\Setting;
 use App\Models\User;
@@ -276,6 +277,8 @@ class UserController extends Controller implements HasMiddleware
             ->orderBy('last_name')
             ->get(['id', 'first_name', 'last_name', 'email']);
 
+        $orgUnits = OrgUnit::where('is_active', true)->orderBy('name')->get();
+
         return view('users.edit', [
             'user' => $user,
             'roles' => $roles,
@@ -286,6 +289,7 @@ class UserController extends Controller implements HasMiddleware
             'departments' => $departments,
             'canEditEmail' => $canEditEmail,
             'allUsers' => $allUsers,
+            'orgUnits' => $orgUnits,
         ]);
     }
 
@@ -312,6 +316,7 @@ class UserController extends Controller implements HasMiddleware
                     $fail(__('users.manager_cannot_be_self'));
                 }
             }],
+            'org_unit_id' => 'nullable|exists:org_units,id',
             'phone' => 'nullable|string|max:50',
             'remark' => 'nullable|string|max:1000',
         ];
@@ -326,6 +331,7 @@ class UserController extends Controller implements HasMiddleware
             'department_id' => $request->department_id,
             'position_id' => $request->position_id,
             'manager_id' => $request->filled('manager_id') ? (int) $request->manager_id : null,
+            'org_unit_id' => $request->filled('org_unit_id') ? (int) $request->org_unit_id : null,
             'phone' => $request->phone,
             'remark' => $request->remark,
             'is_active' => $request->boolean('is_active', true),

@@ -24,6 +24,8 @@ return [
     'manager' => 'Direct Manager',
     'manager_hint' => 'Used for "Direct Manager (org chart)" workflow routing.',
     'manager_cannot_be_self' => 'You cannot set yourself as your own manager.',
+    'org_unit' => 'Org Unit',
+    'org_unit_hint' => 'Used for org-tree-based workflow routing (org_head / org_parent_head / org_n_up).',
     'phone' => 'Phone',
     'placeholder_phone' => '',
     'placeholder_remark' => '',

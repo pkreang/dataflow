@@ -126,6 +126,9 @@
                                     <option value="user">{{ __('common.workflow_approver_user') }}</option>
                                     <option value="role">{{ __('common.workflow_approver_role') }}</option>
                                     <option value="direct_manager">{{ __('common.workflow_approver_direct_manager') }}</option>
+                                    <option value="org_head">{{ __('common.workflow_approver_org_head') }}</option>
+                                    <option value="org_parent_head">{{ __('common.workflow_approver_org_parent_head') }}</option>
+                                    <option value="org_n_up">{{ __('common.workflow_approver_org_n_up') }}</option>
                                 </select>
                             </div>
                             <div>
@@ -161,6 +164,25 @@
                                     <div>
                                         <input type="hidden" :name="`stages[${idx}][approver_ref]`" value="" />
                                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_direct_manager_note') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="stage.approver_type === 'org_head'">
+                                    <div>
+                                        <input type="hidden" :name="`stages[${idx}][approver_ref]`" value="" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_org_head_note') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="stage.approver_type === 'org_parent_head'">
+                                    <div>
+                                        <input type="hidden" :name="`stages[${idx}][approver_ref]`" value="" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_org_parent_head_note') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="stage.approver_type === 'org_n_up'">
+                                    <div>
+                                        <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">{{ __('common.workflow_org_n_up_levels') }}</label>
+                                        <input type="number" min="1" max="10" :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @input="checkValidity()" required class="form-input" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_org_n_up_note') }}</p>
                                     </div>
                                 </template>
                             </div>
@@ -346,7 +368,7 @@
             checkValidity() {
                 this.isValid = this.stages.length > 0 && this.stages.every((s) =>
                     String(s.name || '').trim() !== '' &&
-                    (s.approver_type === 'direct_manager' || String(s.approver_ref || '').trim() !== '') &&
+                    (['direct_manager','org_head','org_parent_head'].includes(s.approver_type) || String(s.approver_ref || '').trim() !== '') &&
                     Number(s.min_approvals || 0) >= 1
                 );
             },
@@ -360,6 +382,9 @@
                 if (t === 'user') return i.typeUser;
                 if (t === 'position') return i.typePosition;
                 if (t === 'direct_manager') return i.typeDirectManager || '{{ __('common.workflow_approver_direct_manager') }}';
+                if (t === 'org_head') return '{{ __('common.workflow_approver_org_head') }}';
+                if (t === 'org_parent_head') return '{{ __('common.workflow_approver_org_parent_head') }}';
+                if (t === 'org_n_up') return '{{ __('common.workflow_approver_org_n_up') }}';
                 return t || '—';
             },
             positionUsersPreview(positionId) {

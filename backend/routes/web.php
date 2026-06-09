@@ -24,6 +24,7 @@ use App\Http\Controllers\Web\NotificationSettingController;
 use App\Http\Controllers\Web\PasswordResetController;
 use App\Http\Controllers\Web\PermissionController;
 use App\Http\Controllers\Web\PocSchemaFirstController;
+use App\Http\Controllers\Web\OrgUnitController;
 use App\Http\Controllers\Web\PositionController;
 use App\Http\Controllers\Web\PurchaseOrderController;
 use App\Http\Controllers\Web\PurchaseRequestController;
@@ -311,6 +312,15 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/positions/{position}/edit', [PositionController::class, 'edit'])->name('settings.positions.edit');
         Route::put('/settings/positions/{position}', [PositionController::class, 'update'])->name('settings.positions.update');
         Route::delete('/settings/positions/{position}', [PositionController::class, 'destroy'])->name('settings.positions.destroy');
+
+        // Org Units (hierarchical org chart)
+        Route::get('/settings/org-units', [OrgUnitController::class, 'index'])->name('settings.org-units.index');
+        Route::get('/settings/org-units/tree', [OrgUnitController::class, 'treeJson'])->name('settings.org-units.tree');
+        Route::get('/settings/org-units/create', [OrgUnitController::class, 'create'])->name('settings.org-units.create');
+        Route::post('/settings/org-units', [OrgUnitController::class, 'store'])->name('settings.org-units.store');
+        Route::get('/settings/org-units/{orgUnit}/edit', [OrgUnitController::class, 'edit'])->name('settings.org-units.edit');
+        Route::put('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'update'])->name('settings.org-units.update');
+        Route::delete('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'destroy'])->name('settings.org-units.destroy');
 
         // Equipment Categories
         Route::get('/settings/equipment', [EquipmentController::class, 'index'])->name('settings.equipment.index');

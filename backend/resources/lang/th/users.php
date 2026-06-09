@@ -24,6 +24,8 @@ return [
     'manager' => 'ผู้บังคับบัญชาโดยตรง',
     'manager_hint' => 'ใช้กำหนดเส้นทาง workflow ประเภท "หัวหน้าโดยตรง (org chart)"',
     'manager_cannot_be_self' => 'ไม่สามารถตั้งตัวเองเป็นผู้บังคับบัญชาได้',
+    'org_unit' => 'Org Unit (โครงสร้างองค์กร)',
+    'org_unit_hint' => 'ใช้กำหนดเส้นทาง workflow ประเภท org_head / org_parent_head / org_n_up',
     'phone' => 'เบอร์โทรศัพท์',
     'placeholder_phone' => '',
     'placeholder_remark' => '',

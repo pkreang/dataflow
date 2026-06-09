@@ -102,6 +102,18 @@ class NavigationMenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'id' => 65,
+                'parent_id' => 2,
+                'label' => 'Org Chart',
+                'label_en' => 'Org Chart',
+                'label_th' => 'โครงสร้างองค์กร',
+                'icon' => 'building-office',
+                'route' => '/settings/org-units',
+                'permission' => 'manage_settings',
+                'sort_order' => 4,
+                'is_active' => true,
+            ],
+            [
                 'id' => 3,
                 'parent_id' => 2,
                 'label' => 'Users',
@@ -110,7 +122,7 @@ class NavigationMenuSeeder extends Seeder
                 'icon' => 'users',
                 'route' => '/users',
                 'permission' => 'user_access.read',
-                'sort_order' => 4,
+                'sort_order' => 5,
                 'is_active' => true,
             ],
             [

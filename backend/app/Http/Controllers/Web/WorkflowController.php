@@ -129,7 +129,7 @@ class WorkflowController extends Controller
             'stages' => 'required|array|min:1',
             'stages.*.step_no' => 'required|integer|min:1',
             'stages.*.name' => 'required|string|max:255',
-            'stages.*.approver_type' => 'required|in:role,user,position,direct_manager',
+            'stages.*.approver_type' => 'required|in:role,user,position,direct_manager,org_head,org_parent_head,org_n_up',
             'stages.*.approver_ref' => 'nullable|string|max:255',
             'stages.*.approver_rules' => 'nullable|string',
             'stages.*.min_approvals' => 'required|integer|min:1',
@@ -185,7 +185,7 @@ class WorkflowController extends Controller
             'stages' => 'required|array|min:1',
             'stages.*.step_no' => 'required|integer|min:1',
             'stages.*.name' => 'required|string|max:255',
-            'stages.*.approver_type' => 'required|in:role,user,position,direct_manager',
+            'stages.*.approver_type' => 'required|in:role,user,position,direct_manager,org_head,org_parent_head,org_n_up',
             'stages.*.approver_ref' => 'nullable|string|max:255',
             'stages.*.approver_rules' => 'nullable|string',
             'stages.*.min_approvals' => 'required|integer|min:1',
@@ -231,7 +231,7 @@ class WorkflowController extends Controller
         $validated = $request->validate([
             'step_no' => 'required|integer|min:1',
             'name' => 'required|string|max:255',
-            'approver_type' => 'required|in:role,user,position,direct_manager',
+            'approver_type' => 'required|in:role,user,position,direct_manager,org_head,org_parent_head,org_n_up',
             'approver_ref' => 'nullable|string|max:255',
             'min_approvals' => 'required|integer|min:1',
             'is_active' => 'nullable|boolean',
@@ -290,6 +290,10 @@ class WorkflowController extends Controller
 
             if ($type === 'direct_manager') {
                 continue; // resolved at submit time from requester's manager_id
+            }
+
+            if (in_array($type, ['org_head', 'org_parent_head', 'org_n_up'], true)) {
+                continue; // resolved at submit time from requester's org_unit_id
             }
 
             if ($type === 'role' && ! in_array($ref, $roleNames, true)) {
