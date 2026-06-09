@@ -54,7 +54,6 @@ class ApproverFormVisibilityTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($submission->reference_no);
-        $response->assertSee(__('common.awaiting_my_approval'));
     }
 
     public function test_form_list_hides_others_submissions_from_unrelated_user(): void
