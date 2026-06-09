@@ -21,7 +21,7 @@
     </div>
     @endif
 
-    @if(session('warning'))
+    @if(session('warning') && empty($passwordChangeMandatory))
     <div class="alert-warning mb-6">
         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
