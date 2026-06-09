@@ -47,6 +47,7 @@ class SchoolEFormTemplateSeeder extends Seeder
 
         $this->seedCompany();
         $this->seedDepartments();
+        $this->seedDirectorPosition();
 
         // Ensure the shared `leave_type` lookup list exists (idempotent — same key
         // as BodindechaDemoSeeder so running either seeder is safe).
@@ -68,18 +69,14 @@ class SchoolEFormTemplateSeeder extends Seeder
             );
         }
 
+        $leaveFields = $this->leaveFormFields();
+
         $leaveForm = $this->syncForm(
             'school_leave_default',
-            'คำขอลา (ตัวอย่าง)',
+            'คำขอลา (ครู/บุคลากร)',
             'school_leave_request',
-            'เทมเพลตโรงเรียน: ปรับฟิลด์และ workflow ในเมนูตั้งค่า',
-            [
-                ['field_key' => 'title', 'label' => 'หัวเรื่อง', 'field_type' => 'text', 'is_required' => true, 'sort_order' => 1],
-                ['field_key' => 'leave_type', 'label' => 'ประเภทการลา', 'field_type' => 'lookup', 'is_required' => true, 'sort_order' => 2, 'options' => ['source' => 'leave_type']],
-                ['field_key' => 'start_date', 'label' => 'วันเริ่ม', 'field_type' => 'date', 'is_required' => true, 'sort_order' => 3],
-                ['field_key' => 'end_date', 'label' => 'วันสิ้นสุด', 'field_type' => 'date', 'is_required' => true, 'sort_order' => 4],
-                ['field_key' => 'detail', 'label' => 'เหตุผล / รายละเอียด', 'field_type' => 'textarea', 'is_required' => false, 'sort_order' => 5],
-            ]
+            'เทมเพลตโรงเรียน tier 1: หัวหน้าฝ่าย → รองผอ.',
+            $leaveFields
         );
 
         $procForm = $this->syncForm(
@@ -119,6 +116,38 @@ class SchoolEFormTemplateSeeder extends Seeder
         $this->syncGlobalPolicy($leaveForm, $wLeave);
         $this->syncGlobalPolicy($procForm, $wProc);
         $this->syncGlobalPolicy($actForm, $wAct);
+
+        // tier 2: หัวหน้าฝ่าย → รองผอ. → ผอ.
+        $leaveHeadForm = $this->syncForm(
+            'school_leave_head_default',
+            'ใบลา (หัวหน้าฝ่าย)',
+            'school_leave_request',
+            'เทมเพลตโรงเรียน tier 2: รองผอ. → ผอ.',
+            $leaveFields
+        );
+        $wLeaveHead = $this->syncWorkflow(
+            'โรงเรียน — อนุมัติการลา (หัวหน้าฝ่าย)',
+            'school_leave_request',
+            'เทมเพลตโรงเรียน tier 2: รองผู้อำนวยการ → ผู้อำนวยการ',
+            $this->headApprovalStages()
+        );
+        $this->syncGlobalPolicy($leaveHeadForm, $wLeaveHead);
+
+        // tier 3: รองผอ./ผอ. → ผอ. อย่างเดียว
+        $leaveExecForm = $this->syncForm(
+            'school_leave_exec_default',
+            'ใบลา (ผู้บริหาร)',
+            'school_leave_request',
+            'เทมเพลตโรงเรียน tier 3: ผู้อำนวยการอนุมัติ',
+            $leaveFields
+        );
+        $wLeaveExec = $this->syncWorkflow(
+            'โรงเรียน — อนุมัติการลา (ผู้บริหาร)',
+            'school_leave_request',
+            'เทมเพลตโรงเรียน tier 3: ผู้อำนวยการอนุมัติ',
+            $this->execApprovalStages()
+        );
+        $this->syncGlobalPolicy($leaveExecForm, $wLeaveExec);
 
         $this->command?->info('SchoolEFormTemplateSeeder: school departments, forms, workflows, policies.');
     }
@@ -276,6 +305,56 @@ class SchoolEFormTemplateSeeder extends Seeder
                 'workflow_id' => $workflow->id,
             ]
         );
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function leaveFormFields(): array
+    {
+        return [
+            ['field_key' => 'title',      'label' => 'หัวเรื่อง',                'field_type' => 'text',     'is_required' => true,  'sort_order' => 1],
+            ['field_key' => 'leave_type', 'label' => 'ประเภทการลา',             'field_type' => 'lookup',   'is_required' => true,  'sort_order' => 2, 'options' => ['source' => 'leave_type']],
+            ['field_key' => 'start_date', 'label' => 'วันเริ่ม',                'field_type' => 'date',     'is_required' => true,  'sort_order' => 3],
+            ['field_key' => 'end_date',   'label' => 'วันสิ้นสุด',              'field_type' => 'date',     'is_required' => true,  'sort_order' => 4],
+            ['field_key' => 'detail',     'label' => 'เหตุผล / รายละเอียด',    'field_type' => 'textarea', 'is_required' => false, 'sort_order' => 5],
+        ];
+    }
+
+    private function seedDirectorPosition(): void
+    {
+        Position::query()->updateOrCreate(
+            ['code' => 'SCH_DIRECTOR'],
+            ['name' => 'ผู้อำนวยการ', 'is_active' => true]
+        );
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function headApprovalStages(): array
+    {
+        $vice     = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
+        $director = Position::query()->where('code', 'SCH_DIRECTOR')->first();
+
+        if ($vice && $director) {
+            return [
+                ['step_no' => 1, 'name' => 'รองผู้อำนวยการอนุมัติ', 'approver_type' => 'position', 'approver_ref' => (string) $vice->id],
+                ['step_no' => 2, 'name' => 'ผู้อำนวยการอนุมัติ',    'approver_type' => 'position', 'approver_ref' => (string) $director->id],
+            ];
+        }
+
+        return $this->schoolApprovalStages();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function execApprovalStages(): array
+    {
+        $director = Position::query()->where('code', 'SCH_DIRECTOR')->first();
+
+        if ($director) {
+            return [
+                ['step_no' => 1, 'name' => 'ผู้อำนวยการอนุมัติ', 'approver_type' => 'position', 'approver_ref' => (string) $director->id],
+            ];
+        }
+
+        return $this->schoolApprovalStages();
     }
 
     private function seedCompany(): void
