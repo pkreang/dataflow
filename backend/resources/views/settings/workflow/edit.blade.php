@@ -205,7 +205,7 @@
                         </div>
                         {{-- Extra approver rules (multi-source) --}}
                         <template x-for="(rule, ri) in stage.approver_rules" :key="ri">
-                            <div class="grid gap-3 items-center" style="grid-template-columns: 1fr 100px 2fr 60px">
+                            <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr 2fr auto auto">
                                 <div class="flex items-center">
                                     <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full">หรือ</span>
                                 </div>
@@ -234,6 +234,11 @@
                                         </template>
                                     </select>
                                 </div>
+                                <div class="w-14" x-show="rule.type !== 'user'" title="{{ __('common.workflow_rule_min_count_hint') }}">
+                                    <input type="number" min="1" x-model.number="rule.min_count"
+                                           class="form-input text-sm text-center w-full" />
+                                </div>
+                                <div x-show="rule.type === 'user'" class="w-14"></div>
                                 <div class="flex justify-center">
                                     <button type="button" @click="stage.approver_rules.splice(ri, 1)"
                                             class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 rounded">ลบ</button>
@@ -242,7 +247,7 @@
                         </template>
                         <div>
                             <button type="button"
-                                    @click="if (!stage.approver_rules) stage.approver_rules = []; stage.approver_rules.push({type:'role', ref:''})"
+                                    @click="if (!stage.approver_rules) stage.approver_rules = []; stage.approver_rules.push({type:'role', ref:'', min_count:1})"
                                     class="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1">
                                 + เพิ่มแหล่งอนุมัติ (OR)
                             </button>

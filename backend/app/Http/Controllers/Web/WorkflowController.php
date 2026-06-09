@@ -157,7 +157,7 @@ class WorkflowController extends Controller
                     'name' => $stage['name'],
                     'approver_type' => $stage['approver_type'],
                     'approver_ref' => $stage['approver_ref'] ?? '',
-                    'approver_rules' => ($rulesJson && $rulesJson !== '[]') ? json_decode($rulesJson, true) : null,
+                    'approver_rules' => $this->sanitizeApproverRules(($rulesJson && $rulesJson !== '[]') ? json_decode($rulesJson, true) : null),
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'allow_requester_override' => (bool) ($stage['allow_requester_override'] ?? false),
@@ -214,7 +214,7 @@ class WorkflowController extends Controller
                     'name' => $stage['name'],
                     'approver_type' => $stage['approver_type'],
                     'approver_ref' => $stage['approver_ref'] ?? '',
-                    'approver_rules' => ($rulesJson && $rulesJson !== '[]') ? json_decode($rulesJson, true) : null,
+                    'approver_rules' => $this->sanitizeApproverRules(($rulesJson && $rulesJson !== '[]') ? json_decode($rulesJson, true) : null),
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'allow_requester_override' => (bool) ($stage['allow_requester_override'] ?? false),
@@ -276,6 +276,17 @@ class WorkflowController extends Controller
         if (count($steps) !== count(array_unique($steps))) {
             abort(422, __('common.workflow_duplicate_step'));
         }
+    }
+
+    private function sanitizeApproverRules(?array $rules): ?array
+    {
+        if (! $rules) {
+            return null;
+        }
+        return array_map(function (array $rule) {
+            $rule['min_count'] = max(1, (int) ($rule['min_count'] ?? 1));
+            return $rule;
+        }, $rules);
     }
 
     private function validateApproverRefs(array $stages): void

@@ -478,6 +478,7 @@ return [
     'workflow_org_parent_head_note' => "System routes to the head of the org unit one level above the submitter's unit.",
     'workflow_org_n_up_note' => 'System walks N levels up the org tree and routes to the head of that unit.',
     'workflow_org_n_up_levels' => 'Levels to walk up (N)',
+    'workflow_rule_min_count_hint' => 'Minimum number of people from this source who must approve (default 1)',
     'workflow_no_org_head' => "Submitter's org unit has no head assigned. Please configure it in Org Chart settings.",
     'workflow_no_org_parent' => "Submitter's org unit has no parent unit, or the parent has no head assigned.",
     'workflow_no_org_unit_at_level' => 'No org unit found at the specified level, or that unit has no head assigned.',

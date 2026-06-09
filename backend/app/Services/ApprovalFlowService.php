@@ -533,17 +533,24 @@ class ApprovalFlowService
     private function countSatisfiedSources(ApprovalInstanceStep $step, array $approvedBy): int
     {
         $allRules = array_merge(
-            [['type' => $step->approver_type, 'ref' => $step->approver_ref]],
-            $step->approver_rules ?? []
+            [['type' => $step->approver_type, 'ref' => $step->approver_ref, 'min_count' => 1]],
+            collect($step->approver_rules ?? [])
+                ->map(fn ($r) => array_merge(['min_count' => 1], (array) $r))
+                ->all()
         );
+
         $satisfied = 0;
         foreach ($allRules as $rule) {
+            $need = max(1, (int) ($rule['min_count'] ?? 1));
+            $matched = 0;
             foreach ($approvedBy as $ab) {
                 $u = User::find($ab['user_id']);
                 if ($u && $this->userMatchesApproverRule($rule['type'] ?? '', $rule['ref'] ?? '', $ab['user_id'], $u)) {
-                    $satisfied++;
-                    break;
+                    $matched++;
                 }
+            }
+            if ($matched >= $need) {
+                $satisfied++;
             }
         }
         return $satisfied;

@@ -478,6 +478,7 @@ return [
     'workflow_org_parent_head_note' => 'ระบบจะส่งให้หัวหน้าของ Unit เหนือขึ้นไป 1 ชั้นใน org tree',
     'workflow_org_n_up_note' => 'ระบบจะเดิน org tree ขึ้น N ชั้นแล้วส่งให้หัวหน้าของ unit นั้น',
     'workflow_org_n_up_levels' => 'จำนวนชั้นที่ขึ้น (N)',
+    'workflow_rule_min_count_hint' => 'จำนวนคนขั้นต่ำจาก source นี้ที่ต้องอนุมัติ (ค่าเริ่มต้น 1)',
     'workflow_no_org_head' => 'org unit ของผู้ยื่นยังไม่มีหัวหน้า — กรุณาตั้งค่าที่โครงสร้างองค์กรก่อน',
     'workflow_no_org_parent' => 'org unit ของผู้ยื่นไม่มี parent unit หรือ parent ไม่มีหัวหน้า',
     'workflow_no_org_unit_at_level' => 'ไม่พบ org unit ที่ระดับที่กำหนด หรือ unit นั้นไม่มีหัวหน้า',
