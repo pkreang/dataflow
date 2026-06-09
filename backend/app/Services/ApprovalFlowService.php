@@ -37,14 +37,15 @@ class ApprovalFlowService
         array $payload = [],
         ?string $formKey = null,
         ?float $amount = null,
-        array $pickedApprovers = []
+        array $pickedApprovers = [],
+        int $positionId = 0
     ): ApprovalInstance {
         if ($departmentId === null) {
             $departmentId = User::find($requesterUserId)?->department_id;
         }
 
         $routingMode = $this->routingMode($documentType);
-        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode);
+        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, $positionId);
 
         $binding = null;
         if ($resolvedWorkflowId === null) {
@@ -171,7 +172,8 @@ class ApprovalFlowService
         ?int $departmentId,
         ?string $formKey,
         ?float $amount,
-        string $routingMode
+        string $routingMode,
+        int $positionId = 0
     ): ?int {
         if (! $formKey) {
             return null;
@@ -190,12 +192,24 @@ class ApprovalFlowService
             ->with('ranges')
             ->where('form_id', $form->id);
 
-        $policyQuery->where(function ($query) use ($departmentId) {
-            $query->whereNull('department_id');
+        // Priority: position-specific > department-specific > global
+        // Collect all policies that could match, then pick most specific.
+        $policyQuery->where(function ($query) use ($departmentId, $positionId) {
+            // Global fallback always included
+            $query->where(function ($q) {
+                $q->whereNull('department_id')->whereNull('position_id');
+            });
             if ($departmentId) {
-                $query->orWhere('department_id', $departmentId);
+                $query->orWhere(function ($q) use ($departmentId) {
+                    $q->where('department_id', $departmentId)->whereNull('position_id');
+                });
             }
-        })->orderByRaw('department_id IS NULL ASC');
+            if ($positionId) {
+                $query->orWhere('position_id', $positionId);
+            }
+        })
+        ->orderByRaw('(position_id IS NOT NULL) DESC')
+        ->orderByRaw('(department_id IS NOT NULL) DESC');
 
         $policy = $policyQuery->first();
 

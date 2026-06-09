@@ -55,6 +55,18 @@
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('common.policy_department_hint') }}</p>
             </div>
 
+            {{-- Position --}}
+            <div class="max-w-md">
+                <label class="form-label">{{ __('common.position') }} <span class="text-slate-400 font-normal">({{ __('common.optional') }})</span></label>
+                <select name="position_id" class="form-input">
+                    <option value="">—</option>
+                    @foreach($positions as $position)
+                        <option value="{{ $position->id }}" @selected(old('position_id', $policy->position_id) == $position->id)>{{ $position->name }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('common.policy_position_hint') }}</p>
+            </div>
+
             {{-- Mode Selection --}}
             <div>
                 <label class="form-label mb-3">{{ __('common.workflow') }}</label>

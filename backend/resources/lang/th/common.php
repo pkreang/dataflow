@@ -461,6 +461,7 @@ return [
     'workflow_policy_for' => 'นโยบายเวิร์กโฟลว์: :name',
     'department_optional' => 'ใช้สำหรับแผนก',
     'policy_department_hint' => 'ถ้าไม่เลือก = ใช้ทุกแผนก',
+    'policy_position_hint' => 'ถ้าไม่เลือก = ใช้ทุกตำแหน่ง — เมื่อเลือกตำแหน่งจะมีความสำคัญสูงกว่า policy ของแผนก',
     'policy_amount_field_key' => 'Field key ของยอดเงิน',
     'policy_amount_field_key_hint' => 'ชื่อ field ในฟอร์มที่เก็บยอดเงิน เช่น `total_amount` — ใช้สำหรับเลือก workflow ตามวงเงิน',
     'global_default' => 'ทุกแผนก',

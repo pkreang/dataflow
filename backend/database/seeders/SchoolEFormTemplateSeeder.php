@@ -71,11 +71,16 @@ class SchoolEFormTemplateSeeder extends Seeder
 
         $leaveFields = $this->leaveFormFields();
 
+        // Consolidate to 1 leave form — routing handled by position-based policies
+        DocumentForm::query()
+            ->whereIn('form_key', ['school_leave_head_default', 'school_leave_exec_default'])
+            ->delete();
+
         $leaveForm = $this->syncForm(
             'school_leave_default',
-            'คำขอลา (ครู/บุคลากร)',
+            'ใบลาโรงเรียน',
             'school_leave_request',
-            'เทมเพลตโรงเรียน tier 1: หัวหน้าฝ่าย → รองผอ.',
+            'ฟอร์มใบลาสำหรับทุกตำแหน่ง — routing อัตโนมัติตามตำแหน่งผู้ยื่น',
             $leaveFields
         );
 
@@ -109,45 +114,42 @@ class SchoolEFormTemplateSeeder extends Seeder
             ? 'เทมเพลตโรงเรียน: หัวหน้าฝ่ายวิชาการ → รองผู้อำนวยการ'
             : 'เทมเพลตโรงเรียน: ขั้นเดียวตามตำแหน่งหรือผู้ใช้ (ไม่ผูกกับ role approver)';
 
-        $wLeave = $this->syncWorkflow('โรงเรียน — อนุมัติการลา', 'school_leave_request', $flowHint, $stages);
-        $wProc = $this->syncWorkflow('โรงเรียน — อนุมัติขอซื้อ', 'school_procurement', $flowHint, $stages);
-        $wAct = $this->syncWorkflow('โรงเรียน — อนุมัติกิจกรรม', 'school_activity', $flowHint, $stages);
-
-        $this->syncGlobalPolicy($leaveForm, $wLeave);
-        $this->syncGlobalPolicy($procForm, $wProc);
-        $this->syncGlobalPolicy($actForm, $wAct);
-
-        // tier 2: หัวหน้าฝ่าย → รองผอ. → ผอ.
-        $leaveHeadForm = $this->syncForm(
-            'school_leave_head_default',
-            'ใบลา (หัวหน้าฝ่าย)',
-            'school_leave_request',
-            'เทมเพลตโรงเรียน tier 2: รองผอ. → ผอ.',
-            $leaveFields
-        );
-        $wLeaveHead = $this->syncWorkflow(
+        // Tier-1 workflow: ครู/บุคลากรทั่วไป → หัวหน้าฝ่าย → รองผอ.
+        $wLeave1 = $this->syncWorkflow('โรงเรียน — อนุมัติการลา', 'school_leave_request', $flowHint, $stages);
+        // Tier-2 workflow: หัวหน้าฝ่าย → รองผอ. → ผอ.
+        $wLeave2 = $this->syncWorkflow(
             'โรงเรียน — อนุมัติการลา (หัวหน้าฝ่าย)',
             'school_leave_request',
             'เทมเพลตโรงเรียน tier 2: รองผู้อำนวยการ → ผู้อำนวยการ',
             $this->headApprovalStages()
         );
-        $this->syncGlobalPolicy($leaveHeadForm, $wLeaveHead);
-
-        // tier 3: รองผอ./ผอ. → ผอ. อย่างเดียว
-        $leaveExecForm = $this->syncForm(
-            'school_leave_exec_default',
-            'ใบลา (ผู้บริหาร)',
-            'school_leave_request',
-            'เทมเพลตโรงเรียน tier 3: ผู้อำนวยการอนุมัติ',
-            $leaveFields
-        );
-        $wLeaveExec = $this->syncWorkflow(
+        // Tier-3 workflow: ผู้บริหาร → ผอ. อย่างเดียว
+        $wLeave3 = $this->syncWorkflow(
             'โรงเรียน — อนุมัติการลา (ผู้บริหาร)',
             'school_leave_request',
             'เทมเพลตโรงเรียน tier 3: ผู้อำนวยการอนุมัติ',
             $this->execApprovalStages()
         );
-        $this->syncGlobalPolicy($leaveExecForm, $wLeaveExec);
+        $wProc = $this->syncWorkflow('โรงเรียน — อนุมัติขอซื้อ', 'school_procurement', $flowHint, $stages);
+        $wAct = $this->syncWorkflow('โรงเรียน — อนุมัติกิจกรรม', 'school_activity', $flowHint, $stages);
+
+        // Leave form: global fallback → tier1; position-specific → tier2/tier3
+        $this->syncPolicy($leaveForm, null, null, $wLeave1);
+        $headPos  = Position::query()->where('code', 'SCH_ACAD_HEAD')->first();
+        $vicePos  = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
+        $dirPos   = Position::query()->where('code', 'SCH_DIRECTOR')->first();
+        if ($headPos) {
+            $this->syncPolicy($leaveForm, null, $headPos->id, $wLeave2);
+        }
+        if ($vicePos) {
+            $this->syncPolicy($leaveForm, null, $vicePos->id, $wLeave3);
+        }
+        if ($dirPos) {
+            $this->syncPolicy($leaveForm, null, $dirPos->id, $wLeave3);
+        }
+
+        $this->syncPolicy($procForm, null, null, $wProc);
+        $this->syncPolicy($actForm, null, null, $wAct);
 
         $this->command?->info('SchoolEFormTemplateSeeder: school departments, forms, workflows, policies.');
     }
@@ -293,16 +295,17 @@ class SchoolEFormTemplateSeeder extends Seeder
         return $form;
     }
 
-    private function syncGlobalPolicy(DocumentForm $form, ApprovalWorkflow $workflow): void
+    private function syncPolicy(DocumentForm $form, ?int $departmentId, ?int $positionId, ApprovalWorkflow $workflow): void
     {
         DocumentFormWorkflowPolicy::query()->updateOrCreate(
             [
-                'form_id' => $form->id,
-                'department_id' => null,
+                'form_id'       => $form->id,
+                'department_id' => $departmentId,
+                'position_id'   => $positionId,
             ],
             [
                 'use_amount_condition' => false,
-                'workflow_id' => $workflow->id,
+                'workflow_id'          => $workflow->id,
             ]
         );
     }

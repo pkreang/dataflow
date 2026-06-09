@@ -461,6 +461,7 @@ return [
     'workflow_policy_for' => 'Workflow policy: :name',
     'department_optional' => 'Apply to department',
     'policy_department_hint' => 'Leave empty to apply to all departments',
+    'policy_position_hint' => 'Leave empty to apply to all positions. When set, this policy wins over the department-only policy.',
     'policy_amount_field_key' => 'Amount field key',
     'policy_amount_field_key_hint' => 'The form field name that holds the amount value, e.g. `total_amount` — used to route to the correct workflow tier.',
     'global_default' => 'All departments',

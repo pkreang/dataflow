@@ -611,6 +611,7 @@ class DocumentFormSubmissionController extends Controller
         }
 
         try {
+            $positionId = (int) ($request->user()?->position_id ?? 0);
             $instance = $approvalFlowService->start(
                 documentType: $form->document_type,
                 departmentId: $submission->department_id,
@@ -620,6 +621,7 @@ class DocumentFormSubmissionController extends Controller
                 formKey: $form->form_key,
                 amount: $amount,
                 pickedApprovers: $pickedApprovers,
+                positionId: $positionId,
             );
         } catch (RuntimeException $e) {
             $message = $e->getMessage() === 'requester_pick_invalid_approver'
