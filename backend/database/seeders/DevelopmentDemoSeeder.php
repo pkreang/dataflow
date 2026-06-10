@@ -20,6 +20,7 @@ class DevelopmentDemoSeeder extends Seeder
             IndustryTemplateSeeder::class,
             DashboardSeeder::class,
             DemoPeopleSeeder::class,
+            OrgUnitSeeder::class,
         ]);
     }
 }
