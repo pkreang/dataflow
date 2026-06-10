@@ -20,6 +20,7 @@
     'min_approvals' => $s->min_approvals,
     'require_signature' => (bool) $s->require_signature,
     'allow_requester_override' => (bool) $s->allow_requester_override,
+    'escalation_after_days' => $s->escalation_after_days,
 ])->values()) }}, {{ Js::from($roles->values()) }}, {{ Js::from($users->values()) }}, {{ Js::from($positions->map(fn($p) => ['id' => (string) $p['id'], 'code' => $p['code'] ?? '', 'label' => $p['label'], 'users' => $p['users'] ?? []])->values()) }}, {{ Js::from([
     'untitled' => __('common.workflow_stage_untitled'),
     'minLabel' => __('common.workflow_preview_min_label'),
@@ -273,6 +274,16 @@
                                 <span>{{ __('common.workflow_allow_requester_override') }}</span>
                             </label>
                             @endif
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <label class="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ __('common.workflow_escalation_days') }}</label>
+                            <input type="number" min="1" max="365"
+                                   :name="`stages[${idx}][escalation_after_days]`"
+                                   :value="stage.escalation_after_days || ''"
+                                   @input="stage.escalation_after_days = $event.target.value ? parseInt($event.target.value) : null"
+                                   class="form-input w-20 text-center"
+                                   placeholder="—" />
+                            <span class="text-xs text-slate-400">{{ __('common.workflow_escalation_days_hint') }}</span>
                         </div>
                     </div>
                 </template>

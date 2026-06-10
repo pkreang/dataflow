@@ -106,4 +106,8 @@ return [
     'mail_encryption_ssl' => 'SSL (SMTPS)',
     'mail_from_address' => 'อีเมลผู้ส่ง',
     'mail_from_name' => 'ชื่อผู้ส่ง',
+    'escalation_reminder_title' => 'รออนุมัติ — กรุณาดำเนินการ',
+    'escalation_reminder_body' => 'เอกสาร :reference (ขั้น: :step) รออนุมัติมา :days วันแล้ว กรุณาตรวจสอบ',
+    'substitution_assigned_title' => 'คุณถูกกำหนดเป็นผู้อนุมัติแทน',
+    'substitution_assigned_body' => 'คุณจะอนุมัติแทน :from_name ตั้งแต่ :starts_at ถึง :ends_at',
 ];

@@ -106,4 +106,8 @@ return [
     'mail_encryption_ssl' => 'SSL (SMTPS)',
     'mail_from_address' => 'From address',
     'mail_from_name' => 'From name',
+    'escalation_reminder_title' => 'Approval Pending — Action Required',
+    'escalation_reminder_body' => 'Document :reference (step: :step) has been awaiting your approval for :days day(s). Please review it.',
+    'substitution_assigned_title' => 'You have been assigned as an approval substitute',
+    'substitution_assigned_body' => 'You will act as substitute for :from_name from :starts_at to :ends_at.',
 ];

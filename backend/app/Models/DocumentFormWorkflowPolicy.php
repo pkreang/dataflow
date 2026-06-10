@@ -16,6 +16,7 @@ class DocumentFormWorkflowPolicy extends Model
         'position_id',
         'use_amount_condition',
         'amount_field_key',
+        'field_conditions',
         'workflow_id',
     ];
 
@@ -23,6 +24,7 @@ class DocumentFormWorkflowPolicy extends Model
     {
         return [
             'use_amount_condition' => 'boolean',
+            'field_conditions'     => 'array',
         ];
     }
 

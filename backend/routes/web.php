@@ -26,6 +26,7 @@ use App\Http\Controllers\Web\PermissionController;
 use App\Http\Controllers\Web\PocSchemaFirstController;
 use App\Http\Controllers\Web\OrgUnitController;
 use App\Http\Controllers\Web\PositionController;
+use App\Http\Controllers\Web\UserSubstitutionController;
 use App\Http\Controllers\Web\PurchaseOrderController;
 use App\Http\Controllers\Web\PurchaseRequestController;
 use App\Http\Controllers\Web\ProfileController;
@@ -312,6 +313,13 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/positions/{position}/edit', [PositionController::class, 'edit'])->name('settings.positions.edit');
         Route::put('/settings/positions/{position}', [PositionController::class, 'update'])->name('settings.positions.update');
         Route::delete('/settings/positions/{position}', [PositionController::class, 'destroy'])->name('settings.positions.destroy');
+
+        // Approval Substitutions
+        Route::get('/settings/substitutions', [UserSubstitutionController::class, 'index'])->name('settings.substitutions.index');
+        Route::get('/settings/substitutions/create', [UserSubstitutionController::class, 'create'])->name('settings.substitutions.create');
+        Route::post('/settings/substitutions', [UserSubstitutionController::class, 'store'])->name('settings.substitutions.store');
+        Route::patch('/settings/substitutions/{substitution}/toggle', [UserSubstitutionController::class, 'toggleActive'])->name('settings.substitutions.toggle');
+        Route::delete('/settings/substitutions/{substitution}', [UserSubstitutionController::class, 'destroy'])->name('settings.substitutions.destroy');
 
         // Org Units (hierarchical org chart)
         Route::get('/settings/org-units', [OrgUnitController::class, 'index'])->name('settings.org-units.index');

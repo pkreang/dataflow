@@ -114,6 +114,18 @@ class NavigationMenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'id' => 66,
+                'parent_id' => 2,
+                'label' => 'Substitutions',
+                'label_en' => 'Approval Substitutions',
+                'label_th' => 'ผู้แทนอนุมัติ',
+                'icon' => 'user-group',
+                'route' => '/settings/substitutions',
+                'permission' => 'manage_settings',
+                'sort_order' => 5,
+                'is_active' => true,
+            ],
+            [
                 'id' => 3,
                 'parent_id' => 2,
                 'label' => 'Users',

@@ -118,6 +118,11 @@ class User extends Authenticatable implements HasLocalePreference
         return $this->belongsTo(OrgUnit::class, 'org_unit_id');
     }
 
+    public function substitutions(): HasMany
+    {
+        return $this->hasMany(UserSubstitution::class, 'from_user_id');
+    }
+
     public function homeDashboard(): BelongsTo
     {
         return $this->belongsTo(ReportDashboard::class, 'home_dashboard_id');

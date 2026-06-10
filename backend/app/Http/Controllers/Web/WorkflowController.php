@@ -135,6 +135,7 @@ class WorkflowController extends Controller
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
             'stages.*.allow_requester_override' => 'nullable|boolean',
+            'stages.*.escalation_after_days' => 'nullable|integer|min:1|max:365',
         ]);
 
         $this->validateUniqueSteps($validated['stages']);
@@ -161,6 +162,7 @@ class WorkflowController extends Controller
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'allow_requester_override' => (bool) ($stage['allow_requester_override'] ?? false),
+                    'escalation_after_days' => isset($stage['escalation_after_days']) && $stage['escalation_after_days'] !== '' ? (int) $stage['escalation_after_days'] : null,
                     'is_active' => true,
                 ]);
             }
@@ -191,6 +193,7 @@ class WorkflowController extends Controller
             'stages.*.min_approvals' => 'required|integer|min:1',
             'stages.*.require_signature' => 'nullable|boolean',
             'stages.*.allow_requester_override' => 'nullable|boolean',
+            'stages.*.escalation_after_days' => 'nullable|integer|min:1|max:365',
         ]);
 
         $this->validateUniqueSteps($validated['stages']);
@@ -218,6 +221,7 @@ class WorkflowController extends Controller
                     'min_approvals' => (int) $stage['min_approvals'],
                     'require_signature' => (bool) ($stage['require_signature'] ?? false),
                     'allow_requester_override' => (bool) ($stage['allow_requester_override'] ?? false),
+                    'escalation_after_days' => isset($stage['escalation_after_days']) && $stage['escalation_after_days'] !== '' ? (int) $stage['escalation_after_days'] : null,
                     'is_active' => true,
                 ]);
             }

@@ -245,6 +245,16 @@
                             </label>
                             @endif
                         </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <label class="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ __('common.workflow_escalation_days') }}</label>
+                            <input type="number" min="1" max="365"
+                                   :name="`stages[${idx}][escalation_after_days]`"
+                                   :value="stage.escalation_after_days || ''"
+                                   @input="stage.escalation_after_days = $event.target.value ? parseInt($event.target.value) : null"
+                                   class="form-input w-20 text-center"
+                                   placeholder="—" />
+                            <span class="text-xs text-slate-400">{{ __('common.workflow_escalation_days_hint') }}</span>
+                        </div>
                     </div>
                 </template>
 

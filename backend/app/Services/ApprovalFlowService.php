@@ -46,7 +46,7 @@ class ApprovalFlowService
         }
 
         $routingMode = $this->routingMode($documentType);
-        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, $positionId);
+        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, $positionId, $payload);
 
         $binding = null;
         if ($resolvedWorkflowId === null) {
@@ -152,7 +152,7 @@ class ApprovalFlowService
                     }
                 }
 
-                ApprovalInstanceStep::create([
+                $createdStep = ApprovalInstanceStep::create([
                     'approval_instance_id' => $instance->id,
                     'step_no' => $stage->step_no,
                     'stage_name' => $stage->name,
@@ -161,9 +161,19 @@ class ApprovalFlowService
                     'approver_rules' => $stage->allow_requester_override ? null : $stage->approver_rules,
                     'min_approvals' => $stage->min_approvals ?? 1,
                     'require_signature' => (bool) ($stage->require_signature ?? false),
+                    'escalation_after_days' => $stage->escalation_after_days ?? null,
                     'approved_by' => [],
                     'action' => 'pending',
                 ]);
+
+                // Notify substitute if primary approver has an active substitution
+                if ($stepType === 'user' && $stepRef) {
+                    $substituteId = \App\Models\UserSubstitution::findActiveSubstitute((int) $stepRef, now());
+                    if ($substituteId && $substituteId !== (int) $stepRef) {
+                        $substitute = \App\Models\User::find($substituteId);
+                        $substitute?->notify(new \App\Notifications\ApprovalPendingNotification($instance, $createdStep));
+                    }
+                }
             }
 
             event(new WorkflowStarted($instance));
@@ -220,7 +230,8 @@ class ApprovalFlowService
         ?string $formKey,
         ?float $amount,
         string $routingMode,
-        int $positionId = 0
+        int $positionId = 0,
+        array $payload = []
     ): ?int {
         if (! $formKey) {
             return null;
@@ -264,6 +275,17 @@ class ApprovalFlowService
             return null;
         }
 
+        // Field conditions — evaluated first (more specific than amount ranges)
+        if (! empty($policy->field_conditions)) {
+            $sorted = collect($policy->field_conditions)->sortBy('priority');
+            foreach ($sorted as $cond) {
+                $fieldVal = $payload[$cond['field_key'] ?? ''] ?? null;
+                if ($fieldVal !== null && $this->evalFieldCondition($fieldVal, $cond['operator'] ?? '=', $cond['value'] ?? null)) {
+                    return isset($cond['workflow_id']) ? (int) $cond['workflow_id'] : null;
+                }
+            }
+        }
+
         if (! $policy->use_amount_condition) {
             return $policy->workflow_id ? (int) $policy->workflow_id : null;
         }
@@ -281,6 +303,25 @@ class ApprovalFlowService
         }
 
         throw new RuntimeException("No matching amount range for form {$formKey}");
+    }
+
+    private function evalFieldCondition(mixed $fieldVal, string $operator, mixed $expected): bool
+    {
+        $strVal = (string) $fieldVal;
+        $numVal = is_numeric($fieldVal) ? (float) $fieldVal : null;
+
+        return match ($operator) {
+            '='         => $strVal === (string) $expected,
+            '!='        => $strVal !== (string) $expected,
+            '>'         => $numVal !== null && $numVal > (float) $expected,
+            '>='        => $numVal !== null && $numVal >= (float) $expected,
+            '<'         => $numVal !== null && $numVal < (float) $expected,
+            '<='        => $numVal !== null && $numVal <= (float) $expected,
+            'in'        => is_array($expected) && in_array($strVal, array_map('strval', $expected), true),
+            'not_in'    => is_array($expected) && ! in_array($strVal, array_map('strval', $expected), true),
+            'contains'  => str_contains($strVal, (string) $expected),
+            default     => false,
+        };
     }
 
     private function resolveDepartmentBinding(string $documentType, ?int $departmentId): ?DepartmentWorkflowBinding
@@ -514,7 +555,15 @@ class ApprovalFlowService
         }
 
         if ($step->approver_type === 'user') {
-            return (int) $step->approver_ref === $actorUserId;
+            if ((int) $step->approver_ref === $actorUserId) {
+                return true;
+            }
+            // Allow active substitute to act on behalf of the primary approver
+            return \App\Models\UserSubstitution::activeSubstituteFor(
+                (int) $step->approver_ref,
+                $actorUserId,
+                now()
+            );
         }
 
         $user = User::find($actorUserId);
