@@ -3,9 +3,7 @@
 namespace Tests\Feature\Settings;
 
 use App\Models\ApprovalWorkflow;
-use App\Models\Department;
-use App\Models\DepartmentWorkflowBinding;
-use App\Models\DocumentType;
+use App\Models\DocumentForm;
 use App\Models\Setting;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -99,44 +97,44 @@ class SingletonSettingsTest extends TestCase
     public function test_super_admin_can_save_approval_routing(): void
     {
         $admin = $this->makeSuperAdmin();
-        $dept = Department::factory()->create();
+        $form = DocumentForm::factory()->create(['document_type' => 'repair_request']);
         $workflow = ApprovalWorkflow::create(['name' => 'Test WF', 'document_type' => 'repair_request', 'is_active' => true]);
 
         $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
-            'bindings' => [
-                ['department_id' => $dept->id, 'document_type' => 'repair_request', 'workflow_id' => $workflow->id],
-            ],
+            'defaults' => [(string) $form->id => (string) $workflow->id],
             'allow_requester_override' => '1',
         ])->assertRedirect(route('settings.approval-routing'));
 
-        $this->assertDatabaseHas('department_workflow_bindings', [
-            'department_id' => $dept->id,
-            'document_type' => 'repair_request',
+        $this->assertDatabaseHas('document_form_workflow_policies', [
+            'form_id' => $form->id,
+            'department_id' => null,
+            'position_id' => null,
             'workflow_id' => $workflow->id,
         ]);
         $this->assertTrue(Setting::getBool('approval.allow_requester_override'));
     }
 
-    public function test_approval_routing_deletes_binding_when_workflow_id_empty(): void
+    public function test_approval_routing_deletes_policy_when_workflow_id_empty(): void
     {
         $admin = $this->makeSuperAdmin();
-        $dept = Department::factory()->create();
+        $form = DocumentForm::factory()->create(['document_type' => 'repair_request']);
         $workflow = ApprovalWorkflow::create(['name' => 'Test WF2', 'document_type' => 'repair_request', 'is_active' => true]);
-        DepartmentWorkflowBinding::create([
-            'department_id' => $dept->id,
-            'document_type' => 'repair_request',
+        \App\Models\DocumentFormWorkflowPolicy::create([
+            'form_id' => $form->id,
+            'department_id' => null,
+            'position_id' => null,
             'workflow_id' => $workflow->id,
+            'use_amount_condition' => false,
         ]);
 
         $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
-            'bindings' => [
-                ['department_id' => $dept->id, 'document_type' => 'repair_request', 'workflow_id' => ''],
-            ],
+            'defaults' => [(string) $form->id => ''],
         ])->assertRedirect(route('settings.approval-routing'));
 
-        $this->assertDatabaseMissing('department_workflow_bindings', [
-            'department_id' => $dept->id,
-            'document_type' => 'repair_request',
+        $this->assertDatabaseMissing('document_form_workflow_policies', [
+            'form_id' => $form->id,
+            'department_id' => null,
+            'position_id' => null,
         ]);
     }
 

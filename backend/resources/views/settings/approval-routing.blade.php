@@ -25,41 +25,92 @@
         </div>
     @endif
 
-    @if ($departments->isEmpty())
+    @if ($errors->any())
+        <div class="alert-error mb-4">
+            <ul class="text-sm space-y-1">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if ($forms->isEmpty())
         <div class="card p-6 text-sm text-slate-600 dark:text-slate-400">
-            {{ __('common.department_workflow_bindings_no_types') }}
+            {{ __('common.approval_routing_no_forms') }}
         </div>
     @else
         <div x-data="{
-            original: @js($initialBindings),
-            current: JSON.parse(JSON.stringify(@js($initialBindings))),
-            openDepts: { '{{ $departments->first()?->id }}': true },
-            toggle(id) { this.openDepts[id] = !this.openDepts[id] },
-            isOpen(id) { return !!this.openDepts[id] },
-            isDirty(key) { return this.current[key] !== this.original[key] },
-            get dirtyCount() { return Object.keys(this.current).filter(k => this.isDirty(k)).length },
-            deptDirtyCount(deptId) {
-                return Object.keys(this.current).filter(k => k.startsWith(deptId + '|') && this.isDirty(k)).length;
+            original: @js($initialState),
+            state: JSON.parse(JSON.stringify(@js($initialState))),
+            deptOptions: @js($departments->map(fn ($d) => ['id' => (string) $d->id, 'name' => $d->name])->values()),
+            posOptions: @js($positions->map(fn ($p) => ['id' => (string) $p->id, 'name' => $p->name])->values()),
+            deletedIds: [],
+            isDirty() {
+                return JSON.stringify(this.state) !== JSON.stringify(this.original) || this.deletedIds.length > 0;
             },
-            reset() { this.current = JSON.parse(JSON.stringify(this.original)) },
+            get dirtyCount() {
+                let n = this.deletedIds.length;
+                Object.keys(this.state).forEach(fid => {
+                    if (this.state[fid].default.workflowId !== this.original[fid].default.workflowId) n++;
+                    this.state[fid].exceptions.forEach((ex, i) => {
+                        const orig = this.original[fid].exceptions[i];
+                        if (!orig || JSON.stringify(ex) !== JSON.stringify(orig)) n++;
+                    });
+                });
+                return n;
+            },
+            hasDuplicate(fid) {
+                const seen = new Set();
+                for (const ex of this.state[fid].exceptions) {
+                    if (ex.advanced || ex.scope === 'both') continue;
+                    const key = ex.scope + ':' + (ex.scope === 'department' ? ex.targetDeptId : ex.targetPosId);
+                    if ((ex.targetDeptId || ex.targetPosId) && seen.has(key)) return true;
+                    seen.add(key);
+                }
+                return false;
+            },
+            get anyDuplicate() { return Object.keys(this.state).some(fid => this.hasDuplicate(fid)); },
+            addException(fid) {
+                this.state[fid].exceptions.push({
+                    id: null, scope: 'department', targetDeptId: '', targetPosId: '', workflowId: '', advanced: false,
+                });
+            },
+            removeException(fid, idx) {
+                const ex = this.state[fid].exceptions[idx];
+                if (ex.id) this.deletedIds.push(ex.id);
+                this.state[fid].exceptions.splice(idx, 1);
+            },
+            reset() {
+                this.state = JSON.parse(JSON.stringify(this.original));
+                this.deletedIds = [];
+            },
             submitForm(formEl) {
                 formEl.querySelectorAll('.dynamic-input').forEach(el => el.remove());
+                const mk = (name, val) => {
+                    let inp = document.createElement('input');
+                    inp.type = 'hidden'; inp.name = name; inp.value = val;
+                    inp.classList.add('dynamic-input');
+                    formEl.appendChild(inp);
+                };
                 let i = 0;
-                Object.keys(this.current).filter(k => this.isDirty(k)).forEach(key => {
-                    const sep = key.indexOf('|');
-                    const deptId = key.substring(0, sep);
-                    const docType = key.substring(sep + 1);
-                    const mk = (name, val) => {
-                        let inp = document.createElement('input');
-                        inp.type = 'hidden'; inp.name = name; inp.value = val;
-                        inp.classList.add('dynamic-input');
-                        formEl.appendChild(inp);
-                    };
-                    mk('bindings[' + i + '][department_id]', deptId);
-                    mk('bindings[' + i + '][document_type]', docType);
-                    mk('bindings[' + i + '][workflow_id]', this.current[key]);
-                    i++;
+                Object.keys(this.state).forEach(fid => {
+                    if (this.state[fid].default.workflowId !== this.original[fid].default.workflowId) {
+                        mk('defaults[' + fid + ']', this.state[fid].default.workflowId);
+                    }
+                    this.state[fid].exceptions.forEach(ex => {
+                        if (ex.advanced || ex.scope === 'both') return;
+                        const target = ex.scope === 'department' ? ex.targetDeptId : ex.targetPosId;
+                        if (!target || !ex.workflowId) return;
+                        mk('exceptions[' + i + '][form_id]', fid);
+                        mk('exceptions[' + i + '][scope]', ex.scope);
+                        if (ex.scope === 'department') mk('exceptions[' + i + '][department_id]', ex.targetDeptId);
+                        if (ex.scope === 'position') mk('exceptions[' + i + '][position_id]', ex.targetPosId);
+                        mk('exceptions[' + i + '][workflow_id]', ex.workflowId);
+                        i++;
+                    });
                 });
+                this.deletedIds.forEach(id => mk('deleted_policy_ids[]', id));
                 formEl.submit();
             }
         }">
@@ -79,60 +130,138 @@
                     </label>
                 </div>
 
-                {{-- Dept × doc_type → workflow matrix --}}
-                <div class="space-y-3">
-                    @foreach ($departments as $department)
-                        <div class="table-wrapper">
-                            <button type="button" @click="toggle('{{ $department->id }}')"
-                                    class="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors rounded-xl">
-                                <div class="flex items-center gap-3">
-                                    <svg class="w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-200"
-                                         :class="isOpen('{{ $department->id }}') && 'rotate-90'"
-                                         fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                    </svg>
-                                    <div>
-                                        <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $department->name }}</span>
-                                        <span class="ml-2 text-xs text-slate-500 dark:text-slate-400">({{ $department->code }})</span>
-                                    </div>
-                                </div>
-                                <span x-show="deptDirtyCount('{{ $department->id }}') > 0"
-                                      x-text="deptDirtyCount('{{ $department->id }}')"
-                                      x-cloak
-                                      class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-bold text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40 rounded-full">
-                                </span>
-                            </button>
+                {{-- Resolution order hint --}}
+                <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-4 py-3 mb-4">
+                    <p class="text-xs text-blue-800 dark:text-blue-200">{{ __('common.approval_routing_priority_hint') }}</p>
+                </div>
 
-                            <div x-show="isOpen('{{ $department->id }}')" x-collapse x-cloak>
-                                <div class="border-t border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700">
-                                    @foreach ($documentTypes as $docType)
-                                        @php
-                                            $cellKey = $department->id . '|' . $docType;
-                                            $options = $workflows->where('document_type', $docType);
-                                            $docLabel = $documentTypeLabels[$docType] ?? \Illuminate\Support\Str::headline(str_replace('_', ' ', $docType));
-                                        @endphp
-                                        <div class="px-5 py-3 flex items-center gap-4 transition-colors duration-150"
-                                             :class="isDirty('{{ $cellKey }}') && 'bg-amber-50 dark:bg-amber-900/20'">
-                                            <div class="w-44 shrink-0">
-                                                <span class="text-sm text-slate-700 dark:text-slate-300">{{ $docLabel }}</span>
-                                            </div>
+                {{-- Cards per form, grouped by document type --}}
+                <div class="space-y-6">
+                    @foreach ($formGroups as $docType => $formsInGroup)
+                        @php
+                            $docLabel = $documentTypeLabels[$docType] ?? \Illuminate\Support\Str::headline(str_replace('_', ' ', $docType));
+                            $typeWorkflows = $workflowsByType->get($docType, collect());
+                        @endphp
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{{ $docLabel }}</h3>
+                            <div class="space-y-3">
+                                @foreach ($formsInGroup as $form)
+                                    @php $fid = (string) $form->id; @endphp
+                                    <div class="card p-5">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $form->name }}</span>
+                                            <a href="{{ route('settings.document-forms.policy.edit', $form) }}"
+                                               class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500">
+                                                {{ __('common.approval_routing_advanced_link') }}
+                                            </a>
+                                        </div>
+
+                                        {{-- Default workflow --}}
+                                        <div class="flex items-center gap-4 mb-4">
+                                            <span class="w-44 shrink-0 text-sm text-slate-700 dark:text-slate-300">{{ __('common.approval_routing_default_workflow') }}</span>
                                             <div class="flex-1 max-w-md">
-                                                @if ($options->isEmpty())
+                                                @if ($initialState[$fid]['default']['advanced'])
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                                                        {{ __('common.approval_routing_advanced_badge') }}
+                                                    </span>
+                                                @elseif ($typeWorkflows->isEmpty())
                                                     <span class="text-xs text-slate-400 dark:text-slate-500 italic">{{ __('common.no_workflows_for_document_type') }}</span>
                                                 @else
-                                                    <select x-model="current['{{ $cellKey }}']"
+                                                    <select x-model="state['{{ $fid }}'].default.workflowId"
                                                             class="form-input w-full transition-shadow duration-150"
-                                                            :class="isDirty('{{ $cellKey }}') && 'ring-2 ring-amber-400 dark:ring-amber-500'">
-                                                        <option value="">-- {{ __('common.none') }} --</option>
-                                                        @foreach ($options as $workflow)
+                                                            :class="state['{{ $fid }}'].default.workflowId !== original['{{ $fid }}'].default.workflowId && 'ring-2 ring-amber-400 dark:ring-amber-500'">
+                                                        <option value="">{{ __('common.approval_routing_default_not_set') }}</option>
+                                                        @foreach ($typeWorkflows as $workflow)
                                                             <option value="{{ $workflow->id }}">{{ $workflow->name }}</option>
                                                         @endforeach
                                                     </select>
                                                 @endif
                                             </div>
                                         </div>
-                                    @endforeach
-                                </div>
+
+                                        {{-- Exceptions --}}
+                                        <div class="border-t border-slate-100 dark:border-slate-700 pt-4">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">{{ __('common.approval_routing_exceptions') }}</span>
+                                            </div>
+
+                                            <p x-show="state['{{ $fid }}'].exceptions.length === 0" x-cloak
+                                               class="text-xs text-slate-400 dark:text-slate-500 italic mb-2">
+                                                {{ __('common.approval_routing_no_exceptions') }}
+                                            </p>
+
+                                            <div class="space-y-2">
+                                                <template x-for="(ex, idx) in state['{{ $fid }}'].exceptions" :key="idx">
+                                                    <div>
+                                                        {{-- Advanced / combo row: read-only --}}
+                                                        <template x-if="ex.advanced || ex.scope === 'both'">
+                                                            <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                                                                <span class="text-xs text-slate-600 dark:text-slate-300"
+                                                                      x-text="(ex.targetDeptId ? deptOptions.find(d => d.id === ex.targetDeptId)?.name : '') + (ex.targetDeptId && ex.targetPosId ? ' + ' : '') + (ex.targetPosId ? posOptions.find(p => p.id === ex.targetPosId)?.name : '')"></span>
+                                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                                                                    {{ __('common.approval_routing_advanced_badge') }}
+                                                                </span>
+                                                                <a href="{{ route('settings.document-forms.policy.edit', $form) }}"
+                                                                   class="ml-auto text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500">
+                                                                    {{ __('common.approval_routing_advanced_link') }}
+                                                                </a>
+                                                            </div>
+                                                        </template>
+
+                                                        {{-- Editable row --}}
+                                                        <template x-if="!ex.advanced && ex.scope !== 'both'">
+                                                            <div class="flex flex-wrap items-center gap-2">
+                                                                <select x-model="ex.scope" class="form-input w-32">
+                                                                    <option value="department">{{ __('common.approval_routing_scope_department') }}</option>
+                                                                    <option value="position">{{ __('common.approval_routing_scope_position') }}</option>
+                                                                </select>
+
+                                                                <select x-show="ex.scope === 'department'" x-model="ex.targetDeptId" class="form-input flex-1 min-w-40">
+                                                                    <option value="">{{ __('common.approval_routing_select_target') }}</option>
+                                                                    <template x-for="d in deptOptions" :key="d.id">
+                                                                        <option :value="d.id" x-text="d.name" :selected="d.id === ex.targetDeptId"></option>
+                                                                    </template>
+                                                                </select>
+                                                                <select x-show="ex.scope === 'position'" x-cloak x-model="ex.targetPosId" class="form-input flex-1 min-w-40">
+                                                                    <option value="">{{ __('common.approval_routing_select_target') }}</option>
+                                                                    <template x-for="p in posOptions" :key="p.id">
+                                                                        <option :value="p.id" x-text="p.name" :selected="p.id === ex.targetPosId"></option>
+                                                                    </template>
+                                                                </select>
+
+                                                                <span class="text-slate-400">&rarr;</span>
+
+                                                                <select x-model="ex.workflowId" class="form-input flex-1 min-w-44">
+                                                                    <option value="">{{ __('common.approval_routing_select_target') }}</option>
+                                                                    @foreach ($typeWorkflows as $workflow)
+                                                                        <option value="{{ $workflow->id }}">{{ $workflow->name }}</option>
+                                                                    @endforeach
+                                                                </select>
+
+                                                                <button type="button" @click="removeException('{{ $fid }}', idx)"
+                                                                        class="text-xs text-red-600 dark:text-red-400 hover:text-red-500 px-2 py-1">
+                                                                    {{ __('common.approval_routing_remove_exception') }}
+                                                                </button>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <p x-show="hasDuplicate('{{ $fid }}')" x-cloak
+                                               class="text-xs text-red-600 dark:text-red-400 mt-2">
+                                                {{ __('common.approval_routing_duplicate_exception') }}
+                                            </p>
+
+                                            @if ($typeWorkflows->isNotEmpty())
+                                                <button type="button" @click="addException('{{ $fid }}')"
+                                                        class="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 font-medium">
+                                                    + {{ __('common.approval_routing_add_exception') }}
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
                     @endforeach
@@ -153,7 +282,8 @@
                                 class="btn-secondary">
                             {{ __('common.reset') }}
                         </button>
-                        <button type="submit" class="btn-primary">
+                        <button type="submit" class="btn-primary" :disabled="anyDuplicate"
+                                :class="anyDuplicate && 'opacity-50 cursor-not-allowed'">
                             {{ __('common.save_all') }}
                         </button>
                     </div>

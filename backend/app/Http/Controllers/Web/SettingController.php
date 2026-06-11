@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
-use App\Models\DepartmentWorkflowBinding;
+use App\Models\DocumentForm;
+use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentType;
+use App\Models\Position;
 use App\Models\Setting;
 use App\Services\Auth\AuthModeService;
-use App\Support\WorkflowDocumentTypes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -167,76 +168,195 @@ class SettingController extends Controller
     }
 
     /**
-     * How workflows are chosen: hybrid (dept + org), department-only, or organization-wide.
+     * Default workflow per form + department/position exceptions
+     * (reads/writes DocumentFormWorkflowPolicy — the primary routing layer).
      */
     public function approvalRouting(): View
     {
         $allowRequesterOverride = Setting::getBool('approval.allow_requester_override', false);
+        $forms = DocumentForm::query()->where('is_active', true)->orderBy('name')->get();
+        $formGroups = $forms->groupBy('document_type');
+        $workflowsByType = ApprovalWorkflow::query()->where('is_active', true)
+            ->orderBy('name')->get()->groupBy('document_type');
         $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
-        $documentTypes = WorkflowDocumentTypes::forBindings();
-        $workflows = ApprovalWorkflow::query()->where('is_active', true)->orderBy('name')->get();
+        $positions = Position::query()->where('is_active', true)->orderBy('name')->get();
 
         $documentTypeLabels = DocumentType::allActive()
             ->mapWithKeys(fn ($dt) => [$dt->code => $dt->label()])
             ->toArray();
 
-        $departments->load(['workflowBindings']);
-        $initialBindings = [];
-        foreach ($departments as $dept) {
-            foreach ($documentTypes as $docType) {
-                $key = $dept->id.'|'.$docType;
-                $binding = $dept->workflowBindings->firstWhere('document_type', $docType);
-                $initialBindings[$key] = $binding ? (string) $binding->workflow_id : '';
+        $policies = DocumentFormWorkflowPolicy::query()->with('ranges')
+            ->whereIn('form_id', $forms->pluck('id'))
+            ->get()
+            ->groupBy('form_id');
+
+        $initialState = [];
+        foreach ($forms as $form) {
+            $state = [
+                'default' => ['workflowId' => '', 'advanced' => false, 'policyId' => null],
+                'exceptions' => [],
+            ];
+            foreach ($policies->get($form->id, collect()) as $policy) {
+                $advanced = $this->policyIsAdvanced($policy);
+                if ($policy->department_id === null && $policy->position_id === null) {
+                    $state['default'] = [
+                        'workflowId' => $advanced ? '' : (string) ($policy->workflow_id ?? ''),
+                        'advanced' => $advanced,
+                        'policyId' => $policy->id,
+                    ];
+                } else {
+                    $scope = $policy->department_id !== null && $policy->position_id !== null
+                        ? 'both'
+                        : ($policy->position_id !== null ? 'position' : 'department');
+                    $state['exceptions'][] = [
+                        'id' => $policy->id,
+                        'scope' => $scope,
+                        'targetDeptId' => $policy->department_id ? (string) $policy->department_id : '',
+                        'targetPosId' => $policy->position_id ? (string) $policy->position_id : '',
+                        'workflowId' => (string) ($policy->workflow_id ?? ''),
+                        'advanced' => $advanced,
+                    ];
+                }
             }
+            $initialState[(string) $form->id] = $state;
         }
 
         return view('settings.approval-routing', compact(
             'allowRequesterOverride',
+            'forms',
+            'formGroups',
+            'workflowsByType',
             'departments',
-            'documentTypes',
-            'workflows',
+            'positions',
             'documentTypeLabels',
-            'initialBindings'
+            'initialState'
         ));
     }
 
     public function saveApprovalRouting(Request $request): RedirectResponse
     {
         $request->validate([
-            'bindings' => 'nullable|array',
-            'bindings.*.department_id' => 'required|exists:departments,id',
-            'bindings.*.document_type' => 'required|string|max:50',
-            'bindings.*.workflow_id' => 'nullable',
+            'allow_requester_override' => 'nullable|boolean',
+            'defaults' => 'nullable|array',
+            'defaults.*' => 'nullable|string',
+            'exceptions' => 'nullable|array',
+            'exceptions.*.form_id' => 'required|integer|exists:document_forms,id',
+            'exceptions.*.scope' => 'required|in:department,position',
+            'exceptions.*.department_id' => 'required_if:exceptions.*.scope,department|nullable|integer|exists:departments,id',
+            'exceptions.*.position_id' => 'required_if:exceptions.*.scope,position|nullable|integer|exists:positions,id',
+            'exceptions.*.workflow_id' => 'required|integer|exists:approval_workflows,id',
+            'deleted_policy_ids' => 'nullable|array',
+            'deleted_policy_ids.*' => 'integer',
         ]);
 
-        DB::transaction(function () use ($request) {
-            foreach ($request->input('bindings', []) as $entry) {
-                $deptId = (int) $entry['department_id'];
-                $docType = $entry['document_type'];
-                $workflowId = $entry['workflow_id'] ?? '';
+        $errors = [];
+
+        DB::transaction(function () use ($request, &$errors) {
+            // 1. Defaults: form_id => workflow_id|'' (global policy row)
+            foreach ($request->input('defaults', []) as $formId => $workflowId) {
+                $form = DocumentForm::find((int) $formId);
+                if (! $form) {
+                    continue;
+                }
+
+                $existing = DocumentFormWorkflowPolicy::query()->with('ranges')
+                    ->where('form_id', $form->id)
+                    ->whereNull('department_id')
+                    ->whereNull('position_id')
+                    ->first();
+
+                if ($existing && $this->policyIsAdvanced($existing)) {
+                    $errors["defaults.{$formId}"] = __('common.approval_routing_advanced_locked');
+
+                    continue;
+                }
 
                 if ($workflowId === '' || $workflowId === null) {
-                    DepartmentWorkflowBinding::where('department_id', $deptId)
-                        ->where('document_type', $docType)
-                        ->delete();
-                } else {
-                    $workflow = ApprovalWorkflow::find((int) $workflowId);
-                    if (! $workflow || $workflow->document_type !== $docType) {
+                    $existing?->delete();
+
+                    continue;
+                }
+
+                $workflow = ApprovalWorkflow::find((int) $workflowId);
+                if (! $workflow || $workflow->document_type !== $form->document_type) {
+                    continue;
+                }
+
+                DocumentFormWorkflowPolicy::updateOrCreate(
+                    ['form_id' => $form->id, 'department_id' => null, 'position_id' => null],
+                    ['workflow_id' => (int) $workflowId, 'use_amount_condition' => false]
+                );
+            }
+
+            // 2. Exceptions: dept-only or position-only policy rows
+            foreach ($request->input('exceptions', []) as $i => $entry) {
+                $form = DocumentForm::find((int) $entry['form_id']);
+                if (! $form) {
+                    continue;
+                }
+
+                $deptId = $entry['scope'] === 'department' ? (int) $entry['department_id'] : null;
+                $posId = $entry['scope'] === 'position' ? (int) $entry['position_id'] : null;
+
+                $existing = DocumentFormWorkflowPolicy::query()->with('ranges')
+                    ->where('form_id', $form->id)
+                    ->where('department_id', $deptId)
+                    ->where('position_id', $posId)
+                    ->first();
+
+                if ($existing && $this->policyIsAdvanced($existing)) {
+                    $errors["exceptions.{$i}"] = __('common.approval_routing_advanced_locked');
+
+                    continue;
+                }
+
+                $workflow = ApprovalWorkflow::find((int) $entry['workflow_id']);
+                if (! $workflow || $workflow->document_type !== $form->document_type) {
+                    continue;
+                }
+
+                DocumentFormWorkflowPolicy::updateOrCreate(
+                    ['form_id' => $form->id, 'department_id' => $deptId, 'position_id' => $posId],
+                    ['workflow_id' => $workflow->id, 'use_amount_condition' => false]
+                );
+            }
+
+            // 3. Deletions: only simple rows belonging to active forms
+            $deleteIds = array_map('intval', $request->input('deleted_policy_ids', []));
+            if ($deleteIds !== []) {
+                $candidates = DocumentFormWorkflowPolicy::query()->with('ranges')
+                    ->whereIn('id', $deleteIds)
+                    ->whereIn('form_id', DocumentForm::query()->where('is_active', true)->pluck('id'))
+                    ->get();
+                foreach ($candidates as $policy) {
+                    if ($this->policyIsAdvanced($policy)) {
+                        $errors["deleted.{$policy->id}"] = __('common.approval_routing_advanced_locked');
+
                         continue;
                     }
-                    DepartmentWorkflowBinding::updateOrCreate(
-                        ['department_id' => $deptId, 'document_type' => $docType],
-                        ['workflow_id' => (int) $workflowId]
-                    );
+                    $policy->delete();
                 }
             }
         });
 
         Setting::set('approval.allow_requester_override', $request->boolean('allow_requester_override'));
 
+        if ($errors !== []) {
+            return redirect()
+                ->route('settings.approval-routing')
+                ->withErrors($errors);
+        }
+
         return redirect()
             ->route('settings.approval-routing')
             ->with('success', __('common.saved'));
+    }
+
+    private function policyIsAdvanced(DocumentFormWorkflowPolicy $policy): bool
+    {
+        return $policy->use_amount_condition
+            || ! empty($policy->field_conditions)
+            || $policy->ranges->isNotEmpty();
     }
 
     private array $authSettingKeys = [
