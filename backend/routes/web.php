@@ -21,15 +21,14 @@ use App\Http\Controllers\Web\MyReportController;
 use App\Http\Controllers\Web\NavigationMenuController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\NotificationSettingController;
+use App\Http\Controllers\Web\OrgUnitController;
 use App\Http\Controllers\Web\PasswordResetController;
 use App\Http\Controllers\Web\PermissionController;
 use App\Http\Controllers\Web\PocSchemaFirstController;
-use App\Http\Controllers\Web\OrgUnitController;
 use App\Http\Controllers\Web\PositionController;
-use App\Http\Controllers\Web\UserSubstitutionController;
+use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\PurchaseOrderController;
 use App\Http\Controllers\Web\PurchaseRequestController;
-use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\RepairRequestController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\ReportDashboardController;
@@ -41,6 +40,7 @@ use App\Http\Controllers\Web\SystemChangeLogController;
 use App\Http\Controllers\Web\ThailandAddressSearchController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\UserPinnedMenuController;
+use App\Http\Controllers\Web\UserSubstitutionController;
 use App\Http\Controllers\Web\WebhookController;
 use App\Http\Controllers\Web\WorkflowController;
 use App\Models\User;
@@ -299,6 +299,9 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/branding', [SettingController::class, 'branding'])->name('settings.branding');
         Route::post('/settings/branding', [SettingController::class, 'saveBranding'])->name('settings.branding.save');
         Route::get('/settings/departments', [DepartmentController::class, 'index'])->name('settings.departments.index');
+        Route::get('/settings/departments/import', [DepartmentController::class, 'importForm'])->name('settings.departments.import');
+        Route::post('/settings/departments/import', [DepartmentController::class, 'import'])->name('settings.departments.import.store');
+        Route::get('/settings/departments/import/template', [DepartmentController::class, 'downloadTemplate'])->name('settings.departments.import.template');
         Route::get('/settings/department-workflow-bindings', fn () => redirect()->route('settings.approval-routing'))->name('settings.department-workflow-bindings.index');
         Route::post('/settings/department-workflow-bindings', fn () => redirect()->route('settings.approval-routing'))->name('settings.department-workflow-bindings.bulk');
         Route::get('/settings/departments/create', [DepartmentController::class, 'create'])->name('settings.departments.create');
@@ -308,6 +311,9 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::delete('/settings/departments/{department}', [DepartmentController::class, 'destroy'])->name('settings.departments.destroy');
         Route::post('/settings/departments/{department}/bindings', [DepartmentController::class, 'bindWorkflow'])->name('settings.departments.bindings.store');
         Route::get('/settings/positions', [PositionController::class, 'index'])->name('settings.positions.index');
+        Route::get('/settings/positions/import', [PositionController::class, 'importForm'])->name('settings.positions.import');
+        Route::post('/settings/positions/import', [PositionController::class, 'import'])->name('settings.positions.import.store');
+        Route::get('/settings/positions/import/template', [PositionController::class, 'downloadTemplate'])->name('settings.positions.import.template');
         Route::get('/settings/positions/create', [PositionController::class, 'create'])->name('settings.positions.create');
         Route::post('/settings/positions', [PositionController::class, 'store'])->name('settings.positions.store');
         Route::get('/settings/positions/{position}/edit', [PositionController::class, 'edit'])->name('settings.positions.edit');
@@ -323,6 +329,9 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
 
         // Org Units (hierarchical org chart)
         Route::get('/settings/org-units', [OrgUnitController::class, 'index'])->name('settings.org-units.index');
+        Route::get('/settings/org-units/import', [OrgUnitController::class, 'importForm'])->name('settings.org-units.import');
+        Route::post('/settings/org-units/import', [OrgUnitController::class, 'import'])->name('settings.org-units.import.store');
+        Route::get('/settings/org-units/import/template', [OrgUnitController::class, 'downloadTemplate'])->name('settings.org-units.import.template');
         Route::get('/settings/org-units/tree', [OrgUnitController::class, 'treeJson'])->name('settings.org-units.tree');
         Route::get('/settings/org-units/create', [OrgUnitController::class, 'create'])->name('settings.org-units.create');
         Route::post('/settings/org-units', [OrgUnitController::class, 'store'])->name('settings.org-units.store');

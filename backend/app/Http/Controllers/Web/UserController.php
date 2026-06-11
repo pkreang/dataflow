@@ -131,8 +131,10 @@ class UserController extends Controller implements HasMiddleware
             try {
                 $deptName = trim($data['department'] ?? $data['แผนก'] ?? '');
                 $positionName = trim($data['position'] ?? $data['ตำแหน่ง'] ?? '');
+                $orgUnitName = trim($data['org_unit'] ?? $data['หน่วยงาน'] ?? '');
                 $deptId = $deptName !== '' ? Department::where('name', $deptName)->value('id') : null;
                 $posId = $positionName !== '' ? Position::where('name', $positionName)->value('id') : null;
+                $orgUnitId = $orgUnitName !== '' ? OrgUnit::where('name', $orgUnitName)->value('id') : null;
 
                 User::create([
                     'first_name' => $firstName ?: '-',
@@ -143,6 +145,7 @@ class UserController extends Controller implements HasMiddleware
                     'password_must_change' => Setting::getBool('password_force_change_first_login'),
                     'department_id' => $deptId,
                     'position_id' => $posId,
+                    'org_unit_id' => $orgUnitId,
                     'phone' => trim($data['phone'] ?? $data['เบอร์โทร'] ?? '') ?: null,
                     'remark' => trim($data['remark'] ?? $data['หมายเหตุ'] ?? '') ?: null,
                     'is_active' => true,

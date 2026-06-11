@@ -1306,4 +1306,13 @@ return [
     'approver_section_hint' => 'Fill in the fields below before approving. Fields marked * are required.',
     'approver_fields_required' => 'Please fill in the following fields before approving: :fields',
     'approver_fields_required_prefix' => 'Please fill in the approver section before approving:',
+
+    'download_template' => 'Download template',
+    'import_result' => 'Created :created, updated :updated, skipped :skipped.',
+    'department_import_title' => 'Import Departments',
+    'department_import_subtitle' => 'Upload a CSV file to create or update departments.',
+    'position_import_title' => 'Import Positions',
+    'position_import_subtitle' => 'Upload a CSV file to create or update positions.',
+    'org_unit_import_title' => 'Import Org Units',
+    'org_unit_import_subtitle' => 'Upload a CSV file to create or update org units. Parent rows must appear before child rows.',
 ];

@@ -1,23 +1,19 @@
 @extends('layouts.app')
 
-@section('title', __('users.import_title'))
+@section('title', __('common.department_import_title'))
 
 @section('breadcrumb')
     <x-breadcrumb :items="[
-        ['label' => __('common.user_and_access'), 'url' => route('users.index')],
-        ['label' => __('common.import_data')],
+        ['label' => __('common.settings'), 'url' => route('settings.departments.index')],
+        ['label' => __('common.departments'), 'url' => route('settings.departments.index')],
+        ['label' => __('common.import')],
     ]" />
 @endsection
 
 @section('content')
 <div>
-    <nav class="text-sm text-slate-500 dark:text-slate-400 mb-2">
-        <a href="{{ route('users.index') }}" class="hover:text-blue-600 dark:hover:text-blue-400">{{ __('common.users') }}</a>
-        <span class="mx-1">/</span>
-        <span>{{ __('common.import') }}</span>
-    </nav>
-    <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-1">{{ __('users.import_title') }}</h2>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">{{ __('users.import_subtitle') }}</p>
+    <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-1">{{ __('common.department_import_title') }}</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">{{ __('common.department_import_subtitle') }}</p>
 
     @if ($errors->any())
         <div class="alert-error mb-4">
@@ -48,19 +44,20 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="card p-6">
-            <form method="POST" action="{{ route('users.import.store') }}" enctype="multipart/form-data" class="space-y-5" novalidate>
+            <form method="POST" action="{{ route('settings.departments.import.store') }}" enctype="multipart/form-data" class="space-y-5" novalidate>
                 @csrf
                 <div>
-                    <label class="form-label">
-                        {{ __('users.import_upload_label') }}
-                    </label>
+                    <label class="form-label">{{ __('common.import_data') }}</label>
                     <input type="file" name="file" accept=".csv,.txt" required
                            class="w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50" />
-                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ __('users.import_upload_hint') }}</p>
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">CSV / TXT, max 2MB — UTF-8</p>
                 </div>
 
                 <div class="flex flex-wrap items-center justify-end gap-3">
-                    <a href="{{ route('users.index') }}" class="btn-secondary">
+                    <a href="{{ route('settings.departments.import.template') }}" class="btn-secondary">
+                        {{ __('common.download_template') }}
+                    </a>
+                    <a href="{{ route('settings.departments.index') }}" class="btn-secondary">
                         {{ __('common.cancel') }}
                     </a>
                     <button type="submit" class="btn-primary">
@@ -71,8 +68,7 @@
         </div>
 
         <div class="card p-6">
-            <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2">{{ __('users.import_template_title') }}</h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">{{ __('users.import_template_hint') }}</p>
+            <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200 mb-3">{{ __('common.columns') ?? 'Columns' }}</h3>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-xs">
                     <thead class="bg-slate-50 dark:bg-slate-800/60">
@@ -82,17 +78,15 @@
                         </tr>
                     </thead>
                     <tbody class="text-slate-700 dark:text-slate-300">
-                        <tr><td class="py-1.5 pr-4 font-mono">email</td><td>*</td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">first_name</td><td></td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">last_name</td><td></td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">department</td><td></td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">position</td><td></td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">org_unit</td><td></td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">phone</td><td></td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">remark</td><td></td></tr>
+                        <tr><td class="py-1.5 pr-4 font-mono">name</td><td>*</td></tr>
+                        <tr><td class="py-1.5 pr-4 font-mono">code</td><td></td></tr>
+                        <tr><td class="py-1.5 pr-4 font-mono">description</td><td></td></tr>
                     </tbody>
                 </table>
             </div>
+            <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                ถ้า code ซ้ำ — อัปเดต row นั้น; ถ้าไม่มี code — ค้น name แทน
+            </p>
         </div>
     </div>
 </div>

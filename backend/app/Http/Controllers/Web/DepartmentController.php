@@ -18,6 +18,88 @@ class DepartmentController extends Controller
 {
     use HasPerPage;
 
+    public function importForm(): View
+    {
+        return view('settings.departments.import');
+    }
+
+    public function downloadTemplate()
+    {
+        $csv = "name,code,description\n";
+        $csv .= "ฝ่ายวิชาการ,SCH_ACAD,ฝ่ายดูแลการเรียนการสอน\n";
+        $csv .= "ฝ่ายธุรการ,SCH_ADMIN,\n";
+
+        return response()->streamDownload(
+            fn () => print ($csv),
+            'departments_template.csv',
+            ['Content-Type' => 'text/csv; charset=UTF-8']
+        );
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate(['file' => 'required|file|mimes:csv,txt|max:2048']);
+
+        $path = $request->file('file')->getRealPath();
+        $lines = array_map('str_getcsv', file($path));
+        $header = array_shift($lines);
+
+        $created = $updated = $skipped = 0;
+        $errors = [];
+
+        foreach ($lines as $i => $row) {
+            if (count($row) < 1 || empty(trim($row[0]))) {
+                $skipped++;
+
+                continue;
+            }
+            $data = array_combine($header, array_pad($row, count($header), null));
+            $name = trim($data['name'] ?? $data['ชื่อ'] ?? '');
+            $code = strtoupper(trim($data['code'] ?? $data['รหัส'] ?? ''));
+            $desc = trim($data['description'] ?? $data['คำอธิบาย'] ?? '') ?: null;
+
+            if (empty($name)) {
+                $skipped++;
+
+                continue;
+            }
+
+            try {
+                $unique = $code !== ''
+                    ? Department::where('code', $code)->first()
+                    : Department::where('name', $name)->first();
+
+                if ($unique) {
+                    $unique->update([
+                        'name' => $name,
+                        'code' => $code !== '' ? $code : $unique->code,
+                        'description' => $desc,
+                    ]);
+                    $updated++;
+                } else {
+                    Department::create([
+                        'name' => $name,
+                        'code' => $code !== '' ? $code : strtoupper(substr(preg_replace('/\s+/', '_', $name), 0, 20)),
+                        'description' => $desc,
+                        'is_active' => true,
+                    ]);
+                    $created++;
+                }
+            } catch (\Exception $e) {
+                $errors[] = 'Row '.($i + 2).': '.$e->getMessage();
+            }
+        }
+
+        $message = __('common.import_result', compact('created', 'updated', 'skipped'));
+        if (! empty($errors)) {
+            return redirect()->route('settings.departments.import')
+                ->with('success', $message)
+                ->with('import_errors', array_slice($errors, 0, 10));
+        }
+
+        return redirect()->route('settings.departments.index')->with('success', $message);
+    }
+
     public function index(Request $request): View
     {
         $perPage = $this->resolvePerPage($request, 'departments_per_page');
@@ -69,7 +151,7 @@ class DepartmentController extends Controller
         $initialBindings = [];
         foreach ($departments as $dept) {
             foreach ($documentTypes as $docType) {
-                $key = $dept->id . '|' . $docType;
+                $key = $dept->id.'|'.$docType;
                 $binding = $dept->workflowBindings->firstWhere('document_type', $docType);
                 $initialBindings[$key] = $binding ? (string) $binding->workflow_id : '';
             }
@@ -111,6 +193,7 @@ class DepartmentController extends Controller
     {
         if ($request->has('toggle_active')) {
             $department->update(['is_active' => ! $department->is_active]);
+
             return redirect()->route('settings.departments.index')->with('success', __('common.saved'));
         }
 

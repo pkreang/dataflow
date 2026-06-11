@@ -1306,4 +1306,13 @@ return [
     'approver_section_hint' => 'กรุณากรอก field ด้านล่างก่อนอนุมัติ โดย field ที่มีเครื่องหมาย * เป็น field บังคับ',
     'approver_fields_required' => 'กรุณากรอก field ต่อไปนี้ก่อนอนุมัติ: :fields',
     'approver_fields_required_prefix' => 'กรุณากรอกข้อมูลในส่วนของผู้อนุมัติก่อน:',
+
+    'download_template' => 'ดาวน์โหลด template',
+    'import_result' => 'สร้างใหม่ :created รายการ / อัปเดต :updated รายการ / ข้าม :skipped รายการ',
+    'department_import_title' => 'นำเข้าแผนก',
+    'department_import_subtitle' => 'อัปโหลดไฟล์ CSV เพื่อสร้างหรืออัปเดตแผนก',
+    'position_import_title' => 'นำเข้าตำแหน่ง',
+    'position_import_subtitle' => 'อัปโหลดไฟล์ CSV เพื่อสร้างหรืออัปเดตตำแหน่ง',
+    'org_unit_import_title' => 'นำเข้าหน่วยงาน',
+    'org_unit_import_subtitle' => 'อัปโหลดไฟล์ CSV เพื่อสร้างหรืออัปเดตหน่วยงาน โดยแถว parent ต้องอยู่ก่อน child',
 ];

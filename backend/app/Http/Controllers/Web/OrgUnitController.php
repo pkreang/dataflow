@@ -9,11 +9,110 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OrgUnitController extends Controller
 {
+    public function importForm(): View
+    {
+        return view('settings.org-units.import');
+    }
+
+    public function downloadTemplate()
+    {
+        $csv = "name,type,parent_name,head_email,sort_order\n";
+        $csv .= "โรงเรียนตัวอย่าง,company,,,1\n";
+        $csv .= "ฝ่ายวิชาการ,department,โรงเรียนตัวอย่าง,,1\n";
+        $csv .= "ฝ่ายธุรการ,department,โรงเรียนตัวอย่าง,,2\n";
+
+        return response()->streamDownload(
+            fn () => print ($csv),
+            'org_units_template.csv',
+            ['Content-Type' => 'text/csv; charset=UTF-8']
+        );
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate(['file' => 'required|file|mimes:csv,txt|max:2048']);
+
+        $path = $request->file('file')->getRealPath();
+        $lines = array_map('str_getcsv', file($path));
+        $header = array_shift($lines);
+
+        $created = $updated = $skipped = 0;
+        $errors = [];
+        $nameToId = OrgUnit::pluck('id', 'name')->all();  // pre-seed from DB
+
+        $validTypes = ['company', 'division', 'department', 'section', 'team'];
+
+        foreach ($lines as $i => $row) {
+            if (count($row) < 1 || empty(trim($row[0]))) {
+                $skipped++;
+
+                continue;
+            }
+            $data = array_combine($header, array_pad($row, count($header), null));
+            $name = trim($data['name'] ?? '');
+            $type = trim($data['type'] ?? 'department');
+            $parentName = trim($data['parent_name'] ?? '');
+            $headEmail = trim($data['head_email'] ?? '');
+            $sortOrder = (int) ($data['sort_order'] ?? 0);
+
+            if (empty($name)) {
+                $skipped++;
+
+                continue;
+            }
+
+            if (! in_array($type, $validTypes, true)) {
+                $errors[] = 'Row '.($i + 2).": type \"{$type}\" ไม่ถูกต้อง (ใช้ company/division/department/section/team)";
+                $skipped++;
+
+                continue;
+            }
+
+            try {
+                $parentId = $parentName !== '' ? ($nameToId[$parentName] ?? null) : null;
+                $headId = $headEmail !== '' ? User::where('email', $headEmail)->value('id') : null;
+
+                $existing = OrgUnit::where('name', $name)->first();
+                if ($existing) {
+                    $existing->update([
+                        'type' => $type,
+                        'parent_id' => $parentId,
+                        'head_user_id' => $headId,
+                        'sort_order' => $sortOrder,
+                    ]);
+                    $nameToId[$name] = $existing->id;
+                    $updated++;
+                } else {
+                    $unit = OrgUnit::create([
+                        'name' => $name,
+                        'type' => $type,
+                        'parent_id' => $parentId,
+                        'head_user_id' => $headId,
+                        'sort_order' => $sortOrder,
+                        'is_active' => true,
+                    ]);
+                    $nameToId[$name] = $unit->id;
+                    $created++;
+                }
+            } catch (\Exception $e) {
+                $errors[] = 'Row '.($i + 2).': '.$e->getMessage();
+            }
+        }
+
+        $message = __('common.import_result', compact('created', 'updated', 'skipped'));
+        if (! empty($errors)) {
+            return redirect()->route('settings.org-units.import')
+                ->with('success', $message)
+                ->with('import_errors', array_slice($errors, 0, 10));
+        }
+
+        return redirect()->route('settings.org-units.index')->with('success', $message);
+    }
+
     public function index(): View
     {
         $roots = OrgUnit::with(['children.children.children', 'head'])
@@ -60,23 +159,23 @@ class OrgUnitController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'         => 'required|string|max:255',
-            'type'         => 'required|in:company,division,department,section,team',
-            'parent_id'    => 'nullable|exists:org_units,id',
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:company,division,department,section,team',
+            'parent_id' => 'nullable|exists:org_units,id',
             'head_user_id' => 'nullable|exists:users,id',
-            'branch_id'    => 'nullable|exists:branches,id',
-            'sort_order'   => 'nullable|integer|min:0',
-            'is_active'    => 'nullable|boolean',
+            'branch_id' => 'nullable|exists:branches,id',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         OrgUnit::create([
-            'name'         => $validated['name'],
-            'type'         => $validated['type'],
-            'parent_id'    => $validated['parent_id'] ?? null,
+            'name' => $validated['name'],
+            'type' => $validated['type'],
+            'parent_id' => $validated['parent_id'] ?? null,
             'head_user_id' => $validated['head_user_id'] ?? null,
-            'branch_id'    => $validated['branch_id'] ?? null,
-            'sort_order'   => (int) ($validated['sort_order'] ?? 0),
-            'is_active'    => (bool) ($validated['is_active'] ?? true),
+            'branch_id' => $validated['branch_id'] ?? null,
+            'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
 
         return redirect()->route('settings.org-units.index')
@@ -97,13 +196,14 @@ class OrgUnitController extends Controller
     {
         if ($request->has('toggle_active')) {
             $orgUnit->update(['is_active' => ! $orgUnit->is_active]);
+
             return redirect()->route('settings.org-units.index')->with('success', __('common.saved'));
         }
 
         $validated = $request->validate([
-            'name'         => 'required|string|max:255',
-            'type'         => 'required|in:company,division,department,section,team',
-            'parent_id'    => [
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:company,division,department,section,team',
+            'parent_id' => [
                 'nullable',
                 'exists:org_units,id',
                 function ($attribute, $value, $fail) use ($orgUnit) {
@@ -113,19 +213,19 @@ class OrgUnitController extends Controller
                 },
             ],
             'head_user_id' => 'nullable|exists:users,id',
-            'branch_id'    => 'nullable|exists:branches,id',
-            'sort_order'   => 'nullable|integer|min:0',
-            'is_active'    => 'nullable|boolean',
+            'branch_id' => 'nullable|exists:branches,id',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $orgUnit->update([
-            'name'         => $validated['name'],
-            'type'         => $validated['type'],
-            'parent_id'    => $validated['parent_id'] ?? null,
+            'name' => $validated['name'],
+            'type' => $validated['type'],
+            'parent_id' => $validated['parent_id'] ?? null,
             'head_user_id' => $validated['head_user_id'] ?? null,
-            'branch_id'    => $validated['branch_id'] ?? null,
-            'sort_order'   => (int) ($validated['sort_order'] ?? 0),
-            'is_active'    => (bool) ($validated['is_active'] ?? $orgUnit->is_active),
+            'branch_id' => $validated['branch_id'] ?? null,
+            'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            'is_active' => (bool) ($validated['is_active'] ?? $orgUnit->is_active),
         ]);
 
         return redirect()->route('settings.org-units.edit', $orgUnit)
