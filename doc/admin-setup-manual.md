@@ -37,7 +37,7 @@ php artisan migrate:fresh --seed
 ```
 ผลลัพธ์ที่ควรได้ (อ้างอิง 2026-05-23 หลัง LINE Messaging API migration):
 - 1 admin user — `admin@example.com` / `password`
-- 4 roles — super-admin, admin, viewer, approver
+- 4 roles — super-admin, admin, employee, approver
 - 25 permissions
 - 35 navigation menus
 - 47 settings rows (default ครบ — +4 จาก LINE Messaging API keys ที่ commit `6116d82`/`34f891b`)
@@ -129,7 +129,7 @@ settings=47
 
 **ทำอะไร:**
 1. ไป `/settings/password-policy` → เห็น min length=8, require upper/lower/number/special, force change first login=true
-2. ไป `/settings/authentication` → เห็น Local enabled, Entra disabled, LDAP disabled, default role=viewer
+2. ไป `/settings/authentication` → เห็น Local enabled, Entra disabled, LDAP disabled, default role=employee
 3. ไป `/settings/branding` → เห็นค่า default (logo placeholder, สี default)
 4. ไป `/settings/notifications` → email + Line enabled, ทุก event เปิด
 
@@ -311,7 +311,7 @@ echo "positions=".\App\Models\Position::count().PHP_EOL;'
 ลำดับ: สำรวจ seeded roles → สร้าง test users → ทดสอบ admin password reset → ทดสอบ non-admin permission gate → ทบทวน role overview matrix
 
 - **Bootstrap login:** `admin@example.com` / `password` (super-admin, `password_must_change=false`)
-- **Seeded state ที่จะเห็น:** 4 roles (`super-admin`, `admin`, `viewer`, `approver`) + 25 permissions + 1 bootstrap user
+- **Seeded state ที่จะเห็น:** 4 roles (`super-admin`, `admin`, `employee`, `approver`) + 25 permissions + 1 bootstrap user
 - ระบบล็อกอิน 3 mode: Local / Microsoft Entra (OIDC) / LDAP — Phase นี้ใช้ **Local mode** เท่านั้น (instance default)
 - Departments + Positions ที่สร้างใน Phase 1 จำเป็นต้องมีอย่างน้อย 1 ตัวก่อนสร้าง user (validate `required|exists`)
 
@@ -320,7 +320,7 @@ echo "positions=".\App\Models\Position::count().PHP_EOL;'
 
 **ทำอะไร:**
 1. คลิกเมนู "ภาพรวมสิทธิ์" → เปิดหน้า matrix
-2. ดูหัวคอลัมน์: ควรเห็น **4 roles** (super-admin, admin, approver, viewer หรือคล้าย)
+2. ดูหัวคอลัมน์: ควรเห็น **4 roles** (super-admin, admin, approver, employee หรือคล้าย)
 3. ดูแถว: **25 permissions** จัดกลุ่มตามโมดูล (manage_settings, user_access.*, approval.*, ฯลฯ)
 4. ทดสอบ search box (ด้านบนตาราง) — พิมพ์ "approval" → กรองแถวที่ permission name มี keyword
 5. คลิกชื่อ role ในหัวคอลัมน์ → ไปหน้า `/roles/{id}/edit` (super-admin เท่านั้นที่แก้ได้)
@@ -341,7 +341,7 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
 - super-admin row: ไม่มี explicit perms (system bypass ผ่าน `Gate::before`) — เซลล์อาจว่าง แต่จริงๆ มีทุก permission
 - admin row: ทุก perm checked (25 perms via `Role::syncPermissions(Permission::all())`)
 - approver row: 3 perms checked (approval.approve, view_purchase_requests, view_purchase_orders)
-- viewer row: ทุก perm ที่ action เป็น `read` หรือ `export` checked
+- employee row: perm ที่ action เป็น `read` หรือ `export` checked ยกเว้น `user_access.read`, `role_access.read`, `permission_access.read` (admin-area)
 - tinker count: `roles=4`, `perms=25`
 
 **Pitfall:**
@@ -366,7 +366,7 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
    - **หมายเหตุ (remark):** *(optional, max 1000)*
    - **สถานะ (is_active):** ☑ *(default true)*
    - **ประเภทบทบาท (role_type):**
-     - `default` → เลือก role 1 ตัวจาก dropdown (4 ตัว: super-admin / admin / approver / viewer)
+     - `default` → เลือก role 1 ตัวจาก dropdown (4 ตัว: super-admin / admin / approver / employee)
      - `custom` → ติ๊ก permission ทีละช่อง (จาก matrix grid 25 perms)
    - **role:** `admin` *(สำหรับ user 1 — somchai)*
 4. คลิก **"บันทึก"**
@@ -386,9 +386,9 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
 |---|---|---|---|---|---|---|
 | 1 | สมชาย | ใจดี | somchai@abc.co.th | IT | MGR | admin |
 | 2 | สมหญิง | รักงาน | somying@abc.co.th | FIN | SUP | approver |
-| 3 | สมศรี | ขยัน | somsri@abc.co.th | ACC | SUP | viewer |
+| 3 | สมศรี | ขยัน | somsri@abc.co.th | ACC | SUP | employee |
 
-**สำคัญ: เก็บ temp password ของ user 3 (somsri, viewer) ไว้ใช้ใน Step 2.4!** หลังกด "สร้างรหัสผ่านชั่วคราว" รหัสจะแสดงครั้งเดียวบนหน้าจอ — copy ไว้ก่อน refresh
+**สำคัญ: เก็บ temp password ของ user 3 (somsri, employee) ไว้ใช้ใน Step 2.4!** หลังกด "สร้างรหัสผ่านชั่วคราว" รหัสจะแสดงครั้งเดียวบนหน้าจอ — copy ไว้ก่อน refresh
 
 **Pitfall:**
 - **Email unique ทั้งระบบ** — กรอกซ้ำ → validation error "อีเมลนี้ถูกใช้แล้ว"
@@ -432,7 +432,7 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
 **UAT check:** ☐
 
 ### Step 2.4 — Non-Admin Login → Permission Gate
-**ที่:** logout admin → login เป็น `somsri@abc.co.th` (role: viewer)  ·  **Permission test:** `manage_settings` (viewer ไม่มี)
+**ที่:** logout admin → login เป็น `somsri@abc.co.th` (role: employee)  ·  **Permission test:** `manage_settings` (employee ไม่มี)
 
 **ทำอะไร:**
 1. Logout admin → กลับหน้า login
@@ -440,13 +440,13 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
 3. ถ้ามี `password_must_change` → เปลี่ยนรหัสก่อน
 4. ที่ dashboard → สังเกต **sidebar ที่หายไป**:
    - "ตั้งค่า" group: เมนูส่วนใหญ่ควรหายไป (Branding, Navigation, Departments, Positions, ฯลฯ)
-   - viewer ได้แต่ permissions read+export → เห็นเฉพาะเมนู view
+   - employee ได้แต่ permissions read+export → เห็นเฉพาะเมนู view
 5. ลอง access route ที่ super-admin only โดยพิมพ์ใน URL bar: `http://localhost:8000/settings/branch-scoping`
 6. ระบบควรคืน **403 Forbidden** (middleware `super-admin` หรือ `EnforceMenuPermission`)
 7. ลอง access `/settings/users` → 403 (`manage_settings` required)
 
 **ผลที่ควรเห็น:**
-- sidebar viewer มีเมนู: ดูฟอร์มเอกสาร, ดูรายงาน, profile — รายการสั้นกว่าของ admin มาก
+- sidebar employee มีเมนู: ดูฟอร์มเอกสาร, ดูรายงาน, profile — รายการสั้นกว่าของ admin มาก
 - `/settings/*` ส่วนใหญ่ → 403 page "ไม่มีสิทธิ์เข้าถึง"
 - API endpoint (Bearer token) ที่ super-admin only — ตัวอย่าง: `GET /v1/departments` → JSON 403 `{"error":"auth.super_admin_only"}`
 
@@ -466,7 +466,7 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
 **ที่:** `/roles/overview`  ·  **Permission:** ไม่ล็อก (กลับมาใช้ admin login)
 
 **ทำอะไร:**
-1. Logout viewer → log กลับ admin
+1. Logout employee → log กลับ admin
 2. ไป `/roles/overview` อีกครั้ง
 3. ทดสอบ search:
    - พิมพ์ `approval` → กรองแถวที่ permission name มี keyword
@@ -483,7 +483,7 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
 
 **Pitfall:**
 - **Cache permission ของ Spatie** — หลังแก้ role ใหม่ ถ้าไม่ refresh page อาจเห็นค่าเก่า — Spatie cache invalidates ผ่าน model event แต่ server-side cache อาจค้าง — กด hard refresh
-- viewer/approver คลิก role link ได้แต่หน้า edit จะ block save (auth fail) — สำหรับทดสอบ
+- employee/approver คลิก role link ได้แต่หน้า edit จะ block save (auth fail) — สำหรับทดสอบ
 
 **UAT check:** ☐
 
@@ -491,7 +491,7 @@ foreach(\Spatie\Permission\Models\Role::all() as $r){
 **ที่:** `/roles/create`  ·  **เมนู:** "บทบาท" / "Roles" (เข้าจาก list `/roles` แล้วกดปุ่ม "เพิ่มบทบาท")  ·  **Permission:** `super-admin` middleware (DB column `is_super_admin=true`)
 
 **ทำอะไร:**
-1. ไป `/roles` → list มี 4 row (super-admin, admin, approver, viewer)
+1. ไป `/roles` → list มี 4 row (super-admin, admin, approver, employee)
 2. คลิกปุ่ม **"เพิ่มบทบาท"** มุมขวาบน → ไปหน้า `/roles/create`
 3. กรอก:
    - **ชื่อบทบาท (name):** `editor` *(required, unique, machine identifier — ใช้ snake_case หรือ kebab)*
@@ -529,27 +529,27 @@ foreach($r->permissions as $p) echo "  - ".$p->name.PHP_EOL;'
 1. ไป `/permissions` → list มี 25 row จาก seed (จัดกลุ่มตาม module: `manage_settings`, `user_access.*`, `approval.*`, ฯลฯ)
 2. คลิกปุ่ม **"เพิ่มสิทธิ์"** มุมขวาบน → ไปหน้า `/permissions/create`
 3. กรอก field เดียว:
-   - **ชื่อสิทธิ์ (name):** `reports.viewer` *(required, max 100, unique, format แนะนำ `module.action`)*
+   - **ชื่อสิทธิ์ (name):** `reports.employee` *(required, max 100, unique, format แนะนำ `module.action`)*
    - Placeholder ใน input: `"module.action"`
    - Help text ใต้: hint key `common.permission_name_hint`
 4. คลิก **"บันทึก"**
 
 **ผลที่ควรเห็น:**
 - Redirect กลับ `/permissions` (list) — toast: "บันทึกเรียบร้อย" (key `common.saved`)
-- ตาราง list เพิ่ม 1 row `reports.viewer` — auto-parse `module='reports'`, `action='viewer'` (split ที่ `.` แรก)
+- ตาราง list เพิ่ม 1 row `reports.employee` — auto-parse `module='reports'`, `action='employee'` (split ที่ `.` แรก)
 - DB: `permissions` row +1 (`guard_name='web'`); Spatie cache `PermissionRegistrar::forgetCachedPermissions()` clear อัตโนมัติ
-- ที่ `/roles/overview` — แถวใหม่ `reports.viewer` ปรากฏ แต่ทุก role ไม่มี checkmark (ยังไม่ผูก)
+- ที่ `/roles/overview` — แถวใหม่ `reports.employee` ปรากฏ แต่ทุก role ไม่มี checkmark (ยังไม่ผูก)
 
 **ขั้นถัดไปบังคับ:** การมี permission ใน DB **ไม่ทำให้** ใครได้สิทธิ์ทันที — ต้องไปผูก:
-- เข้า `/roles/{id}/edit` ของ role ที่ต้องการ → ติ๊ก `reports.viewer` → save  
+- เข้า `/roles/{id}/edit` ของ role ที่ต้องการ → ติ๊ก `reports.employee` → save  
 - **หรือ** ใน user edit page เลือก `role_type=custom` แล้วติ๊ก permissions[] ตรงๆ
-- **หรือ** assign โดยตรงผ่าน Spatie: `$user->givePermissionTo('reports.viewer')` (โค้ด level)
+- **หรือ** assign โดยตรงผ่าน Spatie: `$user->givePermissionTo('reports.employee')` (โค้ด level)
 
 **Pitfall ใหญ่:**
 - **สร้าง permission row เปล่าๆ ไม่ gate route ใดๆ** — โค้ดจะกัน route ต้อง reference string ตรงเป๊ะ:
-  - `@can('reports.viewer', ...)` ใน Blade view
-  - `middleware('permission:reports.viewer')` ใน routes
-  - `'permission' => 'reports.viewer'` ใน `navigation_menus` row (เพื่อ filter sidebar)
+  - `@can('reports.employee', ...)` ใน Blade view
+  - `middleware('permission:reports.employee')` ใน routes
+  - `'permission' => 'reports.employee'` ใน `navigation_menus` row (เพื่อ filter sidebar)
   - **ถ้าไม่มี code reference → permission นี้แค่อยู่ใน DB เฉยๆ ไม่มีผล**
 - **ลบ permission ไม่ได้** ถ้า:
   - มี role ผูกอยู่ (`role_has_permissions`)
@@ -566,7 +566,7 @@ DB state ที่ควรได้:
 ```
 users = 4 (1 admin seed + 3 test: somchai, somying, somsri)
 roles = 5 (4 seed + 1 custom: editor)
-permissions = 26 (25 seed + 1 custom: reports.viewer)
+permissions = 26 (25 seed + 1 custom: reports.employee)
 ```
 
 ตรวจด้วย:
@@ -1311,7 +1311,7 @@ composer analyse # ควร 0 errors (PHPStan level ใน phpstan.neon)
 
 **7.3.3 Permission gates:**
 1. Logout admin
-2. Login เป็น viewer user (ไม่มี super-admin)
+2. Login เป็น employee user (ไม่มี super-admin)
 3. ลองเข้า URL ตรง:
    - `/settings/document-forms` → 403 หรือ redirect
    - `/users` → 403

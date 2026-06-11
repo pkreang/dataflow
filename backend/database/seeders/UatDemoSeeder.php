@@ -25,7 +25,7 @@ use Spatie\Permission\Models\Role;
  *   php artisan db:seed --class=UatDemoSeeder
  *
  * Test accounts (password: password):
- *   employee@test.com   — submitter (viewer)
+ *   employee@test.com   — submitter (employee)
  *   manager@test.com    — stage 1 approver (approver)
  *   gm@test.com         — stage 2 approver (approver)
  *   substitute@test.com — substitute for manager (approver)
@@ -82,7 +82,7 @@ class UatDemoSeeder extends Seeder
         );
 
         // 5. Users
-        $viewerRole = Role::where('name', 'viewer')->first();
+        $employeeRole = Role::where('name', 'employee')->first();
         $approverRole = Role::where('name', 'approver')->first();
 
         $employee = User::updateOrCreate(
@@ -100,8 +100,8 @@ class UatDemoSeeder extends Seeder
                 'is_active' => true,
             ]
         );
-        if ($viewerRole) {
-            $employee->syncRoles([$viewerRole]);
+        if ($employeeRole) {
+            $employee->syncRoles([$employeeRole]);
         }
 
         $manager = User::updateOrCreate(

@@ -89,7 +89,7 @@ DB ปัจจุบัน clean-slate: 1 admin user, 4 roles, 25 permissions, 
 
 **Permission:** `role_access.read` · **Recent:** `0962787` (write-guard), `79de956` (RBAC overview)
 
-- [ ] เปิด `/roles` → list role 4 ตัว (admin, manager, staff, viewer หรือ seed)
+- [ ] เปิด `/roles` → list role 4 ตัว (admin, manager, staff, employee หรือ seed)
 - [ ] กดปุ่ม "ดูภาพรวมสิทธิ์" → ไปหน้า `/roles/overview` → matrix table role × permission
 - [ ] ค้นหา permission ใน overview ทำได้
 - [ ] Footnote เรื่อง `is_super_admin` ปรากฏ (super-admin ไม่ผูก permission ตรง — bypass ทั้งหมด)

@@ -32,7 +32,7 @@ class DemoPeopleSeeder extends Seeder
     {
         $this->call([PermissionSeeder::class, RolePermissionSeeder::class]);
 
-        $viewerRole = Role::where('name', 'viewer')->first();
+        $employeeRole = Role::where('name', 'employee')->first();
         $approverRole = Role::where('name', 'approver')->first();
 
         $positionsByCode = Position::query()
@@ -107,8 +107,8 @@ class DemoPeopleSeeder extends Seeder
                 ]
             );
 
-            if ($viewerRole) {
-                $user->syncRoles([$viewerRole]);
+            if ($employeeRole) {
+                $user->syncRoles([$employeeRole]);
             }
         }
 

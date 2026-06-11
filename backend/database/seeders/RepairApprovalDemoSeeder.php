@@ -27,7 +27,7 @@ class RepairApprovalDemoSeeder extends Seeder
         }
 
         $approverRole = Role::query()->where('name', 'approver')->where('guard_name', 'web')->first();
-        $viewerRole = Role::query()->where('name', 'viewer')->where('guard_name', 'web')->first();
+        $employeeRole = Role::query()->where('name', 'employee')->where('guard_name', 'web')->first();
 
         $approver = User::query()->updateOrCreate(
             ['email' => 'approver@example.com'],
@@ -53,8 +53,8 @@ class RepairApprovalDemoSeeder extends Seeder
                 'is_super_admin' => false,
             ]
         );
-        if ($viewerRole && ! $requester->hasRole('viewer')) {
-            $requester->syncRoles(['viewer']);
+        if ($employeeRole && ! $requester->hasRole('employee')) {
+            $requester->syncRoles(['employee']);
         }
 
         // Align with BranchSeeder (company / branch) when present

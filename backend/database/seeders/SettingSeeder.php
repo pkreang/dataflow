@@ -27,7 +27,7 @@ class SettingSeeder extends Seeder
             'auth_entra_enabled' => '0',
             'auth_ldap_enabled' => '0',
             'auth_local_super_admin_only' => '0',
-            'auth_default_role' => 'viewer',
+            'auth_default_role' => 'employee',
             'entra_tenant_id' => '',
             'entra_client_id' => '',
             'ldap_host' => '',

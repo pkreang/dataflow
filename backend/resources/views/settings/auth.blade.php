@@ -107,7 +107,7 @@
                             class="form-input w-full max-w-md mt-1">
                         @foreach ($roles as $role)
                             <option value="{{ $role->name }}"
-                                {{ old('auth_default_role', $settings['auth_default_role'] ?? 'viewer') === $role->name ? 'selected' : '' }}>
+                                {{ old('auth_default_role', $settings['auth_default_role'] ?? 'employee') === $role->name ? 'selected' : '' }}>
                                 {{ $role->display_name ?? $role->name }}
                             </option>
                         @endforeach

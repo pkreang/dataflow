@@ -8,14 +8,13 @@ use App\Models\Company;
 use App\Models\Department;
 use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
-use App\Models\DocumentFormField;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentType;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
 use App\Models\Position;
-use App\Models\User;
 use App\Models\RunningNumberConfig;
+use App\Models\User;
 use App\Services\FormSchemaService;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
@@ -79,7 +78,7 @@ class BodindechaDemoSeeder extends Seeder
             $dept = Department::updateOrCreate(['code' => $d['code']], ['name' => $d['name'], 'description' => $d['description']]);
             $deptMap[$d['code']] = $dept;
         }
-        $this->command?->info('Departments: ' . count($departments));
+        $this->command?->info('Departments: '.count($departments));
 
         // ── 4. Positions (5) ────────────────────────────────
         $positions = [
@@ -95,19 +94,19 @@ class BodindechaDemoSeeder extends Seeder
             $pos = Position::updateOrCreate(['code' => $p['code']], ['name' => $p['name'], 'description' => $p['description'], 'is_active' => true]);
             $posMap[$p['code']] = $pos;
         }
-        $this->command?->info('Positions: ' . count($positions));
+        $this->command?->info('Positions: '.count($positions));
 
         // ── 5. Users (6) ────────────────────────────────────
         $approverRole = Role::where('name', 'approver')->where('guard_name', 'web')->first();
-        $viewerRole = Role::where('name', 'viewer')->where('guard_name', 'web')->first();
+        $employeeRole = Role::where('name', 'employee')->where('guard_name', 'web')->first();
 
         $users = [
-            ['email' => 'teacher.thai@bodin.test',  'first_name' => 'สุดา',     'last_name' => 'รักภาษา',   'dept' => 'BD_THAI',   'pos' => 'BD_TEACHER',    'role' => $viewerRole],
-            ['email' => 'teacher.math@bodin.test',  'first_name' => 'ประยุทธ์',  'last_name' => 'คำนวณเก่ง', 'dept' => 'BD_MATH',   'pos' => 'BD_TEACHER',    'role' => $viewerRole],
-            ['email' => 'head.thai@bodin.test',     'first_name' => 'วิภา',     'last_name' => 'หัวหน้าสาระ','dept' => 'BD_THAI',   'pos' => 'BD_DEPT_HEAD',  'role' => $approverRole],
+            ['email' => 'teacher.thai@bodin.test',  'first_name' => 'สุดา',     'last_name' => 'รักภาษา',   'dept' => 'BD_THAI',   'pos' => 'BD_TEACHER',    'role' => $employeeRole],
+            ['email' => 'teacher.math@bodin.test',  'first_name' => 'ประยุทธ์',  'last_name' => 'คำนวณเก่ง', 'dept' => 'BD_MATH',   'pos' => 'BD_TEACHER',    'role' => $employeeRole],
+            ['email' => 'head.thai@bodin.test',     'first_name' => 'วิภา',     'last_name' => 'หัวหน้าสาระ', 'dept' => 'BD_THAI',   'pos' => 'BD_DEPT_HEAD',  'role' => $approverRole],
             ['email' => 'vice.hr@bodin.test',       'first_name' => 'อนันต์',   'last_name' => 'รองบุคคล',  'dept' => 'BD_HR',     'pos' => 'BD_VICE_DIR',   'role' => $approverRole],
-            ['email' => 'vice.acad@bodin.test',     'first_name' => 'พรรณี',    'last_name' => 'รองวิชาการ','dept' => 'BD_ACAD',   'pos' => 'BD_VICE_DIR',   'role' => $approverRole],
-            ['email' => 'director@bodin.test',      'first_name' => 'กัญญาพัชญ์','last_name' => 'กานต์ภูวนันต์', 'dept' => 'BD_ADMIN', 'pos' => 'BD_DIRECTOR', 'role' => $approverRole],
+            ['email' => 'vice.acad@bodin.test',     'first_name' => 'พรรณี',    'last_name' => 'รองวิชาการ', 'dept' => 'BD_ACAD',   'pos' => 'BD_VICE_DIR',   'role' => $approverRole],
+            ['email' => 'director@bodin.test',      'first_name' => 'กัญญาพัชญ์', 'last_name' => 'กานต์ภูวนันต์', 'dept' => 'BD_ADMIN', 'pos' => 'BD_DIRECTOR', 'role' => $approverRole],
         ];
 
         foreach ($users as $u) {
@@ -128,7 +127,7 @@ class BodindechaDemoSeeder extends Seeder
                 $user->syncRoles([$u['role']->name]);
             }
         }
-        $this->command?->info('Users: ' . count($users));
+        $this->command?->info('Users: '.count($users));
 
         // ── 6. Workflows ────────────────────────────────────
 
@@ -236,7 +235,7 @@ class BodindechaDemoSeeder extends Seeder
                     'validation_rules' => ['min_length' => 10]],
                 ['field_key' => 'contact_phone',    'label' => 'เบอร์ติดต่อระหว่างลา', 'field_type' => 'phone',    'is_required' => true,  'sort_order' => 7],
                 ['field_key' => 'substitute',       'label' => 'ผู้ปฏิบัติหน้าที่แทน', 'field_type' => 'text',     'is_required' => false, 'sort_order' => 8],
-                ['field_key' => 'signature',        'label' => 'ลายมือชื่อ',          'field_type' => 'signature','is_required' => false, 'sort_order' => 9],
+                ['field_key' => 'signature',        'label' => 'ลายมือชื่อ',          'field_type' => 'signature', 'is_required' => false, 'sort_order' => 9],
             ],
             $bdDeptIds
         );
@@ -283,7 +282,7 @@ class BodindechaDemoSeeder extends Seeder
                         ['key' => 'amount', 'label' => 'จำนวนเงิน', 'type' => 'number'],
                     ]],
                     'visibility_rules' => [['field' => 'budget_source', 'operator' => 'not_equals', 'value' => 'no_budget']]],
-                ['field_key' => 'requester_sign',    'label' => 'ลายมือชื่อผู้ขออนุมัติ',    'field_type' => 'signature','is_required' => false, 'sort_order' => 15],
+                ['field_key' => 'requester_sign',    'label' => 'ลายมือชื่อผู้ขออนุมัติ',    'field_type' => 'signature', 'is_required' => false, 'sort_order' => 15],
             ],
             $bdDeptIds
         );
@@ -297,12 +296,12 @@ class BodindechaDemoSeeder extends Seeder
         RunningNumberConfig::updateOrCreate(
             ['document_type' => 'bd_leave_request'],
             ['prefix' => 'LV', 'digit_count' => 4, 'reset_mode' => 'yearly',
-             'include_year' => true, 'include_month' => false, 'is_active' => true]
+                'include_year' => true, 'include_month' => false, 'is_active' => true]
         );
         RunningNumberConfig::updateOrCreate(
             ['document_type' => 'bd_activity_approval'],
             ['prefix' => 'ACT', 'digit_count' => 4, 'reset_mode' => 'yearly',
-             'include_year' => true, 'include_month' => false, 'is_active' => true]
+                'include_year' => true, 'include_month' => false, 'is_active' => true]
         );
         $this->command?->info('Running Numbers: LV2026-0001 / ACT2026-0001');
 

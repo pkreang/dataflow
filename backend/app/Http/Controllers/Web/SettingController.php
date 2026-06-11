@@ -513,7 +513,7 @@ class SettingController extends Controller
             Setting::set($key, $request->boolean($key) ? '1' : '0');
         }
 
-        Setting::set('auth_default_role', $request->input('auth_default_role', 'viewer'));
+        Setting::set('auth_default_role', $request->input('auth_default_role', 'employee'));
         Setting::set('entra_tenant_id', trim((string) $request->input('entra_tenant_id', '')));
         Setting::set('entra_client_id', trim((string) $request->input('entra_client_id', '')));
         Setting::set('ldap_host', trim((string) $request->input('ldap_host', '')));
