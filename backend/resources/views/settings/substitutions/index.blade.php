@@ -54,8 +54,12 @@
                                 {{ trim($sub->toUser->first_name . ' ' . $sub->toUser->last_name) }}
                             </td>
                             <td class="px-4 py-3 text-sm text-slate-500">
-                                {{ $sub->starts_at->format('d/m/Y') }}
-                                @if ($sub->ends_at) — {{ $sub->ends_at->format('d/m/Y') }} @endif
+                                {{ $sub->starts_at->format('d/m/Y') }} —
+                                @if ($sub->ends_at)
+                                    {{ $sub->ends_at->format('d/m/Y') }}
+                                @else
+                                    <span class="text-slate-400">{{ __('common.no_end_date') }}</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-slate-500">{{ $sub->reason ?? '-' }}</td>
                             <td class="px-4 py-3 text-sm">
@@ -66,21 +70,10 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <x-row-actions>
-                                    <form method="POST" action="{{ route('settings.substitutions.toggle', $sub) }}">
-                                        @csrf @method('PATCH')
-                                        <button type="submit" class="dropdown-item">
-                                            {{ $sub->is_active ? __('common.deactivate') : __('common.activate') }}
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="{{ route('settings.substitutions.destroy', $sub) }}"
-                                          onsubmit="return confirm('{{ __('common.confirm_delete') }}')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="dropdown-item text-red-600 dark:text-red-400">
-                                            {{ __('common.delete') }}
-                                        </button>
-                                    </form>
-                                </x-row-actions>
+                                <x-row-actions :items="[
+                                    ['label' => $sub->is_active ? __('common.deactivate') : __('common.activate'), 'method' => 'PATCH', 'action' => route('settings.substitutions.toggle', $sub), 'icon' => 'toggle'],
+                                    ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.substitutions.destroy', $sub), 'icon' => 'delete', 'confirm' => __('common.confirm_delete'), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
+                                ]" />
                             </td>
                         </tr>
                         @endforeach

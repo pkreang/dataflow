@@ -22,7 +22,7 @@ class UserSubstitution extends Model
     {
         return [
             'starts_at' => 'datetime',
-            'ends_at'   => 'datetime',
+            'ends_at' => 'datetime',
             'is_active' => 'boolean',
         ];
     }
@@ -69,5 +69,22 @@ class UserSubstitution extends Model
             ->first();
 
         return $sub?->to_user_id;
+    }
+
+    /**
+     * คืน from_user_id ทั้งหมดที่ toUserId เป็น active substitute ให้ ณ เวลาที่กำหนด
+     *
+     * @return array<int, int>
+     */
+    public static function activePrincipalsFor(int $toUserId, Carbon $at): array
+    {
+        return static::query()
+            ->where('to_user_id', $toUserId)
+            ->where('is_active', true)
+            ->where('starts_at', '<=', $at)
+            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', $at))
+            ->pluck('from_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 }

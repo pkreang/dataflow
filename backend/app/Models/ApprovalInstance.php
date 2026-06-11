@@ -94,20 +94,27 @@ class ApprovalInstance extends Model
      */
     public function scopePendingForApprover(Builder $query, int $userId, array $roleNames, ?int $positionId): Builder
     {
+        // รวม id ของ principal ที่ user นี้เป็น active substitute ให้ — list ต้อง parity
+        // กับ canUserActOnStep ซึ่ง honor substitution เฉพาะ single-source user step
+        $userRefs = array_map('strval', array_merge(
+            [$userId],
+            UserSubstitution::activePrincipalsFor($userId, now())
+        ));
+
         return $query->where('approval_instances.status', 'pending')
             ->where(function ($rq) use ($userId) {
                 $rq->where('approval_instances.requester_user_id', '!=', $userId)
                     ->orWhereHas('workflow', fn ($w) => $w->where('allow_requester_as_approver', true));
             })
-            ->whereHas('steps', function ($q) use ($userId, $roleNames, $positionId) {
+            ->whereHas('steps', function ($q) use ($userId, $userRefs, $roleNames, $positionId) {
                 $q->where('approval_instance_steps.action', 'pending')
                     ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
-                    ->where(function ($sq) use ($userId, $roleNames, $positionId) {
+                    ->where(function ($sq) use ($userId, $userRefs, $roleNames, $positionId) {
                         // Single-source steps (approver_rules is null)
-                        $sq->where(function ($single) use ($userId, $roleNames, $positionId) {
+                        $sq->where(function ($single) use ($userRefs, $roleNames, $positionId) {
                             $single->whereNull('approver_rules')
-                                ->where(function ($types) use ($userId, $roleNames, $positionId) {
-                                    $types->where(fn ($u) => $u->where('approver_type', 'user')->where('approver_ref', (string) $userId));
+                                ->where(function ($types) use ($userRefs, $roleNames, $positionId) {
+                                    $types->where(fn ($u) => $u->where('approver_type', 'user')->whereIn('approver_ref', $userRefs));
                                     if (! empty($roleNames)) {
                                         $types->orWhere(fn ($r) => $r->where('approver_type', 'role')->whereIn('approver_ref', $roleNames));
                                     }
@@ -120,12 +127,12 @@ class ApprovalInstance extends Model
                         $sq->orWhere(function ($multi) use ($userId, $roleNames, $positionId) {
                             $multi->whereNotNull('approver_rules')
                                 ->where(function ($json) use ($userId, $roleNames, $positionId) {
-                                    $json->where('approver_rules', 'like', '%"type":"user","ref":"' . $userId . '"}%');
+                                    $json->where('approver_rules', 'like', '%"type":"user","ref":"'.$userId.'"}%');
                                     foreach ($roleNames as $role) {
-                                        $json->orWhere('approver_rules', 'like', '%"type":"role","ref":"' . addslashes($role) . '"}%');
+                                        $json->orWhere('approver_rules', 'like', '%"type":"role","ref":"'.addslashes($role).'"}%');
                                     }
                                     if ($positionId) {
-                                        $json->orWhere('approver_rules', 'like', '%"type":"position","ref":"' . $positionId . '"}%');
+                                        $json->orWhere('approver_rules', 'like', '%"type":"position","ref":"'.$positionId.'"}%');
                                     }
                                 });
                         });

@@ -6,16 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\DocumentFormSubmission;
 use App\Models\LoginHistory;
-use App\Models\SubmissionActivityLog;
 use App\Models\NotificationPreference;
 use App\Models\Position;
 use App\Models\ReportDashboard;
 use App\Models\Setting;
+use App\Models\SubmissionActivityLog;
 use App\Models\User;
 use App\Rules\PasswordNotReused;
 use App\Rules\PasswordPolicy;
 use App\Services\Auth\LineLoginService;
-use App\Services\Auth\LoginHistoryRecorder;
 use App\Services\Auth\PasswordCapabilityService;
 use App\Services\Auth\PasswordLifecycleService;
 use Illuminate\Http\RedirectResponse;
@@ -391,35 +390,8 @@ class ProfileController extends Controller
      */
     private function countPendingApprovalsFor(User $user): int
     {
-        $roles = $user->roles()->pluck('name')->all();
-        $positionId = $user->position_id;
-        $userIdStr = (string) $user->id;
-
         return ApprovalInstance::query()
-            ->where('status', 'pending')
-            ->where(function ($q) use ($user) {
-                $q->where('requester_user_id', '!=', $user->id)
-                    ->orWhereHas('workflow', fn ($w) => $w->where('allow_requester_as_approver', true));
-            })
-            ->whereHas('steps', function ($q) use ($userIdStr, $roles, $positionId) {
-                $q->where('action', 'pending')
-                    ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
-                    ->where(function ($sq) use ($userIdStr, $roles, $positionId) {
-                        $sq->where(function ($uq) use ($userIdStr) {
-                            $uq->where('approver_type', 'user')->where('approver_ref', $userIdStr);
-                        });
-                        if (! empty($roles)) {
-                            $sq->orWhere(function ($rq) use ($roles) {
-                                $rq->where('approver_type', 'role')->whereIn('approver_ref', $roles);
-                            });
-                        }
-                        if ($positionId) {
-                            $sq->orWhere(function ($pq) use ($positionId) {
-                                $pq->where('approver_type', 'position')->where('approver_ref', (string) $positionId);
-                            });
-                        }
-                    });
-            })
+            ->pendingForApprover($user->id, $user->roles()->pluck('name')->all(), $user->position_id)
             ->count();
     }
 

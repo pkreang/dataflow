@@ -15,6 +15,7 @@ use App\Services\FormSchemaService;
 use App\Support\PayloadDiffer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -119,6 +120,10 @@ class ApprovalController extends Controller
                 : $e->getMessage();
             return back()->withErrors(['approval' => $message]);
         }
+
+        // Sidebar badge caches the pending count 60s — bust it so the actor's
+        // count drops immediately after approve/reject instead of lagging.
+        Cache::forget("pending_approvals_count:{$userId}");
 
         // Log approval/rejection to submission activity trail (only on success)
         $submissionId = $instance->formSubmission?->id;

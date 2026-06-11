@@ -13,17 +13,18 @@ use App\Models\DocumentFormSubmission;
 use App\Models\Setting;
 use App\Models\SubmissionActivityLog;
 use App\Models\User;
+use App\Models\UserSubstitution;
 use App\Services\ApprovalFlowService;
 use App\Services\ApproverIdentity;
 use App\Services\FormSchemaService;
 use App\Support\DateExpressionResolver;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Response as HttpResponse;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -61,7 +62,7 @@ class DocumentFormSubmissionController extends Controller
         $submissions = DocumentFormSubmission::query()
             ->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
-                  ->orWhereJsonContains('assigned_editor_user_ids', $userId);
+                    ->orWhereJsonContains('assigned_editor_user_ids', $userId);
             })
             ->with(['form', 'instance'])
             ->latest()
@@ -133,7 +134,7 @@ class DocumentFormSubmissionController extends Controller
             ->when(! $isSuperAdmin, function ($q) use ($userId, $relatedInstanceIds) {
                 $q->where(function ($inner) use ($userId, $relatedInstanceIds) {
                     $inner->where('document_form_submissions.user_id', $userId)
-                          ->orWhereJsonContains('document_form_submissions.assigned_editor_user_ids', $userId);
+                        ->orWhereJsonContains('document_form_submissions.assigned_editor_user_ids', $userId);
                     if (! empty($relatedInstanceIds)) {
                         $inner->orWhereIn('document_form_submissions.approval_instance_id', $relatedInstanceIds);
                     }
@@ -162,12 +163,12 @@ class DocumentFormSubmissionController extends Controller
             ->withQueryString();
 
         return view('forms.list-by-form', [
-            'form'               => $documentForm,
-            'submissions'        => $submissions,
-            'searchable'         => $searchable,
-            'filters'            => $filters,
-            'showCancelled'      => $showCancelled,
-            'perPage'            => $perPage,
+            'form' => $documentForm,
+            'submissions' => $submissions,
+            'searchable' => $searchable,
+            'filters' => $filters,
+            'showCancelled' => $showCancelled,
+            'perPage' => $perPage,
             'relatedInstanceIds' => $relatedInstanceIds,
         ]);
     }
@@ -797,7 +798,7 @@ class DocumentFormSubmissionController extends Controller
 
         $filename = ($submission->reference_no
             ? preg_replace('/[^A-Za-z0-9\-_]/', '-', $submission->reference_no)
-            : 'submission-' . $submission->id) . '.pdf';
+            : 'submission-'.$submission->id).'.pdf';
 
         SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
 
@@ -920,7 +921,6 @@ class DocumentFormSubmissionController extends Controller
 
     // ── Private helpers ─────────────────────────────────────
 
-
     /**
      * Edit-draft gate: owner OR an assigned editor may write field values to
      * a draft. Status must be 'draft' — assignees cannot edit submitted /
@@ -1021,7 +1021,12 @@ class DocumentFormSubmissionController extends Controller
             return false;
         }
 
-        $userIdStr = (string) $userId;
+        // รวม principal ที่ user นี้เป็น active substitute ให้ — ให้เห็นเอกสาร
+        // ที่ principal เป็น approver ได้ (สอดคล้อง scopePendingForApprover)
+        $userRefs = array_map('strval', array_merge(
+            [$userId],
+            UserSubstitution::activePrincipalsFor($userId, now())
+        ));
         $roleNames = collect(session('user.roles', []))
             ->map(fn ($r) => is_array($r) ? ($r['name'] ?? '') : $r)
             ->filter()
@@ -1030,9 +1035,9 @@ class DocumentFormSubmissionController extends Controller
         $positionId = session('user.position_id') ?? User::find($userId)?->position_id;
 
         return $instance->steps()
-            ->where(function ($q) use ($userIdStr, $roleNames, $positionId) {
-                $q->where(function ($uq) use ($userIdStr) {
-                    $uq->where('approver_type', 'user')->where('approver_ref', $userIdStr);
+            ->where(function ($q) use ($userRefs, $roleNames, $positionId) {
+                $q->where(function ($uq) use ($userRefs) {
+                    $uq->where('approver_type', 'user')->whereIn('approver_ref', $userRefs);
                 });
                 if (! empty($roleNames)) {
                     $q->orWhere(function ($rq) use ($roleNames) {
@@ -1082,7 +1087,7 @@ class DocumentFormSubmissionController extends Controller
                 continue;
             }
 
-            $dir = 'forms/' . $form->form_key;
+            $dir = 'forms/'.$form->form_key;
 
             if ($type === 'multi_file') {
                 $files = $request->file("fields.{$key}");
@@ -1100,6 +1105,7 @@ class DocumentFormSubmissionController extends Controller
                     // No new uploads — keep existing array
                     $payload[$key] = $existingPayload[$key] ?? [];
                 }
+
                 continue;
             }
 
@@ -1136,10 +1142,10 @@ class DocumentFormSubmissionController extends Controller
                 $opts = is_array($field->options) ? $field->options : [];
                 $minRows = (int) ($opts['min_rows'] ?? 0);
                 $maxRows = (int) ($opts['max_rows'] ?? 200);
-                $arrRules = ['array', 'max:' . $maxRows];
+                $arrRules = ['array', 'max:'.$maxRows];
                 if ($field->is_required || $minRows > 0) {
                     $arrRules[] = 'required';
-                    $arrRules[] = 'min:' . max(1, $minRows);
+                    $arrRules[] = 'min:'.max(1, $minRows);
                 } else {
                     $arrRules[] = 'nullable';
                 }
@@ -1161,6 +1167,7 @@ class DocumentFormSubmissionController extends Controller
                     $rules["{$key}.*.{$innerKey}"] = $innerRules;
                     $attributes["{$key}.*.{$innerKey}"] = $inner['label'] ?? $innerKey;
                 }
+
                 continue;
             }
 
@@ -1191,37 +1198,37 @@ class DocumentFormSubmissionController extends Controller
 
             // multi_file: validate each uploaded file individually under .*
             if ($field->field_type === 'multi_file') {
-                $rules[$key . '.*'] = ['file', 'max:10240'];
+                $rules[$key.'.*'] = ['file', 'max:10240'];
             }
 
             // Apply configurable validation_rules from field definition
             $vr = $field->validation_rules;
             if (is_array($vr) && count($vr)) {
                 if (! empty($vr['min_length'])) {
-                    $fieldRules[] = 'min:' . (int) $vr['min_length'];
+                    $fieldRules[] = 'min:'.(int) $vr['min_length'];
                 }
                 if (! empty($vr['max_length'])) {
-                    $fieldRules[] = 'max:' . (int) $vr['max_length'];
+                    $fieldRules[] = 'max:'.(int) $vr['max_length'];
                 }
                 if (! empty($vr['regex'])) {
-                    $fieldRules[] = 'regex:/' . str_replace('/', '\/', $vr['regex']) . '/';
+                    $fieldRules[] = 'regex:/'.str_replace('/', '\/', $vr['regex']).'/';
                 }
                 if (isset($vr['min']) && $vr['min'] !== '' && in_array($field->field_type, ['number', 'currency'])) {
-                    $fieldRules[] = 'min:' . $vr['min'];
+                    $fieldRules[] = 'min:'.$vr['min'];
                 }
                 if (isset($vr['max']) && $vr['max'] !== '' && in_array($field->field_type, ['number', 'currency'])) {
-                    $fieldRules[] = 'max:' . $vr['max'];
+                    $fieldRules[] = 'max:'.$vr['max'];
                 }
                 if (! empty($vr['min_date']) && $field->field_type === 'date') {
                     $resolved = DateExpressionResolver::resolve($vr['min_date']);
                     if ($resolved) {
-                        $fieldRules[] = 'after_or_equal:' . $resolved;
+                        $fieldRules[] = 'after_or_equal:'.$resolved;
                     }
                 }
                 if (! empty($vr['max_date']) && $field->field_type === 'date') {
                     $resolved = DateExpressionResolver::resolve($vr['max_date']);
                     if ($resolved) {
-                        $fieldRules[] = 'before_or_equal:' . $resolved;
+                        $fieldRules[] = 'before_or_equal:'.$resolved;
                     }
                 }
             }
@@ -1275,6 +1282,7 @@ class DocumentFormSubmissionController extends Controller
                 return false;
             }
         }
+
         return true;
     }
 
@@ -1287,7 +1295,7 @@ class DocumentFormSubmissionController extends Controller
     private function recomputeFormulaFields(DocumentForm $form, array $payload): array
     {
         $form->loadMissing('fields');
-        $evaluator = new \App\Support\FormulaEvaluator();
+        $evaluator = new \App\Support\FormulaEvaluator;
 
         foreach ($form->fields as $field) {
             if ($field->field_type !== 'formula') {
@@ -1296,6 +1304,7 @@ class DocumentFormSubmissionController extends Controller
             $expression = $field->options['expression'] ?? null;
             if (! is_string($expression) || trim($expression) === '') {
                 $payload[$field->field_key] = null;
+
                 continue;
             }
             try {
