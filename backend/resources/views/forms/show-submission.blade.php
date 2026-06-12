@@ -22,6 +22,14 @@
                     · {{ __('common.approval_status_' . $submission->instance->status) }}
                 @endif
             </p>
+            @if($submission->isOnBehalf())
+                <p class="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                    {{ __('common.submitted_on_behalf_by', [
+                        'creator' => $submission->createdBy?->full_name ?? '—',
+                        'owner' => $submission->user?->full_name ?? '—',
+                    ]) }}
+                </p>
+            @endif
         </div>
         @if($submission->status !== 'draft')
         <div class="flex gap-2 shrink-0">

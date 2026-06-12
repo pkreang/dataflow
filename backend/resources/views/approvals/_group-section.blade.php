@@ -73,6 +73,9 @@
                             </td>
                             <td class="px-[var(--cell-pad-x)] py-[var(--cell-pad-y)] text-sm text-slate-700 dark:text-slate-300">
                                 {{ optional($instance->requester)->full_name ?? '—' }}
+                                @if($instance->formSubmission?->isOnBehalf())
+                                    <span class="block text-xs text-amber-600 dark:text-amber-400">{{ __('common.on_behalf_badge', ['creator' => $instance->formSubmission->createdBy?->full_name ?? '—']) }}</span>
+                                @endif
                                 <span class="block text-xs text-slate-400">{{ $instance->created_at?->format('d M Y H:i') }}</span>
                             </td>
                             @if($mode === 'pending')

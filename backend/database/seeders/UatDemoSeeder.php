@@ -289,6 +289,10 @@ class UatDemoSeeder extends Seeder
         if ($approverRole) {
             $hr->syncRoles([$approverRole]);
         }
+        // HR ยื่นเอกสารแทนพนักงานคนอื่นได้ (UAT ฟีเจอร์ on-behalf)
+        if (\Spatie\Permission\Models\Permission::where('name', 'submission.create_for_others')->exists()) {
+            $hr->givePermissionTo('submission.create_for_others');
+        }
 
         // สายบังคับบัญชาสำหรับ direct_manager (users.manager_id)
         $employee->update(['manager_id' => $manager->id]);

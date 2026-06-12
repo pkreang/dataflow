@@ -274,7 +274,15 @@ class DocumentFormSubmissionController extends Controller
             'Evaluation forms can only be filled via the "Evaluate" button on an approved submission.');
         $documentForm->load('fields');
 
-        return view('forms.create', ['form' => $documentForm]);
+        // "Submit on behalf of" — permission-gated picker of active users.
+        $onBehalfUsers = $this->canCreateForOthers()
+            ? User::query()->where('is_active', true)
+                ->where('id', '!=', (int) (session('user.id') ?? 0))
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email'])
+            : collect();
+
+        return view('forms.create', ['form' => $documentForm, 'onBehalfUsers' => $onBehalfUsers]);
     }
 
     public function storeDraft(Request $request, DocumentForm $documentForm): RedirectResponse
@@ -292,19 +300,38 @@ class DocumentFormSubmissionController extends Controller
         $payload = $this->recomputeFormulaFields($documentForm, $payload);
 
         $userId = (int) (session('user.id') ?? 0);
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+
+        // "Submit on behalf of": the document is OWNED by the beneficiary;
+        // the logged-in creator is recorded in created_by_user_id and kept as
+        // an assigned editor so they retain draft access. Permission-gated
+        // server-side — without it the parameter is silently ignored.
+        $ownerId = $userId;
+        $createdById = null;
+        $onBehalfId = (int) $request->input('on_behalf_of_user_id', 0);
+        if ($onBehalfId && $onBehalfId !== $userId && $this->canCreateForOthers()) {
+            $beneficiary = User::query()->where('is_active', true)->find($onBehalfId);
+            abort_unless($beneficiary !== null, 422);
+            $ownerId = $beneficiary->id;
+            $createdById = $userId;
+        }
+
+        $userDeptId = $createdById
+            ? User::find($ownerId)?->department_id
+            : (session('user.department_id') ?? User::find($userId)?->department_id);
 
         $submission = DocumentFormSubmission::create([
             'form_id' => $documentForm->id,
-            'user_id' => $userId,
+            'user_id' => $ownerId,
+            'created_by_user_id' => $createdById,
             'department_id' => $userDeptId,
             'payload' => $payload,
             'status' => 'draft',
+            'assigned_editor_user_ids' => $createdById ? [$createdById] : null,
         ]);
 
         // Dual-write: insert into fdata_* table
         $fdataRowId = $this->writeFdataRow($documentForm, $payload, [
-            'user_id' => $userId,
+            'user_id' => $ownerId,
             'department_id' => $userDeptId,
             'status' => 'draft',
         ]);
@@ -381,9 +408,10 @@ class DocumentFormSubmissionController extends Controller
 
         // Non-owners (assigned editors) only get to write fields whose
         // editable_by tokens grant them access via 'user:{id}'. Owner keeps
-        // full write across all fields tagged 'requester' (or any token).
+        // full write across all fields tagged 'requester' (or any token);
+        // the on-behalf creator counts as owner for field editing.
         $userId = (int) (session('user.id') ?? 0);
-        $isOwner = (int) $submission->user_id === $userId;
+        $isOwner = (int) $submission->user_id === $userId || $submission->isCreator($userId);
         if (! $isOwner) {
             $allowed = $this->filterPayloadForAssignee($submission, $payload, $userId);
             $payload = array_merge($submission->payload ?? [], $allowed);
@@ -572,6 +600,11 @@ class DocumentFormSubmissionController extends Controller
         $form = $submission->form;
         $userId = (int) (session('user.id') ?? 0);
 
+        // On-behalf: the workflow requester is the document OWNER, not whoever
+        // pressed submit — routing (direct_manager/org_head), requester
+        // exclusion and overlap checks all follow the owner.
+        $ownerId = (int) $submission->user_id;
+
         // requester_pick: map[step_no => chosen user_id]. start() validates that
         // the chosen user actually holds approval.approve before trusting it.
         $pickedApprovers = collect($request->input('picked_approvers', []))
@@ -598,7 +631,7 @@ class DocumentFormSubmissionController extends Controller
         if (isset($payload['date_from'], $payload['date_to'])) {
             try {
                 $leaveValidator->checkOverlap(
-                    userId: $userId,
+                    userId: $ownerId,
                     formId: $form->id,
                     dateFrom: (string) $payload['date_from'],
                     dateTo: (string) $payload['date_to'],
@@ -612,11 +645,11 @@ class DocumentFormSubmissionController extends Controller
         }
 
         try {
-            $positionId = (int) ($request->user()?->position_id ?? 0);
+            $positionId = (int) (User::find($ownerId)?->position_id ?? 0);
             $instance = $approvalFlowService->start(
                 documentType: $form->document_type,
                 departmentId: $submission->department_id,
-                requesterUserId: $userId,
+                requesterUserId: $ownerId,
                 referenceNo: null,
                 payload: $payload,
                 formKey: $form->form_key,
@@ -935,16 +968,25 @@ class DocumentFormSubmissionController extends Controller
         abort_unless($submission->status === 'draft', 403);
     }
 
+    /** Holder of submission.create_for_others (or super-admin) may file on behalf. */
+    private function canCreateForOthers(): bool
+    {
+        return (bool) session('user.is_super_admin', false)
+            || in_array('submission.create_for_others', session('user_permissions', []), true);
+    }
+
     /**
      * Lifecycle-changing actions (submit, destroy, return-to-draft) stay
      * owner-only — assignees collaborate on content, not workflow state.
      * Submitting as an assignee would also confuse downstream "requester"
-     * lookups in the approval flow.
+     * lookups in the approval flow. Exception: the on-behalf CREATOR filed
+     * the document and may drive its lifecycle (the workflow still treats
+     * the owner as requester).
      */
     private function authorizeOwnerOnlyDraft(DocumentFormSubmission $submission): void
     {
         $userId = (int) (session('user.id') ?? 0);
-        abort_unless((int) $submission->user_id === $userId, 403);
+        abort_unless((int) $submission->user_id === $userId || $submission->isCreator($userId), 403);
         abort_unless($submission->status === 'draft', 403);
     }
 
@@ -955,14 +997,14 @@ class DocumentFormSubmissionController extends Controller
     private function authorizeReturnToDraft(DocumentFormSubmission $submission): void
     {
         $userId = (int) (session('user.id') ?? 0);
-        abort_unless((int) $submission->user_id === $userId, 403);
+        abort_unless((int) $submission->user_id === $userId || $submission->isCreator($userId), 403);
         abort_unless($submission->effective_status === 'rejected', 403);
     }
 
     private function authorizeView(DocumentFormSubmission $submission): void
     {
         $userId = (int) (session('user.id') ?? 0);
-        $isOwner = (int) $submission->user_id === $userId;
+        $isOwner = (int) $submission->user_id === $userId || $submission->isCreator($userId);
         $isAssignee = $submission->isAssignedEditor($userId);
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
         if ($isOwner || $isAssignee || $isSuperAdmin) {

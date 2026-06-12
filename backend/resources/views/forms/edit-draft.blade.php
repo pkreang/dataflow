@@ -49,8 +49,11 @@
         $form = $submission->form;
         $viewerId = (int) (session('user.id') ?? 0);
         // Only the owner gets the implicit 'requester' role token. Assigned
-        // editors edit fields purely through their user:{id} grant.
-        $viewerEditorRole = ((int) $submission->user_id === $viewerId) ? 'requester' : null;
+        // editors edit fields purely through their user:{id} grant — except
+        // the on-behalf creator, who authored the document and edits as
+        // 'requester' in full.
+        $viewerEditorRole = ((int) $submission->user_id === $viewerId || $submission->isCreator($viewerId))
+            ? 'requester' : null;
     @endphp
 
     {{-- Update draft form --}}

@@ -54,6 +54,14 @@
                                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                         {{ $submission->created_at->format('d M Y H:i') }}
                                     </p>
+                                    @if($submission->isOnBehalf())
+                                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                            {{ __('common.submitted_on_behalf_by', [
+                                                'creator' => $submission->createdBy?->full_name ?? '—',
+                                                'owner' => $submission->user?->full_name ?? '—',
+                                            ]) }}
+                                        </p>
+                                    @endif
                                 </div>
                                 <div class="flex items-center gap-3">
                                     @if($isDraft)

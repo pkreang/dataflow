@@ -42,6 +42,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage profile', 'module' => 'company', 'action' => 'manage'],
             ['name' => 'manage_settings', 'module' => 'settings', 'action' => 'manage'],
             ['name' => 'approval.approve', 'module' => 'approval', 'action' => 'approve'],
+            ['name' => 'submission.create_for_others', 'module' => 'submission', 'action' => 'create_for_others'],
             ['name' => 'manage equipment', 'module' => 'equipment', 'action' => 'manage'],
             ['name' => 'view equipment', 'module' => 'equipment', 'action' => 'read'],
             ['name' => 'spare_parts.manage', 'module' => 'spare_parts', 'action' => 'manage'],

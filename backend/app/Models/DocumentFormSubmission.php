@@ -13,6 +13,7 @@ class DocumentFormSubmission extends Model
     protected $fillable = [
         'form_id',
         'user_id',
+        'created_by_user_id',
         'department_id',
         'payload',
         'status',
@@ -44,6 +45,7 @@ class DocumentFormSubmission extends Model
             return false;
         }
         $ids = $this->assigned_editor_user_ids ?? [];
+
         return in_array($userId, array_map('intval', $ids), true);
     }
 
@@ -82,6 +84,24 @@ class DocumentFormSubmission extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    /** Filed by someone other than the document owner ("submit on behalf"). */
+    public function isOnBehalf(): bool
+    {
+        return $this->created_by_user_id !== null
+            && (int) $this->created_by_user_id !== (int) $this->user_id;
+    }
+
+    /** True when the given user is the person who actually filed this document. */
+    public function isCreator(?int $userId): bool
+    {
+        return $userId && (int) $this->created_by_user_id === (int) $userId;
     }
 
     public function department()

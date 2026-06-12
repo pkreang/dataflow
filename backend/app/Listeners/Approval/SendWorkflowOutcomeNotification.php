@@ -18,10 +18,17 @@ class SendWorkflowOutcomeNotification implements ShouldQueue
             return;
         }
 
-        if ($event->outcome === 'approved') {
-            $requester->notify(new WorkflowApprovedNotification($instance));
-        } else {
-            $requester->notify(new WorkflowRejectedNotification($instance, $event->comment));
+        $notification = $event->outcome === 'approved'
+            ? new WorkflowApprovedNotification($instance)
+            : new WorkflowRejectedNotification($instance, $event->comment);
+
+        $requester->notify($notification);
+
+        // On-behalf: the person who actually filed the document gets the
+        // outcome too, so they can follow up for the owner.
+        $creator = $instance->formSubmission?->createdBy;
+        if ($creator && (int) $creator->id !== (int) $requester->id) {
+            $creator->notify(clone $notification);
         }
     }
 }

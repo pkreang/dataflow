@@ -48,6 +48,26 @@
     <form method="POST" action="{{ route('forms.draft.store', $form->form_key) }}" enctype="multipart/form-data" novalidate class="w-full"
           x-data="dynamicForm({{ json_encode($initialPayload, JSON_UNESCAPED_UNICODE) }})">
         @csrf
+
+        @if(($onBehalfUsers ?? collect())->isNotEmpty())
+            {{-- Submit on behalf of — permission-gated (submission.create_for_others) --}}
+            <div class="card p-4 sm:p-6 mb-4 border border-amber-200 dark:border-amber-700/50 bg-amber-50/40 dark:bg-amber-900/10">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    {{ __('common.on_behalf_of') }}
+                    <span class="text-xs font-normal text-slate-400">({{ __('common.optional') }})</span>
+                </label>
+                <select name="on_behalf_of_user_id" class="form-input mt-1 max-w-md">
+                    <option value="">{{ __('common.on_behalf_self') }}</option>
+                    @foreach($onBehalfUsers as $u)
+                        <option value="{{ $u->id }}" @selected(old('on_behalf_of_user_id') == $u->id)>
+                            {{ trim($u->first_name.' '.$u->last_name) }} ({{ $u->email }})
+                        </option>
+                    @endforeach
+                </select>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.on_behalf_hint') }}</p>
+            </div>
+        @endif
+
         <div class="card p-4 sm:p-6 lg:p-8">
             <x-document-form-fields-grid :columns="$form->layout_columns ?? 1" class="gap-x-6 gap-y-5 lg:gap-x-10">
                 @foreach($form->fields as $field)
