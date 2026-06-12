@@ -9,6 +9,7 @@ use App\Models\LookupList;
 use App\Models\SubmissionActivityLog;
 use App\Services\ApprovalFlowService;
 use App\Services\LeaveValidationService;
+use App\Support\FormulaFields;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,11 +29,11 @@ class MobileFormController extends Controller
         return response()->json([
             'success' => true,
             'data' => $forms->map(fn ($f) => [
-                'id'             => $f->id,
-                'form_key'       => $f->form_key,
-                'name'           => $f->name,
-                'document_type'  => $f->document_type,
-                'description'    => $f->description,
+                'id' => $f->id,
+                'form_key' => $f->form_key,
+                'name' => $f->name,
+                'document_type' => $f->document_type,
+                'description' => $f->description,
                 'layout_columns' => $f->layout_columns,
             ]),
         ]);
@@ -63,7 +64,7 @@ class MobileFormController extends Controller
                 ->get()
                 ->each(function ($list) use (&$lookupItemsMap) {
                     $lookupItemsMap[$list->list_key] = $list->items->map(fn ($item) => [
-                        'value'    => $item->value,
+                        'value' => $item->value,
                         'label_en' => $item->label_en,
                         'label_th' => $item->label_th,
                     ])->values()->all();
@@ -72,20 +73,20 @@ class MobileFormController extends Controller
 
         $fields = $form->fields->sortBy('sort_order')->map(function ($field) use ($lookupItemsMap) {
             $base = [
-                'id'               => $field->id,
-                'field_key'        => $field->field_key,
-                'label'            => $field->label,
-                'label_en'         => $field->label_en,
-                'label_th'         => $field->label_th,
-                'field_type'       => $field->field_type,
-                'is_required'      => (bool) $field->is_required,
-                'is_readonly'      => (bool) $field->is_readonly,
-                'col_span'         => $field->col_span,
-                'sort_order'       => $field->sort_order,
-                'options'          => $field->options,
-                'placeholder'      => $field->placeholder,
+                'id' => $field->id,
+                'field_key' => $field->field_key,
+                'label' => $field->label,
+                'label_en' => $field->label_en,
+                'label_th' => $field->label_th,
+                'field_type' => $field->field_type,
+                'is_required' => (bool) $field->is_required,
+                'is_readonly' => (bool) $field->is_readonly,
+                'col_span' => $field->col_span,
+                'sort_order' => $field->sort_order,
+                'options' => $field->options,
+                'placeholder' => $field->placeholder,
                 'visibility_rules' => $field->visibility_rules ?? [],
-                'required_rules'   => $field->required_rules ?? [],
+                'required_rules' => $field->required_rules ?? [],
             ];
 
             // Attach resolved items for lookup fields
@@ -100,13 +101,13 @@ class MobileFormController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'id'             => $form->id,
-                'form_key'       => $form->form_key,
-                'name'           => $form->name,
-                'document_type'  => $form->document_type,
-                'description'    => $form->description,
+                'id' => $form->id,
+                'form_key' => $form->form_key,
+                'name' => $form->name,
+                'document_type' => $form->document_type,
+                'description' => $form->description,
                 'layout_columns' => $form->layout_columns,
-                'fields'         => $fields->values(),
+                'fields' => $fields->values(),
             ],
         ]);
     }
@@ -129,7 +130,7 @@ class MobileFormController extends Controller
         $userId = $user->id;
         $userDeptId = $user->department_id;
 
-        $payload = (array) $request->input('fields', []);
+        $payload = FormulaFields::recompute($form, (array) $request->input('fields', []));
 
         // Leave overlap guard
         if (isset($payload['date_from'], $payload['date_to'])) {
@@ -175,13 +176,13 @@ class MobileFormController extends Controller
         }
 
         $submission = DocumentFormSubmission::create([
-            'form_id'              => $form->id,
-            'user_id'              => $userId,
-            'department_id'        => $userDeptId,
-            'payload'              => $payload,
-            'status'               => 'submitted',
+            'form_id' => $form->id,
+            'user_id' => $userId,
+            'department_id' => $userDeptId,
+            'payload' => $payload,
+            'status' => 'submitted',
             'approval_instance_id' => $instance->id,
-            'reference_no'         => $instance->reference_no,
+            'reference_no' => $instance->reference_no,
         ]);
 
         SubmissionActivityLog::record($submission->id, $userId, 'created');
@@ -191,8 +192,8 @@ class MobileFormController extends Controller
             'success' => true,
             'data' => [
                 'submission_id' => $submission->id,
-                'reference_no'  => $submission->reference_no,
-                'status'        => $submission->status,
+                'reference_no' => $submission->reference_no,
+                'status' => $submission->status,
             ],
         ], 201);
     }
@@ -204,15 +205,15 @@ class MobileFormController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        $user     = $request->user();
-        $payload  = (array) $request->input('fields', []);
+        $user = $request->user();
+        $payload = FormulaFields::recompute($form, (array) $request->input('fields', []));
 
         $submission = DocumentFormSubmission::create([
-            'form_id'       => $form->id,
-            'user_id'       => $user->id,
+            'form_id' => $form->id,
+            'user_id' => $user->id,
             'department_id' => $user->department_id,
-            'payload'       => $payload,
-            'status'        => 'draft',
+            'payload' => $payload,
+            'status' => 'draft',
         ]);
 
         SubmissionActivityLog::record($submission->id, $user->id, 'created');
@@ -221,7 +222,7 @@ class MobileFormController extends Controller
             'success' => true,
             'data' => [
                 'submission_id' => $submission->id,
-                'status'        => $submission->status,
+                'status' => $submission->status,
             ],
         ], 201);
     }
