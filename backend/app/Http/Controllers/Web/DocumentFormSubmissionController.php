@@ -1237,15 +1237,17 @@ class DocumentFormSubmissionController extends Controller
             }
             $fieldRules = $isRequired ? ['required'] : ['nullable'];
 
-            $fieldRules[] = match ($field->field_type) {
-                'number', 'currency', 'formula' => 'numeric',
-                'date' => 'date',
-                'email' => 'email',
-                'checkbox', 'multi_select', 'multi_file' => 'array',
-                'image' => 'file|image|max:5120',
-                'file' => 'file|max:10240',
-                default => 'string',
-            };
+            // NOTE: rules are an ARRAY — Laravel does not split pipe-joined
+            // strings inside arrays, so each rule must be its own element.
+            $fieldRules = array_merge($fieldRules, match ($field->field_type) {
+                'number', 'currency', 'formula' => ['numeric'],
+                'date' => ['date'],
+                'email' => ['email'],
+                'checkbox', 'multi_select', 'multi_file' => ['array'],
+                'image' => ['file', 'image', 'max:5120'],
+                'file' => ['file', 'max:10240'],
+                default => ['string'],
+            });
 
             // multi_file: validate each uploaded file individually under .*
             if ($field->field_type === 'multi_file') {
