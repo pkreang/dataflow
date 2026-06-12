@@ -29,21 +29,34 @@ class SendApprovalPendingNotification implements ShouldQueue
             return;
         }
 
-        $recentDuplicate = DB::table('notifications')
+        // Recipients = resolved approvers + their active substitutes.
+        $approvers = $this->resolver->resolve($step);
+        $substitutes = $approvers
+            ->map(fn ($u) => \App\Models\UserSubstitution::findActiveSubstitute((int) $u->id, now()))
+            ->filter()
+            ->map(fn ($id) => \App\Models\User::find($id))
+            ->filter();
+        $recipients = $approvers->concat($substitutes)->unique('id')->values();
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        // Dedup PER RECIPIENT — a blanket instance+step check would let one
+        // recipient's earlier notification suppress everyone else's.
+        $alreadyNotified = DB::table('notifications')
             ->where('type', ApprovalPendingNotification::class)
             ->whereJsonContains('data->instance_id', $instance->id)
             ->whereJsonContains('data->step_no', $step->step_no)
             ->where('created_at', '>', now()->subMinutes(2))
-            ->exists();
+            ->pluck('notifiable_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-        if ($recentDuplicate) {
-            return;
-        }
+        $fresh = $recipients->reject(fn ($u) => in_array((int) $u->id, $alreadyNotified, true));
 
-        $approvers = $this->resolver->resolve($step);
-
-        if ($approvers->isNotEmpty()) {
-            Notification::send($approvers, new ApprovalPendingNotification($instance, $step));
+        if ($fresh->isNotEmpty()) {
+            Notification::send($fresh, new ApprovalPendingNotification($instance, $step));
         }
     }
 }

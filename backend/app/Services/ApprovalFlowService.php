@@ -151,7 +151,7 @@ class ApprovalFlowService
                     }
                 }
 
-                $createdStep = ApprovalInstanceStep::create([
+                ApprovalInstanceStep::create([
                     'approval_instance_id' => $instance->id,
                     'step_no' => $stage->step_no,
                     'stage_name' => $stage->name,
@@ -165,14 +165,11 @@ class ApprovalFlowService
                     'action' => 'pending',
                 ]);
 
-                // Notify substitute if primary approver has an active substitution
-                if ($stepType === 'user' && $stepRef) {
-                    $substituteId = \App\Models\UserSubstitution::findActiveSubstitute((int) $stepRef, now());
-                    if ($substituteId && $substituteId !== (int) $stepRef) {
-                        $substitute = \App\Models\User::find($substituteId);
-                        $substitute?->notify(new \App\Notifications\ApprovalPendingNotification($instance, $createdStep));
-                    }
-                }
+                // Substitute notification now rides along in
+                // SendApprovalPendingNotification (WorkflowStarted listener),
+                // which resolves primaries + active substitutes together —
+                // an inline notify here used to trip the listener's dedup
+                // guard and suppress the PRIMARY approver's notification.
             }
 
             event(new WorkflowStarted($instance));
