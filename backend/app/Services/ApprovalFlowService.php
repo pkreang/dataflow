@@ -13,7 +13,6 @@ use App\Models\ApprovalWorkflow;
 use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
-use App\Models\DocumentType;
 use App\Models\OrgUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -266,8 +265,8 @@ class ApprovalFlowService
                 $query->orWhere('position_id', $positionId);
             }
         })
-        ->orderByRaw('(position_id IS NOT NULL) DESC')
-        ->orderByRaw('(department_id IS NOT NULL) DESC');
+            ->orderByRaw('(position_id IS NOT NULL) DESC')
+            ->orderByRaw('(department_id IS NOT NULL) DESC');
 
         $policy = $policyQuery->first();
 
@@ -311,16 +310,16 @@ class ApprovalFlowService
         $numVal = is_numeric($fieldVal) ? (float) $fieldVal : null;
 
         return match ($operator) {
-            '='         => $strVal === (string) $expected,
-            '!='        => $strVal !== (string) $expected,
-            '>'         => $numVal !== null && $numVal > (float) $expected,
-            '>='        => $numVal !== null && $numVal >= (float) $expected,
-            '<'         => $numVal !== null && $numVal < (float) $expected,
-            '<='        => $numVal !== null && $numVal <= (float) $expected,
-            'in'        => is_array($expected) && in_array($strVal, array_map('strval', $expected), true),
-            'not_in'    => is_array($expected) && ! in_array($strVal, array_map('strval', $expected), true),
-            'contains'  => str_contains($strVal, (string) $expected),
-            default     => false,
+            '=' => $strVal === (string) $expected,
+            '!=' => $strVal !== (string) $expected,
+            '>' => $numVal !== null && $numVal > (float) $expected,
+            '>=' => $numVal !== null && $numVal >= (float) $expected,
+            '<' => $numVal !== null && $numVal < (float) $expected,
+            '<=' => $numVal !== null && $numVal <= (float) $expected,
+            'in' => is_array($expected) && in_array($strVal, array_map('strval', $expected), true),
+            'not_in' => is_array($expected) && ! in_array($strVal, array_map('strval', $expected), true),
+            'contains' => str_contains($strVal, (string) $expected),
+            default => false,
         };
     }
 
@@ -354,7 +353,7 @@ class ApprovalFlowService
             throw new RuntimeException('Invalid approval action');
         }
 
-        return DB::transaction(function () use ($instanceId, $actorUserId, $action, $comment, $signatureImage) {
+        $result = DB::transaction(function () use ($instanceId, $actorUserId, $action, $comment, $signatureImage) {
             $instance = ApprovalInstance::query()->with(['steps', 'workflow'])->lockForUpdate()->findOrFail($instanceId);
 
             if ($instance->status !== 'pending') {
@@ -437,6 +436,16 @@ class ApprovalFlowService
 
             return $instance->fresh(['steps', 'workflow']);
         });
+
+        // Clear the actor's stale "pending approval" bell entries for this
+        // document; when the workflow closed, nobody can act anymore — clear
+        // every recipient's (quorum peers, position co-holders, substitutes).
+        \App\Support\NotificationCleanup::markInstanceRead(
+            $instanceId,
+            in_array($result->status, ['approved', 'rejected'], true) ? null : $actorUserId,
+        );
+
+        return $result;
     }
 
     /**
@@ -551,6 +560,7 @@ class ApprovalFlowService
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -558,6 +568,7 @@ class ApprovalFlowService
             if ((int) $step->approver_ref === $actorUserId) {
                 return true;
             }
+
             // Allow active substitute to act on behalf of the primary approver
             return \App\Models\UserSubstitution::activeSubstituteFor(
                 (int) $step->approver_ref,
@@ -602,16 +613,17 @@ class ApprovalFlowService
                 $satisfied++;
             }
         }
+
         return $satisfied;
     }
 
     private function userMatchesApproverRule(string $type, string $ref, int $actorUserId, User $user): bool
     {
         return match ($type) {
-            'user'     => (int) $ref === $actorUserId,
+            'user' => (int) $ref === $actorUserId,
             'position' => $user->position_id && (string) $user->position_id === $ref,
-            'role'     => $user->hasRole($ref),
-            default    => false,
+            'role' => $user->hasRole($ref),
+            default => false,
         };
     }
 }

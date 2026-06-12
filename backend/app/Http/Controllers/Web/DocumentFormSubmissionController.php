@@ -689,6 +689,15 @@ class DocumentFormSubmissionController extends Controller
     {
         $this->authorizeView($submission);
 
+        // Opening the document clears its bell notifications for this viewer —
+        // users rarely click the notification itself.
+        if ($submission->approval_instance_id) {
+            \App\Support\NotificationCleanup::markInstanceRead(
+                (int) $submission->approval_instance_id,
+                (int) (session('user.id') ?? 0),
+            );
+        }
+
         $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department']);
         $activity = SubmissionActivityLog::with('user')
             ->where('submission_id', $submission->id)
