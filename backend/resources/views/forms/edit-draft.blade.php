@@ -145,6 +145,28 @@
         </div>
     </form>
 
+    @if(($overrideStages ?? collect())->isNotEmpty())
+        {{-- override: requester may optionally substitute the approver for these
+             stages. Full-width card above the action bar; the selects post with
+             the submit form via the form= attribute. --}}
+        <div class="card mt-4 p-4 border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10">
+            <p class="text-sm font-semibold text-blue-800 dark:text-blue-200">{{ __('common.submit_pick_approver_label') }}</p>
+            <div class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($overrideStages as $overrideStage)
+                    <div>
+                        <label class="text-xs text-slate-500 dark:text-slate-400">{{ $overrideStage->name }}</label>
+                        <select form="submit-draft-form" name="picked_approvers[{{ $overrideStage->step_no }}]" class="form-input mt-1 w-full">
+                            <option value="">{{ __('common.submit_pick_approver_use_default') }}</option>
+                            @foreach(($eligibleApprovers ?? collect()) as $appr)
+                                <option value="{{ $appr['id'] }}">{{ $appr['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- Action bar --}}
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
         {{-- Delete draft --}}
@@ -170,23 +192,6 @@
                   action="{{ route('forms.draft.submit', $submission) }}"
                   novalidate>
                 @csrf
-                @if(($overrideStages ?? collect())->isNotEmpty())
-                    {{-- override: requester may optionally substitute the approver for these stages --}}
-                    <div class="mb-3 space-y-2 text-left rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10 p-3">
-                        <p class="text-xs font-semibold text-blue-800 dark:text-blue-200">{{ __('common.submit_pick_approver_label') }}</p>
-                        @foreach($overrideStages as $overrideStage)
-                            <div>
-                                <label class="text-xs text-slate-500 dark:text-slate-400">{{ $overrideStage->name }}</label>
-                                <select name="picked_approvers[{{ $overrideStage->step_no }}]" class="form-input mt-1">
-                                    <option value="">{{ __('common.submit_pick_approver_use_default') }}</option>
-                                    @foreach(($eligibleApprovers ?? collect()) as $appr)
-                                        <option value="{{ $appr['id'] }}">{{ $appr['label'] }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
                 <button type="button" class="btn-primary"
                         @click="window.dispatchEvent(new CustomEvent('confirm-open', {detail:{message:'{{ addslashes(__('common.confirm_submit_form')) }}', okLabel:'{{ addslashes(__('common.submit_form')) }}', danger:false, form:$el.closest('form')}}))">
                     {{ __('common.submit_form') }}
