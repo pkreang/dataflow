@@ -518,6 +518,7 @@ return [
     'on_behalf_hint' => 'เลือกเมื่อกรอกเอกสารนี้แทนผู้อื่น — เอกสารจะเป็นของคนที่เลือก และเส้นทางอนุมัติจะอิงจากคนนั้น',
     'submitted_on_behalf_by' => 'ยื่นโดย :creator แทน :owner',
     'on_behalf_badge' => 'ยื่นแทนโดย :creator',
+    'pick_approver_before_submit' => 'ฟอร์มนี้เลือกผู้อนุมัติเองได้ — เลือกผู้อนุมัติ (หรือใช้ค่าเริ่มต้น) แล้วกดส่งอนุมัติด้านล่าง',
     'approval_confirm_approved_title' => 'ยืนยันการอนุมัติ',
     'approval_confirm_approved_body' => 'อนุมัติเอกสารนี้ใช่หรือไม่',
     'approval_confirm_rejected_title' => 'ยืนยันการไม่อนุมัติ',

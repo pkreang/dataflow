@@ -29,12 +29,18 @@
     @endif
 
     @if (session('autosubmit'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const submitForm = document.getElementById('submit-draft-form');
-                if (submitForm) submitForm.submit();
-            });
-        </script>
+        @if(($overrideStages ?? collect())->isEmpty())
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const submitForm = document.getElementById('submit-draft-form');
+                    if (submitForm) submitForm.submit();
+                });
+            </script>
+        @else
+            {{-- This workflow lets the requester pick an approver — pause the
+                 auto-submit so the picker is actually seen before sending. --}}
+            <div class="alert-info mb-4"><p class="text-sm">{{ __('common.pick_approver_before_submit') }}</p></div>
+        @endif
     @endif
 
     @if($errors->any())

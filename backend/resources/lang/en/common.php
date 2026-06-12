@@ -518,6 +518,7 @@ return [
     'on_behalf_hint' => 'Pick a person when filing this document for someone else — they become the document owner and approval routing follows them.',
     'submitted_on_behalf_by' => 'Filed by :creator on behalf of :owner',
     'on_behalf_badge' => 'Filed by :creator',
+    'pick_approver_before_submit' => 'This form lets you pick the approver — choose one (or keep the default), then press Submit below.',
     'approval_confirm_approved_title' => 'Confirm approval',
     'approval_confirm_approved_body' => 'Approve this document?',
     'approval_confirm_rejected_title' => 'Confirm rejection',
