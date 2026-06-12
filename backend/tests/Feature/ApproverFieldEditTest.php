@@ -46,6 +46,11 @@ class ApproverFieldEditTest extends TestCase
         $response->assertSee('field_updates[approver_note]', false);
         $response->assertSee(route('approvals.update-fields', $instance), false);
         $response->assertSee(__('common.save_fields'));
+        // Approve/reject must go through an explicit confirm dialog.
+        // (dialog titles are embedded via @js() so Thai text is \u-escaped —
+        // assert the structural marker instead of the literal string)
+        $response->assertSee('data-approval-confirm-dialog', false);
+        $response->assertSee('confirmProceed()', false);
     }
 
     public function test_owner_sees_readonly_view_without_edit_form(): void

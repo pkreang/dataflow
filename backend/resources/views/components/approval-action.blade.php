@@ -24,6 +24,15 @@
         sendBackOpen: false,
         sigError: false,
         requiredFieldsError: '',
+        confirmOpen: false,
+        confirmed: false,
+        pendingAction: null,
+        confirmProceed() {
+            this.confirmed = true;
+            this.confirmOpen = false;
+            this.$refs.actionInput.value = this.pendingAction;
+            this.$refs.actForm.requestSubmit();
+        },
         guardSignature($event) {
             // Check required-at-step fields before allowing approve
             const required = window.__approverRequiredFields__ || [];
@@ -51,6 +60,14 @@
                 return false;
             }
             this.sigError = false;
+
+            // All guards passed — ask for explicit confirmation before acting.
+            if (!this.confirmed) {
+                $event.preventDefault();
+                this.pendingAction = $event.submitter?.value || 'approved';
+                this.confirmOpen = true;
+                return false;
+            }
         },
      }">
     <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">{{ __('common.approval_actions_title') }}</h3>
@@ -66,8 +83,12 @@
     @endif
 
     <form method="POST" action="{{ route('approvals.act', $instance) }}" class="space-y-3" novalidate
-          @submit="guardSignature($event)">
+          x-ref="actForm" @submit="guardSignature($event)">
         @csrf
+        {{-- Carries the chosen action when the form is re-submitted from the
+             confirm dialog (requestSubmit() has no submitter button). Sits
+             BEFORE the submit buttons so a direct button click still wins. --}}
+        <input type="hidden" name="action" value="" x-ref="actionInput">
 
         @if($priorApprovedSteps->isNotEmpty())
             <details class="rounded-lg border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-900/10">
@@ -135,6 +156,41 @@
             </button>
         </div>
     </form>
+
+    {{-- Confirm dialog — explicit yes/no before approve/reject is recorded --}}
+    <div x-show="confirmOpen" x-cloak data-approval-confirm-dialog
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="confirmOpen = false">
+        <div class="fixed inset-0 bg-black/50" @click="confirmOpen = false"></div>
+        <div class="relative card p-5 w-full max-w-sm">
+            <div class="flex items-start gap-3">
+                <template x-if="pendingAction === 'approved'">
+                    <div class="shrink-0 w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                </template>
+                <template x-if="pendingAction === 'rejected'">
+                    <div class="shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </div>
+                </template>
+                <div class="min-w-0">
+                    <h4 class="text-base font-semibold text-slate-900 dark:text-slate-100"
+                        x-text="pendingAction === 'approved' ? @js(__('common.approval_confirm_approved_title')) : @js(__('common.approval_confirm_rejected_title'))"></h4>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        {{ $instance->reference_no ?: ('#'.$instance->id) }} —
+                        <span x-text="pendingAction === 'approved' ? @js(__('common.approval_confirm_approved_body')) : @js(__('common.approval_confirm_rejected_body'))"></span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" @click="confirmOpen = false" class="btn-secondary text-sm">{{ __('common.cancel') }}</button>
+                <button type="button" @click="confirmProceed()"
+                        :class="pendingAction === 'rejected' ? 'btn-danger' : 'btn-primary'"
+                        class="text-sm">{{ __('common.confirm') }}</button>
+            </div>
+        </div>
+    </div>
 
     @if($instance->formSubmission)
         {{-- Send-back dialog — its own <form>, kept outside the approvals.act form --}}
