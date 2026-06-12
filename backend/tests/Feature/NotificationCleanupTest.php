@@ -94,6 +94,28 @@ class NotificationCleanupTest extends TestCase
         $this->assertNull($theirs->fresh()->read_at, 'other users keep their own unread state');
     }
 
+    public function test_notifications_index_unread_filter(): void
+    {
+        $user = $this->makeRegularUser('ncl-bell-'.uniqid().'@example.test');
+        $unread = $this->makeDbNotification($user, ApprovalPendingNotification::class, 991);
+        $read = $this->makeDbNotification($user, ApprovalPendingNotification::class, 992);
+        $read->markAsRead();
+
+        $response = $this->actingAsWebSession($user)
+            ->getJson(route('notifications.index', ['unread' => 1]))
+            ->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id');
+        $this->assertTrue($ids->contains($unread->id));
+        $this->assertFalse($ids->contains($read->id));
+
+        // Without the filter the full history still comes back.
+        $all = $this->actingAsWebSession($user)
+            ->getJson(route('notifications.index'))
+            ->assertOk();
+        $this->assertCount(2, $all->json('data'));
+    }
+
     // ── Helpers ─────────────────────────────────────────────
 
     /** @return array{0: ApprovalInstance, 1: User, 2?: User} */

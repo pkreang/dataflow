@@ -116,7 +116,7 @@ function notificationBell() {
 
         async fetchItems() {
             try {
-                const res = await fetch('{{ route("notifications.index") }}', {
+                const res = await fetch('{{ route("notifications.index", ['unread' => 1]) }}', {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (res.ok) {

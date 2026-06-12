@@ -19,7 +19,13 @@ class NotificationController extends Controller
         $user = $request->user();
 
         $perPage = $this->resolvePerPage($request, 'notifications_per_page');
-        $notifications = $user->notifications()->paginate($perPage);
+
+        // ?unread=1 — bell dropdown shows actionable items only; the full
+        // history lives on this same route's HTML page (no filter).
+        $query = $request->boolean('unread')
+            ? $user->unreadNotifications()
+            : $user->notifications();
+        $notifications = $query->paginate($perPage);
 
         if ($request->wantsJson()) {
             return response()->json($notifications);
