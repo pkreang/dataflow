@@ -2,9 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApprovalInstance;
+use App\Models\ApprovalInstanceStep;
+use App\Models\ApprovalWorkflow;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormSubmission;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithSettingsAuth;
 use Tests\TestCase;
@@ -97,6 +102,94 @@ class FormFormulaFieldTest extends TestCase
 
         $submission = DocumentFormSubmission::query()->where('form_id', $form->id)->firstOrFail();
         $this->assertNull($submission->payload['subtotal']);
+    }
+
+    public function test_show_submission_renders_stored_formula_value(): void
+    {
+        [$form, $requester] = $this->makeFormWithFormula();
+
+        $submission = DocumentFormSubmission::query()->create([
+            'form_id' => $form->id,
+            'user_id' => $requester->id,
+            'payload' => ['score_a' => 5, 'score_b' => 3, 'score_c' => 2, 'total' => 10.0],
+            'status' => 'submitted',
+        ]);
+
+        // The detail page has no Alpine form scope (`fp`), so the formula input
+        // must carry the DB value as a static attribute, formatted per decimals.
+        $this->actingAsWebSession($requester)
+            ->get(route('forms.submission.show', $submission))
+            ->assertOk()
+            ->assertSee('value="10.00"', false);
+    }
+
+    public function test_approver_field_update_recomputes_formula(): void
+    {
+        $this->seed([PermissionSeeder::class, RolePermissionSeeder::class]);
+
+        $requester = $this->makeRegularUser('formula-upd-req@example.test');
+        $approver = $this->makeRegularUser('formula-upd-appr@example.test');
+        $approver->givePermissionTo('approval.approve');
+
+        $form = DocumentForm::factory()->create(['document_type' => 'formula_upd_test']);
+        DocumentFormField::query()->create([
+            'form_id' => $form->id, 'field_key' => 'score_a', 'label' => 'A',
+            'field_type' => 'number', 'sort_order' => 1, 'editable_by' => ['step_1'],
+        ]);
+        DocumentFormField::query()->create([
+            'form_id' => $form->id, 'field_key' => 'score_b', 'label' => 'B',
+            'field_type' => 'number', 'sort_order' => 2, 'editable_by' => ['requester'],
+        ]);
+        DocumentFormField::query()->create([
+            'form_id' => $form->id, 'field_key' => 'total', 'label' => 'Total',
+            'field_type' => 'formula', 'sort_order' => 3,
+            'options' => ['expression' => 'score_a + score_b', 'decimals' => 2],
+            'editable_by' => ['requester'],
+        ]);
+
+        $workflow = ApprovalWorkflow::query()->create([
+            'name' => 'Formula update WF',
+            'document_type' => 'formula_upd_test',
+            'is_active' => true,
+            'allow_requester_as_approver' => false,
+        ]);
+        $instance = ApprovalInstance::query()->create([
+            'workflow_id' => $workflow->id,
+            'department_id' => null,
+            'requester_user_id' => $requester->id,
+            'document_type' => 'formula_upd_test',
+            'reference_no' => 'FUPD-1',
+            'payload' => [],
+            'current_step_no' => 1,
+            'status' => 'pending',
+        ]);
+        ApprovalInstanceStep::query()->create([
+            'approval_instance_id' => $instance->id,
+            'step_no' => 1,
+            'stage_name' => 'Stage 1',
+            'approver_type' => 'user',
+            'approver_ref' => (string) $approver->id,
+            'min_approvals' => 1,
+            'approved_by' => [],
+            'action' => 'pending',
+        ]);
+        $submission = DocumentFormSubmission::query()->create([
+            'form_id' => $form->id,
+            'user_id' => $requester->id,
+            'payload' => ['score_a' => 1, 'score_b' => 2, 'total' => 3.0],
+            'status' => 'submitted',
+            'approval_instance_id' => $instance->id,
+            'reference_no' => $instance->reference_no,
+        ]);
+
+        $this->actingAsWebSession($approver)
+            ->patch(route('approvals.update-fields', $instance), [
+                'field_updates' => ['score_a' => 10],
+            ])
+            ->assertRedirect();
+
+        // total must be recomputed from the merged payload: 10 + 2 = 12
+        $this->assertSame(12.0, (float) $submission->fresh()->payload['total']);
     }
 
     /**

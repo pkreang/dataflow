@@ -8,7 +8,6 @@ use App\Models\ApprovalInstanceStep;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
 use App\Models\SubmissionActivityLog;
-use App\Models\User;
 use App\Services\ApprovalFlowService;
 use App\Services\ApproverIdentity;
 use App\Services\FormSchemaService;
@@ -64,7 +63,7 @@ class ApprovalController extends Controller
             ->keyBy('id');
 
         $pending = collect($pendingIds)->map(fn ($id) => $instances->get($id))->filter()->values();
-        $acted   = collect($actedIds)->map(fn ($id) => $instances->get($id))->filter()->values();
+        $acted = collect($actedIds)->map(fn ($id) => $instances->get($id))->filter()->values();
 
         $grouped = $pending->groupBy('document_type');
         $actedGrouped = $acted->groupBy('document_type');
@@ -118,6 +117,7 @@ class ApprovalController extends Controller
             $message = $e->getMessage() === 'signature_required'
                 ? __('common.approval_signature_required_error')
                 : $e->getMessage();
+
             return back()->withErrors(['approval' => $message]);
         }
 
@@ -206,6 +206,7 @@ class ApprovalController extends Controller
             foreach ($safeUpdates as $key => $value) {
                 $payload[$key] = $value;
             }
+            $payload = \App\Support\FormulaFields::recompute($form, $payload);
 
             $changedFields = PayloadDiffer::diff(
                 $submission->payload ?? [],
@@ -232,6 +233,7 @@ class ApprovalController extends Controller
             foreach ($safeUpdates as $key => $value) {
                 $payload[$key] = $value;
             }
+            $payload = \App\Support\FormulaFields::recompute($form, $payload);
             $instance->update(['payload' => $payload]);
         }
 
