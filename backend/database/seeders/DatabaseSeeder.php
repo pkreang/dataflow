@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             SettingSeeder::class,
             NavigationMenuSeeder::class,
+            HolidaySeeder::class,
             // Vertical-specific seeders are NOT in this base — they leak across
             // verticals and force factory deployments to ship with school KPIs,
             // school doc types, school demo forms, etc. Per-vertical owners:

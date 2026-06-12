@@ -108,6 +108,9 @@ class MobileFormController extends Controller
                 'description' => $form->description,
                 'layout_columns' => $form->layout_columns,
                 'fields' => $fields->values(),
+                // Active holiday dates for client-side WORKDAYS() preview;
+                // the server recomputes with this calendar on submit.
+                'holidays' => app(\App\Support\WorkdayCalculator::class)->activeDates(),
             ],
         ]);
     }

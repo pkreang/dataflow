@@ -161,6 +161,7 @@ class FormulaEvaluator {
 
         const upper = name.toUpperCase();
         if (upper === 'DAYS') return this.fnDays(argKeys);
+        if (upper === 'WORKDAYS') return this.fnWorkdays(argKeys);
         throw new Error(`Unknown function: ${name}`);
     }
 
@@ -172,6 +173,26 @@ class FormulaEvaluator {
         const d1 = new Date(a), d2 = new Date(b);
         if (isNaN(d1) || isNaN(d2)) return 0;
         return Math.round((d2 - d1) / 86400000) + 1; // inclusive
+    }
+
+    // DAYS() minus active holidays (window.__HOLIDAYS__, 'YYYY-MM-DD' array,
+    // injected by create/edit pages). No list → behaves like DAYS; the server
+    // recomputes with the authoritative calendar on save. Absolute + never
+    // negative, mirroring PHP fnWorkdays.
+    fnWorkdays(argKeys) {
+        if (argKeys.length < 2) return 0;
+        let a = String(this.values[argKeys[0]] ?? '').trim();
+        let b = String(this.values[argKeys[1]] ?? '').trim();
+        if (!a || !b) return 0;
+        let d1 = new Date(a), d2 = new Date(b);
+        if (isNaN(d1) || isNaN(d2)) return 0;
+        if (d1 > d2) { [d1, d2] = [d2, d1]; [a, b] = [b, a]; }
+        const total = Math.round((d2 - d1) / 86400000) + 1;
+        const holidays = Array.isArray(window.__HOLIDAYS__) ? window.__HOLIDAYS__ : [];
+        const lo = d1.toISOString().slice(0, 10);
+        const hi = d2.toISOString().slice(0, 10);
+        const inRange = holidays.filter((d) => d >= lo && d <= hi).length;
+        return Math.max(0, total - inRange);
     }
 
     static coerceNumeric(raw) {

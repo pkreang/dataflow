@@ -62,6 +62,8 @@
 
 6. **Mobile ยังไม่รองรับ "ยื่นแทน" (on-behalf)** (added 2026-06-12) — ฟีเจอร์ยื่นเอกสารแทนคนอื่น (`submission.create_for_others` + `created_by_user_id`) ทำเฉพาะ web. Mobile API (`MobileFormController::submit/saveDraft`) ยังตั้ง `user_id = ผู้ login` เสมอ. Fix เมื่อต้องการ: รับ `on_behalf_of_user_id` ใน mobile submit/draft + เช็ค permission เดียวกัน + Flutter เพิ่ม picker ใน form_create_screen (เฉพาะ user ที่มีสิทธิ์ — ส่ง flag มากับ `/mobile/forms/{key}` schema)
 
+7. **Shift roster รายวัน + rotation + business-day timing** (added 2026-06-12) — ระบบกะปัจจุบันคือ master + assignment ช่วงวันที่ (`user_shift_schedules`). ยังไม่มี: (ก) roster grid รายวัน/override รายวัน; (ข) การหมุนเวียนกะอัตโนมัติ (สลับสัปดาห์); (ค) `work_days` ต่อ user ยังไม่ถูกใช้คำนวณวันลา (WORKDAYS เป็น org-wide ไม่ per-user); (ง) escalation reminder + PM scheduling ยังนับวันปฏิทิน ไม่ข้ามวันหยุด (`SendApprovalEscalationReminders`, `PmWorkOrderGenerator`) — ทำเมื่อมี requirement attendance/โรงงานจริง
+
 ---
 
 > เพิ่มได้เรื่อยๆ — PR ที่ pick งานจาก backlog ให้ cross ออก (ใส่ ~~strike~~) แทนการลบแถว เพื่อเก็บ trail ของการตัดสินใจ

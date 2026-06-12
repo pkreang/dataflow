@@ -100,6 +100,16 @@
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
                             {{ $user->jobPosition?->name ?? '—' }}
+                            @php
+                                $today = now()->toDateString();
+                                $activeShift = $user->shiftSchedules
+                                    ->first(fn ($s) => $s->effective_from->toDateString() <= $today
+                                        && ($s->effective_to === null || $s->effective_to->toDateString() >= $today))
+                                    ?->shift;
+                            @endphp
+                            @if ($activeShift)
+                                <span class="block text-xs text-slate-400">{{ __('common.shift') }}: {{ $activeShift->code }} ({{ substr($activeShift->start_time, 0, 5) }}–{{ substr($activeShift->end_time, 0, 5) }})</span>
+                            @endif
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap">
                             @foreach ($user->roles as $role)

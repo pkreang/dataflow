@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\DocumentFormWorkflowPolicyController;
 use App\Http\Controllers\Web\DocumentTypeController;
 use App\Http\Controllers\Web\EquipmentController;
 use App\Http\Controllers\Web\EquipmentLocationController;
+use App\Http\Controllers\Web\HolidayController;
 use App\Http\Controllers\Web\LookupController;
 use App\Http\Controllers\Web\LookupListController;
 use App\Http\Controllers\Web\MaintenanceController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\Web\ReportDashboardController;
 use App\Http\Controllers\Web\RoleController;
 use App\Http\Controllers\Web\RunningNumberController;
 use App\Http\Controllers\Web\SettingController;
+use App\Http\Controllers\Web\ShiftController;
 use App\Http\Controllers\Web\SparePartsController;
 use App\Http\Controllers\Web\SystemChangeLogController;
 use App\Http\Controllers\Web\ThailandAddressSearchController;
@@ -319,6 +321,20 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/positions/{position}/edit', [PositionController::class, 'edit'])->name('settings.positions.edit');
         Route::put('/settings/positions/{position}', [PositionController::class, 'update'])->name('settings.positions.update');
         Route::delete('/settings/positions/{position}', [PositionController::class, 'destroy'])->name('settings.positions.destroy');
+
+        // Holiday calendar (org-wide)
+        Route::get('/settings/holidays', [HolidayController::class, 'index'])->name('settings.holidays.index');
+        Route::post('/settings/holidays', [HolidayController::class, 'store'])->name('settings.holidays.store');
+        Route::patch('/settings/holidays/{holiday}/toggle', [HolidayController::class, 'toggleActive'])->name('settings.holidays.toggle');
+        Route::delete('/settings/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('settings.holidays.destroy');
+
+        // Shifts (master + per-user assignment)
+        Route::get('/settings/shifts', [ShiftController::class, 'index'])->name('settings.shifts.index');
+        Route::post('/settings/shifts', [ShiftController::class, 'store'])->name('settings.shifts.store');
+        Route::patch('/settings/shifts/{shift}/toggle', [ShiftController::class, 'toggleActive'])->name('settings.shifts.toggle');
+        Route::delete('/settings/shifts/{shift}', [ShiftController::class, 'destroy'])->name('settings.shifts.destroy');
+        Route::post('/settings/shifts/assignments', [ShiftController::class, 'assign'])->name('settings.shifts.assign');
+        Route::delete('/settings/shifts/assignments/{schedule}', [ShiftController::class, 'destroyAssignment'])->name('settings.shifts.assignments.destroy');
 
         // Approval Substitutions
         Route::get('/settings/substitutions', [UserSubstitutionController::class, 'index'])->name('settings.substitutions.index');

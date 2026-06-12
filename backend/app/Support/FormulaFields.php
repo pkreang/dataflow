@@ -16,7 +16,7 @@ class FormulaFields
     public static function recompute(DocumentForm $form, array $payload): array
     {
         $form->loadMissing('fields');
-        $evaluator = new FormulaEvaluator;
+        $evaluator = new FormulaEvaluator(app(WorkdayCalculator::class)->activeDates());
 
         foreach ($form->fields as $field) {
             if ($field->field_type !== 'formula') {

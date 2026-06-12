@@ -89,6 +89,37 @@ class MobileApiFormulaTest extends TestCase
         $this->assertSame($wfDefault->id, $short->workflow_id);
     }
 
+    public function test_mobile_submit_workdays_subtracts_holidays(): void
+    {
+        [$form, $requester] = $this->makeLeaveFormWithWorkflow();
+        $form->fields()->where('field_key', 'total_days')->update([
+            'options' => json_encode(['expression' => 'WORKDAYS(date_from, date_to)', 'decimals' => 0]),
+        ]);
+        \App\Models\Holiday::create(['date' => '2026-06-02', 'name' => 'Test holiday']);
+
+        Sanctum::actingAs($requester);
+
+        $this->postJson("/api/v1/mobile/forms/{$form->form_key}", [
+            'fields' => ['date_from' => '2026-06-01', 'date_to' => '2026-06-03'],
+        ])->assertCreated();
+
+        $submission = DocumentFormSubmission::query()->where('form_id', $form->id)->firstOrFail();
+        $this->assertSame(2.0, (float) $submission->payload['total_days']);
+    }
+
+    public function test_mobile_form_schema_includes_holidays(): void
+    {
+        [$form, $requester] = $this->makeLeaveFormWithWorkflow();
+        \App\Models\Holiday::create(['date' => '2026-12-31', 'name' => 'NYE']);
+        \App\Models\Holiday::create(['date' => '2026-12-30', 'name' => 'Off', 'is_active' => false]);
+
+        Sanctum::actingAs($requester);
+
+        $this->getJson("/api/v1/mobile/forms/{$form->form_key}")
+            ->assertOk()
+            ->assertJsonPath('data.holidays', ['2026-12-31']);
+    }
+
     public function test_mobile_draft_save_recomputes_formula_server_side(): void
     {
         [$form, $requester] = $this->makeLeaveFormWithWorkflow();

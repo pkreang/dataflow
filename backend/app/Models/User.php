@@ -113,6 +113,24 @@ class User extends Authenticatable implements HasLocalePreference
         return $this->belongsTo(User::class, 'manager_id');
     }
 
+    public function shiftSchedules()
+    {
+        return $this->hasMany(UserShiftSchedule::class);
+    }
+
+    /** The shift assigned to this user on the given date (default: today). */
+    public function currentShift(?\Carbon\Carbon $at = null): ?Shift
+    {
+        $date = ($at ?? now())->toDateString();
+
+        return $this->shiftSchedules()
+            ->with('shift')
+            ->where('effective_from', '<=', $date)
+            ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
+            ->orderByDesc('effective_from')
+            ->first()?->shift;
+    }
+
     public function orgUnit(): BelongsTo
     {
         return $this->belongsTo(OrgUnit::class, 'org_unit_id');

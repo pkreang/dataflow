@@ -10,6 +10,8 @@
 @endsection
 
 @section('content')
+{{-- Holiday calendar for live WORKDAYS() evaluation (server recomputes on save) --}}
+<script>window.__HOLIDAYS__ = @json(app(\App\Support\WorkdayCalculator::class)->activeDates());</script>
 <div style="width:100%;max-width:100%">
     <div class="mb-6">
         <a href="{{ route('forms.index') }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.back') }}</a>

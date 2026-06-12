@@ -28,14 +28,15 @@ use Illuminate\Database\Seeder;
 class LeaveRequestTemplateSeeder extends Seeder
 {
     private const DOCUMENT_TYPE = 'leave_request';
-    private const FORM_KEY      = 'leave_request_default';
+
+    private const FORM_KEY = 'leave_request_default';
 
     public function run(): void
     {
         $this->seedDocumentType();
         $this->seedLookup();
         $this->seedRunningNumber();
-        $form     = $this->seedForm();
+        $form = $this->seedForm();
         $workflow = $this->seedWorkflow();
         $this->seedPolicy($form, $workflow);
 
@@ -52,12 +53,12 @@ class LeaveRequestTemplateSeeder extends Seeder
         DocumentType::firstOrCreate(
             ['code' => self::DOCUMENT_TYPE],
             [
-                'label_en'     => 'Leave Request',
-                'label_th'     => 'ใบลา',
-                'icon'         => 'calendar-days',
-                'sort_order'   => 30,
+                'label_en' => 'Leave Request',
+                'label_th' => 'ใบลา',
+                'icon' => 'calendar-days',
+                'sort_order' => 30,
                 'routing_mode' => 'organization_wide',
-                'is_active'    => true,
+                'is_active' => true,
             ]
         );
     }
@@ -67,9 +68,9 @@ class LeaveRequestTemplateSeeder extends Seeder
         $list = LookupList::updateOrCreate(
             ['key' => 'leave_type'],
             [
-                'label_en'   => 'Leave Type',
-                'label_th'   => 'ประเภทการลา',
-                'is_active'  => true,
+                'label_en' => 'Leave Type',
+                'label_th' => 'ประเภทการลา',
+                'is_active' => true,
                 'sort_order' => 20,
             ]
         );
@@ -87,10 +88,10 @@ class LeaveRequestTemplateSeeder extends Seeder
             LookupListItem::updateOrCreate(
                 ['list_id' => $list->id, 'value' => $item['value']],
                 [
-                    'label_en'   => $item['label_en'],
-                    'label_th'   => $item['label_th'],
+                    'label_en' => $item['label_en'],
+                    'label_th' => $item['label_th'],
                     'sort_order' => $item['sort_order'],
-                    'is_active'  => true,
+                    'is_active' => true,
                 ]
             );
         }
@@ -101,12 +102,12 @@ class LeaveRequestTemplateSeeder extends Seeder
         RunningNumberConfig::updateOrCreate(
             ['document_type' => self::DOCUMENT_TYPE],
             [
-                'prefix'        => 'LV',
-                'digit_count'   => 4,
-                'reset_mode'    => 'yearly',
-                'include_year'  => true,
+                'prefix' => 'LV',
+                'digit_count' => 4,
+                'reset_mode' => 'yearly',
+                'include_year' => true,
                 'include_month' => false,
-                'is_active'     => true,
+                'is_active' => true,
             ]
         );
     }
@@ -116,10 +117,10 @@ class LeaveRequestTemplateSeeder extends Seeder
         $form = DocumentForm::updateOrCreate(
             ['form_key' => self::FORM_KEY],
             [
-                'name'           => 'ใบลา',
-                'document_type'  => self::DOCUMENT_TYPE,
-                'description'    => 'ฟอร์มยื่นคำขอลาหยุด',
-                'is_active'      => true,
+                'name' => 'ใบลา',
+                'document_type' => self::DOCUMENT_TYPE,
+                'description' => 'ฟอร์มยื่นคำขอลาหยุด',
+                'is_active' => true,
                 'layout_columns' => 2,
             ]
         );
@@ -129,110 +130,110 @@ class LeaveRequestTemplateSeeder extends Seeder
 
         $fields = [
             [
-                'field_key'        => 'reference_no',
-                'label'            => 'เลขที่ใบลา',
-                'label_en'         => 'Reference No.',
-                'label_th'         => 'เลขที่ใบลา',
-                'field_type'       => 'auto_number',
-                'is_required'      => false,
-                'is_readonly'      => true,
-                'sort_order'       => 1,
-                'col_span'         => 2,
+                'field_key' => 'reference_no',
+                'label' => 'เลขที่ใบลา',
+                'label_en' => 'Reference No.',
+                'label_th' => 'เลขที่ใบลา',
+                'field_type' => 'auto_number',
+                'is_required' => false,
+                'is_readonly' => true,
+                'sort_order' => 1,
+                'col_span' => 2,
             ],
             [
-                'field_key'       => 'leave_type',
-                'label'           => 'ประเภทการลา',
-                'label_en'        => 'Leave Type',
-                'label_th'        => 'ประเภทการลา',
-                'field_type'      => 'lookup',
-                'is_required'     => true,
-                'is_searchable'   => true,
-                'sort_order'      => 2,
-                'col_span'        => 2,
-                'options'         => ['source' => 'leave_type'],
-            ],
-            [
-                'field_key'     => 'date_from',
-                'label'         => 'วันที่เริ่มลา',
-                'label_en'      => 'From',
-                'label_th'      => 'วันที่เริ่มลา',
-                'field_type'    => 'date',
-                'is_required'   => true,
+                'field_key' => 'leave_type',
+                'label' => 'ประเภทการลา',
+                'label_en' => 'Leave Type',
+                'label_th' => 'ประเภทการลา',
+                'field_type' => 'lookup',
+                'is_required' => true,
                 'is_searchable' => true,
-                'sort_order'    => 3,
-                'col_span'      => 1,
+                'sort_order' => 2,
+                'col_span' => 2,
+                'options' => ['source' => 'leave_type'],
             ],
             [
-                'field_key'     => 'date_to',
-                'label'         => 'วันที่สิ้นสุด',
-                'label_en'      => 'To',
-                'label_th'      => 'วันที่สิ้นสุด',
-                'field_type'    => 'date',
-                'is_required'   => true,
+                'field_key' => 'date_from',
+                'label' => 'วันที่เริ่มลา',
+                'label_en' => 'From',
+                'label_th' => 'วันที่เริ่มลา',
+                'field_type' => 'date',
+                'is_required' => true,
                 'is_searchable' => true,
-                'sort_order'    => 4,
-                'col_span'      => 1,
+                'sort_order' => 3,
+                'col_span' => 1,
             ],
             [
-                'field_key'  => 'total_days',
-                'label'      => 'จำนวนวัน',
-                'label_en'   => 'Total Days',
-                'label_th'   => 'จำนวนวัน',
+                'field_key' => 'date_to',
+                'label' => 'วันที่สิ้นสุด',
+                'label_en' => 'To',
+                'label_th' => 'วันที่สิ้นสุด',
+                'field_type' => 'date',
+                'is_required' => true,
+                'is_searchable' => true,
+                'sort_order' => 4,
+                'col_span' => 1,
+            ],
+            [
+                'field_key' => 'total_days',
+                'label' => 'จำนวนวัน',
+                'label_en' => 'Total Days',
+                'label_th' => 'จำนวนวัน',
                 'field_type' => 'formula',
                 'is_required' => false,
                 'is_readonly' => true,
                 'sort_order' => 5,
-                'col_span'   => 2,
-                'options'    => ['expression' => 'DAYS(date_from, date_to)', 'decimals' => 0],
+                'col_span' => 2,
+                'options' => ['expression' => 'WORKDAYS(date_from, date_to)', 'decimals' => 0],
             ],
             [
-                'field_key'        => 'sick_certificate',
-                'label'            => 'ใบรับรองแพทย์',
-                'label_en'         => 'Medical Certificate',
-                'label_th'         => 'ใบรับรองแพทย์',
-                'field_type'       => 'file',
-                'is_required'      => false,
-                'sort_order'       => 6,
-                'col_span'         => 2,
+                'field_key' => 'sick_certificate',
+                'label' => 'ใบรับรองแพทย์',
+                'label_en' => 'Medical Certificate',
+                'label_th' => 'ใบรับรองแพทย์',
+                'field_type' => 'file',
+                'is_required' => false,
+                'sort_order' => 6,
+                'col_span' => 2,
                 'visibility_rules' => [
                     ['field' => 'leave_type', 'operator' => 'equals', 'value' => 'sick'],
                 ],
-                'required_rules'   => [
+                'required_rules' => [
                     ['conditions' => [
                         ['field' => 'leave_type', 'operator' => 'equals', 'value' => 'sick'],
                     ]],
                 ],
             ],
             [
-                'field_key'   => 'substitute',
-                'label'       => 'ผู้ปฏิบัติหน้าที่แทน',
-                'label_en'    => 'Substitute',
-                'label_th'    => 'ผู้ปฏิบัติหน้าที่แทน',
-                'field_type'  => 'text',
+                'field_key' => 'substitute',
+                'label' => 'ผู้ปฏิบัติหน้าที่แทน',
+                'label_en' => 'Substitute',
+                'label_th' => 'ผู้ปฏิบัติหน้าที่แทน',
+                'field_type' => 'text',
                 'is_required' => false,
-                'sort_order'  => 7,
-                'col_span'    => 2,
+                'sort_order' => 7,
+                'col_span' => 2,
             ],
             [
-                'field_key'        => 'reason',
-                'label'            => 'เหตุผลในการลา',
-                'label_en'         => 'Reason',
-                'label_th'         => 'เหตุผลในการลา',
-                'field_type'       => 'textarea',
-                'is_required'      => false,
-                'sort_order'       => 8,
-                'col_span'         => 2,
+                'field_key' => 'reason',
+                'label' => 'เหตุผลในการลา',
+                'label_en' => 'Reason',
+                'label_th' => 'เหตุผลในการลา',
+                'field_type' => 'textarea',
+                'is_required' => false,
+                'sort_order' => 8,
+                'col_span' => 2,
                 'validation_rules' => ['min_length' => 5],
             ],
             [
-                'field_key'   => 'signature',
-                'label'       => 'ลายเซ็นผู้ขอลา',
-                'label_en'    => 'Signature',
-                'label_th'    => 'ลายเซ็นผู้ขอลา',
-                'field_type'  => 'signature',
+                'field_key' => 'signature',
+                'label' => 'ลายเซ็นผู้ขอลา',
+                'label_en' => 'Signature',
+                'label_th' => 'ลายเซ็นผู้ขอลา',
+                'field_type' => 'signature',
                 'is_required' => true,
-                'sort_order'  => 9,
-                'col_span'    => 2,
+                'sort_order' => 9,
+                'col_span' => 2,
             ],
         ];
 
@@ -249,21 +250,21 @@ class LeaveRequestTemplateSeeder extends Seeder
             ['name' => 'อนุมัติใบลา (ค่าเริ่มต้น)'],
             [
                 'document_type' => self::DOCUMENT_TYPE,
-                'description'   => 'workflow อนุมัติใบลา — ปรับเปลี่ยนได้ที่ตั้งค่า > Workflow',
-                'is_active'     => true,
+                'description' => 'workflow อนุมัติใบลา — ปรับเปลี่ยนได้ที่ตั้งค่า > Workflow',
+                'is_active' => true,
             ]
         );
 
         $workflow->stages()->delete();
 
         ApprovalWorkflowStage::query()->create([
-            'workflow_id'   => $workflow->id,
-            'step_no'       => 1,
-            'name'          => 'ผู้อนุมัติใบลา',
+            'workflow_id' => $workflow->id,
+            'step_no' => 1,
+            'name' => 'ผู้อนุมัติใบลา',
             'approver_type' => 'role',
-            'approver_ref'  => 'approver',
+            'approver_ref' => 'approver',
             'min_approvals' => 1,
-            'is_active'     => true,
+            'is_active' => true,
         ]);
 
         return $workflow;
@@ -275,7 +276,7 @@ class LeaveRequestTemplateSeeder extends Seeder
         DocumentFormWorkflowPolicy::updateOrCreate(
             ['form_id' => $form->id, 'department_id' => null],
             [
-                'workflow_id'          => $workflow->id,
+                'workflow_id' => $workflow->id,
                 'use_amount_condition' => false,
             ]
         );

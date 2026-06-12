@@ -26,10 +26,21 @@ use InvalidArgumentException;
 class FormulaEvaluator
 {
     private string $expr;
+
     private int $pos;
+
     private int $len;
+
     /** @var array<string, mixed> */
     private array $values;
+
+    /**
+     * @param  string[]  $holidays  Active holiday dates ('Y-m-d') consumed by
+     *                              WORKDAYS(). Injected by the caller (server:
+     *                              WorkdayCalculator::activeDates(); tests: inline)
+     *                              so the evaluator itself stays DB-free.
+     */
+    public function __construct(private readonly array $holidays = []) {}
 
     /**
      * @param  array<string, mixed>  $values  Map of field_key → value (numeric or numeric-string).
@@ -96,7 +107,7 @@ class FormulaEvaluator
             $right = $this->parseFactor();
             if ($op === '/') {
                 if ($right === 0.0) {
-                    throw new FormulaDivisionByZero();
+                    throw new FormulaDivisionByZero;
                 }
                 $left = $left / $right;
             } else {
@@ -118,6 +129,7 @@ class FormulaEvaluator
 
         if ($c === '-') {
             $this->pos++;
+
             return -$this->parseFactor();
         }
 
@@ -129,6 +141,7 @@ class FormulaEvaluator
                 throw new InvalidArgumentException('Unmatched opening parenthesis');
             }
             $this->pos++;
+
             return $value;
         }
 
@@ -182,6 +195,7 @@ class FormulaEvaluator
         $this->skipWhitespace();
         if ($this->peek() === '(') {
             $this->pos++; // consume '('
+
             return $this->callBuiltin($name);
         }
 
@@ -219,8 +233,9 @@ class FormulaEvaluator
         }
         $this->pos++;
 
-        return match(strtoupper($name)) {
+        return match (strtoupper($name)) {
             'DAYS' => $this->fnDays($argKeys),
+            'WORKDAYS' => $this->fnWorkdays($argKeys),
             default => throw new InvalidArgumentException('Unknown function: '.$name),
         };
     }
@@ -238,10 +253,45 @@ class FormulaEvaluator
         try {
             $d1 = new \DateTimeImmutable($a);
             $d2 = new \DateTimeImmutable($b);
+
             return (float) ($d1->diff($d2)->days + 1);
         } catch (\Exception) {
             return 0.0;
         }
+    }
+
+    /**
+     * DAYS() minus active holidays inside the range. Weekends are NOT skipped
+     * by design (org-wide calendar only). Never negative.
+     */
+    private function fnWorkdays(array $argKeys): float
+    {
+        if (count($argKeys) < 2) {
+            return 0.0;
+        }
+        $a = trim((string) ($this->values[$argKeys[0]] ?? ''));
+        $b = trim((string) ($this->values[$argKeys[1]] ?? ''));
+        if ($a === '' || $b === '') {
+            return 0.0;
+        }
+        try {
+            $d1 = new \DateTimeImmutable($a);
+            $d2 = new \DateTimeImmutable($b);
+        } catch (\Exception) {
+            return 0.0;
+        }
+        if ($d1 > $d2) {
+            [$d1, $d2] = [$d2, $d1];
+        }
+        $total = $d1->diff($d2)->days + 1;
+        $lo = $d1->format('Y-m-d');
+        $hi = $d2->format('Y-m-d');
+        $inRange = count(array_filter(
+            $this->holidays,
+            fn (string $d) => $d >= $lo && $d <= $hi
+        ));
+
+        return (float) max(0, $total - $inRange);
     }
 
     /**
@@ -259,6 +309,7 @@ class FormulaEvaluator
             if ($trimmed === '' || ! is_numeric($trimmed)) {
                 return 0.0;
             }
+
             return (float) $trimmed;
         }
 

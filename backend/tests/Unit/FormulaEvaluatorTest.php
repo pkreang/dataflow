@@ -18,9 +18,54 @@ use PHPUnit\Framework\TestCase;
  */
 class FormulaEvaluatorTest extends TestCase
 {
-    private function eval(string $expr, array $values = []): float|null
+    private function eval(string $expr, array $values = [], array $holidays = []): ?float
     {
-        return (new FormulaEvaluator())->evaluate($expr, $values);
+        return (new FormulaEvaluator($holidays))->evaluate($expr, $values);
+    }
+
+    // ---- WORKDAYS() — like DAYS but subtracts injected holiday dates ----
+
+    public function test_workdays_without_holidays_equals_days(): void
+    {
+        $this->assertSame(3.0, $this->eval('WORKDAYS(date_from, date_to)', [
+            'date_from' => '2026-06-01', 'date_to' => '2026-06-03',
+        ]));
+    }
+
+    public function test_workdays_subtracts_holiday_in_range(): void
+    {
+        $this->assertSame(2.0, $this->eval('WORKDAYS(date_from, date_to)', [
+            'date_from' => '2026-06-01', 'date_to' => '2026-06-03',
+        ], ['2026-06-02']));
+    }
+
+    public function test_workdays_ignores_holiday_outside_range(): void
+    {
+        $this->assertSame(3.0, $this->eval('WORKDAYS(date_from, date_to)', [
+            'date_from' => '2026-06-01', 'date_to' => '2026-06-03',
+        ], ['2026-06-10']));
+    }
+
+    public function test_workdays_holiday_on_edge_subtracted(): void
+    {
+        $this->assertSame(1.0, $this->eval('WORKDAYS(date_from, date_to)', [
+            'date_from' => '2026-06-01', 'date_to' => '2026-06-02',
+        ], ['2026-06-01']));
+    }
+
+    public function test_workdays_missing_value_returns_zero(): void
+    {
+        $this->assertSame(0.0, $this->eval('WORKDAYS(date_from, date_to)', [
+            'date_from' => '2026-06-01',
+        ], ['2026-06-01']));
+    }
+
+    public function test_workdays_never_negative(): void
+    {
+        // Every day in range is a holiday → 0, not negative.
+        $this->assertSame(0.0, $this->eval('WORKDAYS(date_from, date_to)', [
+            'date_from' => '2026-06-01', 'date_to' => '2026-06-02',
+        ], ['2026-06-01', '2026-06-02']));
     }
 
     // ---- arithmetic ----
@@ -168,7 +213,7 @@ class FormulaEvaluatorTest extends TestCase
     {
         $this->assertSame(1.0, $this->eval('DAYS(date_from, date_to)', [
             'date_from' => '2026-06-10',
-            'date_to'   => '2026-06-10',
+            'date_to' => '2026-06-10',
         ]));
     }
 
@@ -176,7 +221,7 @@ class FormulaEvaluatorTest extends TestCase
     {
         $this->assertSame(3.0, $this->eval('DAYS(date_from, date_to)', [
             'date_from' => '2026-06-10',
-            'date_to'   => '2026-06-12',
+            'date_to' => '2026-06-12',
         ]));
     }
 
@@ -191,7 +236,7 @@ class FormulaEvaluatorTest extends TestCase
     {
         $this->assertSame(0.0, $this->eval('DAYS(date_from, date_to)', [
             'date_from' => 'not-a-date',
-            'date_to'   => '2026-06-12',
+            'date_to' => '2026-06-12',
         ]));
     }
 
@@ -200,7 +245,7 @@ class FormulaEvaluatorTest extends TestCase
         // DAYS(d1, d2) + 0 = 3
         $this->assertSame(5.0, $this->eval('DAYS(date_from, date_to) + 2', [
             'date_from' => '2026-06-10',
-            'date_to'   => '2026-06-12',
+            'date_to' => '2026-06-12',
         ]));
     }
 }

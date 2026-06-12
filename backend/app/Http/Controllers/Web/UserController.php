@@ -42,7 +42,7 @@ class UserController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = User::with(['roles', 'jobPosition', 'department']);
+        $query = User::with(['roles', 'jobPosition', 'department', 'shiftSchedules.shift']);
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {

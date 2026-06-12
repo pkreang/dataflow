@@ -45,6 +45,8 @@ class UatDemoSeeder extends Seeder
     {
         // 1. Leave Request form + default lookup + running number
         $this->call(LeaveRequestTemplateSeeder::class);
+        // Holiday calendar — feeds WORKDAYS() in the leave form's total_days
+        $this->call(HolidaySeeder::class);
 
         // 2. Company + Branch
         $company = Company::updateOrCreate(
@@ -228,6 +230,20 @@ class UatDemoSeeder extends Seeder
         if ($form) {
             $this->seedWorkflowVariants($form, $deptAdmin, $posTeacher, $posHead, $posMgr, $employee, $manager, $gm, $substitute, $company, $branch, $root, $wf);
         }
+
+        // 11. กะตัวอย่าง + ผูก employee เข้ากะเช้า (UAT เมนูตารางกะ)
+        $morning = \App\Models\Shift::updateOrCreate(
+            ['code' => 'MORNING'],
+            ['name' => 'กะเช้า', 'start_time' => '08:00', 'end_time' => '17:00', 'break_minutes' => 60, 'is_active' => true]
+        );
+        \App\Models\Shift::updateOrCreate(
+            ['code' => 'NIGHT'],
+            ['name' => 'กะดึก', 'start_time' => '20:00', 'end_time' => '05:00', 'break_minutes' => 60, 'is_active' => true]
+        );
+        \App\Models\UserShiftSchedule::updateOrCreate(
+            ['user_id' => $employee->id, 'shift_id' => $morning->id],
+            ['work_days' => [1, 2, 3, 4, 5], 'effective_from' => now()->startOfYear()->toDateString(), 'effective_to' => null]
+        );
 
         $this->command?->info('UAT Demo ready.');
         $this->command?->info('  employee@test.com   / password  (ผู้ยื่น)');
