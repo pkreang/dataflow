@@ -29,7 +29,9 @@
     @endif
 
     @if (session('autosubmit'))
-        @if(($overrideStages ?? collect())->isEmpty())
+        @if(($overrideStages ?? collect())->isEmpty() || session()->has('picked_approvers'))
+            {{-- No picker, or the choice was already made on the create page
+                 (carried via flash) — proceed straight to submit. --}}
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
                     const submitForm = document.getElementById('submit-draft-form');
@@ -155,10 +157,11 @@
                 @foreach($overrideStages as $overrideStage)
                     <div>
                         <label class="text-xs text-slate-500 dark:text-slate-400">{{ $overrideStage->name }}</label>
+                        @php $flashPick = (string) (session('picked_approvers')[$overrideStage->step_no] ?? ''); @endphp
                         <select form="submit-draft-form" name="picked_approvers[{{ $overrideStage->step_no }}]" class="form-input mt-1 w-full">
                             <option value="">{{ __('common.submit_pick_approver_use_default') }}</option>
                             @foreach(($eligibleApprovers ?? collect()) as $appr)
-                                <option value="{{ $appr['id'] }}">{{ $appr['label'] }}</option>
+                                <option value="{{ $appr['id'] }}" @selected($flashPick !== '' && $flashPick === (string) $appr['id'])>{{ $appr['label'] }}</option>
                             @endforeach
                         </select>
                     </div>

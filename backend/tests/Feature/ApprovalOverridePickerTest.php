@@ -37,6 +37,39 @@ class ApprovalOverridePickerTest extends TestCase
         $response->assertSee(__('common.pick_approver_before_submit'));
     }
 
+    public function test_create_page_shows_picker_upfront(): void
+    {
+        [$submission, $user] = $this->makeDraft(override: true);
+
+        $this->actingAsWebSession($user)
+            ->get(route('forms.create', $submission->form))
+            ->assertOk()
+            ->assertSee('picked_approvers[1]', false);
+    }
+
+    public function test_pick_made_on_create_carries_through_and_autosubmits(): void
+    {
+        [$submission, $user, $approver] = $this->makeDraft(override: true);
+        $form = $submission->form;
+
+        // Filing from the create page WITH the picker answered (use-default '')
+        $response = $this->actingAsWebSession($user)
+            ->post(route('forms.draft.store', $form), [
+                'fields' => ['title' => 'picked upfront'],
+                'picked_approvers' => [1 => (string) $approver->id],
+                '_intent' => 'submit',
+            ])
+            ->assertRedirect();
+
+        $follow = $this->get($response->headers->get('Location'));
+        $follow->assertOk();
+        // Choice already made → auto-submit proceeds (no pause banner)...
+        $follow->assertSee('submitForm.submit()', false);
+        $follow->assertDontSee(__('common.pick_approver_before_submit'));
+        // ...with the picked approver preselected in the carried-over form.
+        $follow->assertSee('value="'.$approver->id.'" selected', false);
+    }
+
     public function test_autosubmit_still_fires_without_override(): void
     {
         [$submission, $user] = $this->makeDraft(override: false);
@@ -50,7 +83,7 @@ class ApprovalOverridePickerTest extends TestCase
         $response->assertSee('submitForm.submit()', false);
     }
 
-    /** @return array{0: DocumentFormSubmission, 1: \App\Models\User} */
+    /** @return array{0: DocumentFormSubmission, 1: \App\Models\User, 2: \App\Models\User} */
     private function makeDraft(bool $override): array
     {
         Setting::set('approval.allow_requester_override', true);
@@ -99,6 +132,6 @@ class ApprovalOverridePickerTest extends TestCase
             'status' => 'draft',
         ]);
 
-        return [$submission, $user];
+        return [$submission, $user, $approver];
     }
 }

@@ -282,7 +282,18 @@ class DocumentFormSubmissionController extends Controller
                 ->get(['id', 'first_name', 'last_name', 'email'])
             : collect();
 
-        return view('forms.create', ['form' => $documentForm, 'onBehalfUsers' => $onBehalfUsers]);
+        // Requester-override: offer the approver picker up-front on creation.
+        [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
+            $documentForm,
+            session('user.department_id') ?? User::find((int) (session('user.id') ?? 0))?->department_id,
+        );
+
+        return view('forms.create', [
+            'form' => $documentForm,
+            'onBehalfUsers' => $onBehalfUsers,
+            'overrideStages' => $overrideStages,
+            'eligibleApprovers' => $eligibleApprovers,
+        ]);
     }
 
     public function storeDraft(Request $request, DocumentForm $documentForm): RedirectResponse
@@ -342,11 +353,22 @@ class DocumentFormSubmissionController extends Controller
 
         SubmissionActivityLog::record($submission->id, $userId, 'created');
 
-        if ($request->input('_intent') === 'submit') {
-            return redirect()->route('forms.draft.edit', $submission)->with('autosubmit', true);
+        // Picker was shown on the create page → carry the choice (even "use
+        // default") through the redirect so the auto-submit can proceed.
+        $flash = [];
+        if ($request->has('picked_approvers')) {
+            $flash['picked_approvers'] = collect((array) $request->input('picked_approvers', []))
+                ->mapWithKeys(fn ($uid, $stepNo) => [(int) $stepNo => (int) $uid])
+                ->all();
         }
 
-        return redirect()->route('forms.draft.edit', $submission)->with('success', __('common.saved'));
+        if ($request->input('_intent') === 'submit') {
+            return redirect()->route('forms.draft.edit', $submission)
+                ->with(array_merge($flash, ['autosubmit' => true]));
+        }
+
+        return redirect()->route('forms.draft.edit', $submission)
+            ->with(array_merge($flash, ['success' => __('common.saved')]));
     }
 
     public function editDraft(DocumentFormSubmission $submission): View
@@ -354,40 +376,55 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeOwnerDraft($submission);
         $submission->load('form.fields');
 
-        // override: if the admin feature is on AND the resolved workflow has stages
-        // with allow_requester_override=true, surface those stages + eligible approvers
-        // so the submit form can render an optional substitute-approver picker.
-        $overrideStages = collect();
-        $eligibleApprovers = collect();
-        if (Setting::getBool('approval.allow_requester_override', false)) {
-            $form = $submission->form()->first();
-            $workflow = $form ? $this->approvalFlow->previewWorkflow(
-                $form->document_type,
-                $submission->department_id,
-                (int) (session('user.id') ?? 0),
-                $form->form_key,
-            ) : null;
-            $overrideStages = $workflow
-                ? ApprovalWorkflowStage::query()
-                    ->where('workflow_id', $workflow->id)
-                    ->where('is_active', true)
-                    ->where('allow_requester_override', true)
-                    ->orderBy('step_no')
-                    ->get()
-                : collect();
-            if ($overrideStages->isNotEmpty()) {
-                $eligibleApprovers = User::permission('approval.approve')
-                    ->orderBy('first_name')
-                    ->get()
-                    ->map(fn (User $u) => [
-                        'id' => $u->id,
-                        'label' => trim($u->first_name.' '.$u->last_name).' ('.$u->email.')',
-                    ])
-                    ->values();
-            }
-        }
+        [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
+            $submission->form()->first(),
+            $submission->department_id,
+        );
 
         return view('forms.edit-draft', compact('submission', 'overrideStages', 'eligibleApprovers'));
+    }
+
+    /**
+     * Requester-override picker data: when the admin feature is on AND the
+     * resolved workflow has stages with allow_requester_override=true, return
+     * those stages + the eligible approver pool. Shared by the create page
+     * (pick up-front) and the edit-draft page (pick before submitting).
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
+     */
+    private function resolveOverridePicker(?DocumentForm $form, ?int $departmentId): array
+    {
+        if (! $form || ! Setting::getBool('approval.allow_requester_override', false)) {
+            return [collect(), collect()];
+        }
+
+        $workflow = $this->approvalFlow->previewWorkflow(
+            $form->document_type,
+            $departmentId,
+            (int) (session('user.id') ?? 0),
+            $form->form_key,
+        );
+        $overrideStages = $workflow
+            ? ApprovalWorkflowStage::query()
+                ->where('workflow_id', $workflow->id)
+                ->where('is_active', true)
+                ->where('allow_requester_override', true)
+                ->orderBy('step_no')
+                ->get()
+            : collect();
+
+        $eligibleApprovers = $overrideStages->isNotEmpty()
+            ? User::permission('approval.approve')
+                ->orderBy('first_name')
+                ->get()
+                ->map(fn (User $u) => [
+                    'id' => $u->id,
+                    'label' => trim($u->first_name.' '.$u->last_name).' ('.$u->email.')',
+                ])
+                ->values()
+            : collect();
+
+        return [$overrideStages, $eligibleApprovers];
     }
 
     public function updateDraft(Request $request, DocumentFormSubmission $submission): RedirectResponse

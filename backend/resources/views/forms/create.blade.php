@@ -138,6 +138,27 @@
                 @endforeach
             </x-document-form-fields-grid>
 
+            @if(($overrideStages ?? collect())->isNotEmpty())
+                {{-- Requester-override: pick the approver up-front; the choice is
+                     carried through storeDraft's redirect to the submit step. --}}
+                <div class="mt-6 rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10 p-4">
+                    <p class="text-sm font-semibold text-blue-800 dark:text-blue-200">{{ __('common.submit_pick_approver_label') }}</p>
+                    <div class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach($overrideStages as $overrideStage)
+                            <div>
+                                <label class="text-xs text-slate-500 dark:text-slate-400">{{ $overrideStage->name }}</label>
+                                <select name="picked_approvers[{{ $overrideStage->step_no }}]" class="form-input mt-1 w-full">
+                                    <option value="">{{ __('common.submit_pick_approver_use_default') }}</option>
+                                    @foreach(($eligibleApprovers ?? collect()) as $appr)
+                                        <option value="{{ $appr['id'] }}" @selected(old("picked_approvers.{$overrideStage->step_no}") == $appr['id'])>{{ $appr['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <div class="mt-6 sm:flex sm:justify-end sm:gap-3" x-data="{ intent: 'draft' }">
                 <input type="hidden" name="_intent" :value="intent">
                 <button type="submit" class="btn-secondary justify-center w-full sm:w-auto py-3 sm:py-2 text-base sm:text-sm mb-2 sm:mb-0"
