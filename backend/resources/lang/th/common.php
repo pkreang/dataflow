@@ -1368,4 +1368,15 @@ return [
     'position_import_subtitle' => 'อัปโหลดไฟล์ CSV เพื่อสร้างหรืออัปเดตตำแหน่ง',
     'org_unit_import_title' => 'นำเข้าหน่วยงาน',
     'org_unit_import_subtitle' => 'อัปโหลดไฟล์ CSV เพื่อสร้างหรืออัปเดตหน่วยงาน โดยแถว parent ต้องอยู่ก่อน child',
+
+    // Document Calendar
+    'document_calendar' => 'ปฏิทินใบเอกสาร',
+    'document_calendar_desc' => 'ภาพรวมใบเอกสารที่ยื่นในแต่ละวัน',
+    'calendar_all_forms' => 'ทุกฟอร์ม',
+    'calendar_no_events' => 'ไม่มีใบเอกสารในวันนี้',
+    'calendar_legend_pending' => 'รออนุมัติ',
+    'calendar_legend_approved' => 'อนุมัติแล้ว',
+    'calendar_legend_rejected' => 'ไม่อนุมัติ',
+    'calendar_legend_submitted' => 'ยื่นแล้ว',
+    'calendar_team_view' => 'มองเห็นใบของทีมด้วย (คุณเป็นผู้บังคับบัญชา)',
 ];

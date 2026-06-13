@@ -437,6 +437,18 @@ class NavigationMenuSeeder extends Seeder
                 'sort_order' => 4,
                 'is_active' => true,
             ],
+            [
+                'id' => 75,
+                'parent_id' => 48,
+                'label' => 'Document Calendar',
+                'label_en' => 'Document Calendar',
+                'label_th' => 'ปฏิทินใบเอกสาร',
+                'icon' => 'calendar',
+                'route' => '/forms/calendar',
+                'permission' => null,
+                'sort_order' => 20,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($menus as &$row) {

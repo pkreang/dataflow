@@ -117,6 +117,8 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
 
     // Document Form Submissions (user-facing)
     Route::get('/forms', [DocumentFormSubmissionController::class, 'index'])->name('forms.index');
+    Route::get('/forms/calendar', [\App\Http\Controllers\Web\DocumentFormCalendarController::class, 'index'])->name('forms.calendar');
+    Route::get('/forms/calendar/events', [\App\Http\Controllers\Web\DocumentFormCalendarController::class, 'events'])->name('forms.calendar.events');
     Route::get('/forms/my-submissions', [DocumentFormSubmissionController::class, 'mySubmissions'])->name('forms.my-submissions');
     Route::get('/forms/drafts/{submission}', [DocumentFormSubmissionController::class, 'editDraft'])->name('forms.draft.edit');
     Route::put('/forms/drafts/{submission}', [DocumentFormSubmissionController::class, 'updateDraft'])->name('forms.draft.update');

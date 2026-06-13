@@ -1368,4 +1368,15 @@ return [
     'position_import_subtitle' => 'Upload a CSV file to create or update positions.',
     'org_unit_import_title' => 'Import Org Units',
     'org_unit_import_subtitle' => 'Upload a CSV file to create or update org units. Parent rows must appear before child rows.',
+
+    // Document Calendar
+    'document_calendar' => 'Document Calendar',
+    'document_calendar_desc' => 'Overview of submitted documents by day',
+    'calendar_all_forms' => 'All forms',
+    'calendar_no_events' => 'No documents on this day',
+    'calendar_legend_pending' => 'Pending',
+    'calendar_legend_approved' => 'Approved',
+    'calendar_legend_rejected' => 'Rejected',
+    'calendar_legend_submitted' => 'Submitted',
+    'calendar_team_view' => 'Viewing team submissions (you manage others)',
 ];
