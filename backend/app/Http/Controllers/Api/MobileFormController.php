@@ -59,11 +59,11 @@ class MobileFormController extends Controller
         $lookupItemsMap = [];
         if ($lookupKeys) {
             LookupList::query()
-                ->whereIn('list_key', $lookupKeys)
+                ->whereIn('key', $lookupKeys)
                 ->with(['items' => fn ($q) => $q->orderBy('sort_order')->orderBy('id')])
                 ->get()
                 ->each(function ($list) use (&$lookupItemsMap) {
-                    $lookupItemsMap[$list->list_key] = $list->items->map(fn ($item) => [
+                    $lookupItemsMap[$list->key] = $list->items->map(fn ($item) => [
                         'value' => $item->value,
                         'label_en' => $item->label_en,
                         'label_th' => $item->label_th,
