@@ -73,7 +73,7 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
                 'header' => [
                     'type'            => 'box',
                     'layout'          => 'vertical',
-                    'backgroundColor' => '#F59E0B',
+                    'backgroundColor' => '#2563EB',
                     'paddingAll'      => 'lg',
                     'contents'        => [[
                         'type'   => 'text',

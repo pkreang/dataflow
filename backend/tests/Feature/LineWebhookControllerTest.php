@@ -75,19 +75,57 @@ class LineWebhookControllerTest extends TestCase
         ]);
     }
 
-    // ---------- reject postback ----------
+    // ---------- reject postback: now prompts for reason ----------
 
-    public function test_reject_postback_calls_act_and_returns_ok(): void
+    public function test_reject_postback_stores_pending_state_and_prompts(): void
+    {
+        [$instance, $step, $approver] = $this->makePendingInstance();
+        $lineUserId = $approver->line_user_id;
+
+        $this->postSigned($this->buildPostbackData($lineUserId, 'reject', $instance->id, $step->step_no))
+            ->assertStatus(200)->assertJson(['status' => 'ok']);
+
+        // Instance should still be pending (waiting for reason)
+        $this->assertDatabaseHas('approval_instances', ['id' => $instance->id, 'status' => 'pending']);
+
+        // Cache should hold the pending state
+        $this->assertNotNull(\Illuminate\Support\Facades\Cache::get("line_reject_pending:{$lineUserId}"));
+    }
+
+    public function test_message_reply_completes_rejection_with_comment(): void
+    {
+        [$instance, $step, $approver] = $this->makePendingInstance();
+        $lineUserId = $approver->line_user_id;
+
+        // First: reject postback sets pending state
+        $this->postSigned($this->buildPostbackData($lineUserId, 'reject', $instance->id, $step->step_no))
+            ->assertStatus(200);
+
+        // Then: message reply with reason completes the rejection
+        $msgData = ['events' => [[
+            'type'    => 'message',
+            'source'  => ['userId' => $lineUserId],
+            'message' => ['type' => 'text', 'text' => 'ข้อมูลไม่ครบถ้วน'],
+        ]]];
+
+        $this->postSigned($msgData)->assertStatus(200)->assertJson(['status' => 'ok']);
+
+        $this->assertDatabaseHas('approval_instances', ['id' => $instance->id, 'status' => 'rejected']);
+        $this->assertNull(\Illuminate\Support\Facades\Cache::get("line_reject_pending:{$lineUserId}"));
+    }
+
+    public function test_message_without_pending_state_is_ignored(): void
     {
         [$instance, $step, $approver] = $this->makePendingInstance();
 
-        $this->postSigned($this->buildPostbackData($approver->line_user_id, 'reject', $instance->id, $step->step_no))
-            ->assertStatus(200)->assertJson(['status' => 'ok']);
+        $msgData = ['events' => [[
+            'type'    => 'message',
+            'source'  => ['userId' => $approver->line_user_id],
+            'message' => ['type' => 'text', 'text' => 'สวัสดี'],
+        ]]];
 
-        $this->assertDatabaseHas('approval_instances', [
-            'id' => $instance->id,
-            'status' => 'rejected',
-        ]);
+        $this->postSigned($msgData)->assertStatus(200)->assertJson(['status' => 'ok']);
+        $this->assertDatabaseHas('approval_instances', ['id' => $instance->id, 'status' => 'pending']);
     }
 
     // ---------- guard cases ----------
