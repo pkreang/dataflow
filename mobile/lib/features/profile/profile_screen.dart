@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/auth/token_storage.dart';
+import '../../router/app_router.dart';
 import '../../shared/theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -31,7 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     await AuthService().logout();
-    if (mounted) context.go('/login');
+    appRouter.go('/login');
   }
 
   @override
