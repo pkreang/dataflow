@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_service.dart';
-import '../../router/app_router.dart';
 import '../../shared/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -27,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordCtrl.text,
         deviceName: 'DataFlow Mobile',
       );
-      AuthNotifier.instance.notify();
+      if (mounted) context.go('/home');
     } catch (e) {
       setState(() => _error = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     } finally {

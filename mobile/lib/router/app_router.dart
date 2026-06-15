@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../core/auth/token_storage.dart';
 import '../features/auth/login_screen.dart';
@@ -12,16 +11,8 @@ import '../features/approvals/approval_detail_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../shared/widgets/main_shell.dart';
 
-// Notifier ที่ screens เรียก notify() หลัง login/logout เพื่อให้ GoRouter re-evaluate redirect
-class AuthNotifier extends ChangeNotifier {
-  static final AuthNotifier instance = AuthNotifier._();
-  AuthNotifier._();
-  void notify() => notifyListeners();
-}
-
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
-  refreshListenable: AuthNotifier.instance,
   redirect: (context, state) {
     final token = TokenStorage.cachedToken;
     final isLoginRoute = state.matchedLocation == '/login';
