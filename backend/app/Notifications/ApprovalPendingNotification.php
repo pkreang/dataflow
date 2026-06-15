@@ -64,6 +64,15 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
         $data  = "a=approve&i={$this->instance->id}&s={$this->step->step_no}";
         $rdata = "a=reject&i={$this->instance->id}&s={$this->step->step_no}";
 
+        $bodyContents = array_merge(
+            [
+                ['type'=>'text','text'=>$ref,'weight'=>'bold','size'=>'xl','wrap'=>true],
+                ['type'=>'text','text'=>$type,'color'=>'#6B7280','size'=>'sm'],
+                ['type'=>'text','text'=>"ขั้นตอน: {$stage}",'size'=>'sm','color'=>'#374151'],
+            ],
+            $this->submissionDetailRows(),
+        );
+
         return [[
             'type'     => 'flex',
             'altText'  => "รออนุมัติ {$ref}",
@@ -88,11 +97,7 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
                     'layout'   => 'vertical',
                     'spacing'  => 'sm',
                     'paddingAll' => 'lg',
-                    'contents' => [
-                        ['type'=>'text','text'=>$ref,'weight'=>'bold','size'=>'xl','wrap'=>true],
-                        ['type'=>'text','text'=>$type,'color'=>'#6B7280','size'=>'sm'],
-                        ['type'=>'text','text'=>"ขั้นตอน: {$stage}",'size'=>'sm','color'=>'#374151'],
-                    ],
+                    'contents' => $bodyContents,
                 ],
                 'footer' => [
                     'type'     => 'box',
@@ -142,6 +147,95 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
                 'step' => $this->step->stage_name,
             ]) . "\n"
             . url($this->documentUrl());
+    }
+
+    private function submissionDetailRows(): array
+    {
+        $submission = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
+            ->select('id', 'user_id', 'payload')
+            ->first();
+
+        if (! $submission) {
+            return [];
+        }
+
+        $payload = is_array($submission->payload) ? $submission->payload : [];
+        $rows    = [];
+
+        // requester name
+        $user = \App\Models\User::find($submission->user_id, ['id', 'first_name', 'last_name']);
+        if ($user) {
+            $rows[] = $this->detailRow('ผู้ยื่น', trim("{$user->first_name} {$user->last_name}"));
+        }
+
+        // leave type
+        $leaveType = $payload['leave_type'] ?? null;
+        if ($leaveType) {
+            $label = \App\Models\LookupListItem::whereHas('list', fn ($q) => $q->where('key', 'leave_type'))
+                ->where('value', $leaveType)
+                ->value('label_th') ?? $leaveType;
+            $rows[] = $this->detailRow('ประเภท', $label);
+        }
+
+        // date range
+        $from = $payload['date_from'] ?? null;
+        $to   = $payload['date_to'] ?? null;
+        if ($from) {
+            $dateText = $to && $to !== $from
+                ? $this->formatDate($from) . ' - ' . $this->formatDate($to)
+                : $this->formatDate($from);
+            $rows[] = $this->detailRow('วันที่', $dateText);
+        }
+
+        // total days
+        $days = $payload['total_days'] ?? null;
+        if ($days !== null) {
+            $rows[] = $this->detailRow('จำนวน', "{$days} วัน");
+        }
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        return array_merge(
+            [['type' => 'separator', 'margin' => 'sm']],
+            $rows,
+        );
+    }
+
+    private function detailRow(string $label, string $value): array
+    {
+        return [
+            'type'     => 'box',
+            'layout'   => 'horizontal',
+            'spacing'  => 'sm',
+            'contents' => [
+                [
+                    'type'  => 'text',
+                    'text'  => $label,
+                    'size'  => 'sm',
+                    'color' => '#6B7280',
+                    'flex'  => 3,
+                ],
+                [
+                    'type'  => 'text',
+                    'text'  => $value,
+                    'size'  => 'sm',
+                    'color' => '#111827',
+                    'flex'  => 5,
+                    'wrap'  => true,
+                ],
+            ],
+        ];
+    }
+
+    private function formatDate(string $date): string
+    {
+        try {
+            return \Carbon\Carbon::parse($date)->format('d/m/Y');
+        } catch (\Throwable) {
+            return $date;
+        }
     }
 
     private function documentTypeLabel(): string
