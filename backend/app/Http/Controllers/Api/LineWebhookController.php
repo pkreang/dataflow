@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
+use App\Models\DocumentFormSubmission;
 use App\Models\Setting;
+use App\Models\SubmissionActivityLog;
 use App\Models\User;
 use App\Notifications\LineConfirmationNotification;
 use App\Services\ApprovalFlowService;
@@ -77,6 +79,7 @@ class LineWebhookController extends Controller
 
         if ($action === 'approve') {
             $service->act($instanceId, $user->id, 'approved', null, null);
+            $this->logActivity($instanceId, $user->id, 'approved');
             $user->notify(new LineConfirmationNotification("อนุมัติสำเร็จ -- {$ref}"));
             return;
         }
@@ -125,7 +128,16 @@ class LineWebhookController extends Controller
         }
 
         $service->act($instanceId, $user->id, 'rejected', $comment ?: null, null);
+        $this->logActivity($instanceId, $user->id, 'rejected');
         $user->notify(new LineConfirmationNotification("ไม่อนุมัติสำเร็จ -- {$ref}"));
+    }
+
+    private function logActivity(int $instanceId, int $userId, string $action): void
+    {
+        $submissionId = DocumentFormSubmission::where('approval_instance_id', $instanceId)->value('id');
+        if ($submissionId) {
+            SubmissionActivityLog::record($submissionId, $userId, $action);
+        }
     }
 
     private function pushText(string $lineUserId, string $text): void

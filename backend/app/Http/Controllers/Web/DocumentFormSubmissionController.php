@@ -857,7 +857,7 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeView($submission);
         abort_if($submission->status === 'draft', 404);
 
-        $submission->load(['form.fields', 'instance.steps.approver', 'instance.workflow', 'department', 'user']);
+        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department', 'user']);
 
         SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
 
