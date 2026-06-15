@@ -6,6 +6,7 @@ use App\Models\ApprovalInstance;
 use App\Models\ApprovalInstanceStep;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
+use App\Models\Position;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormSubmission;
@@ -108,6 +109,44 @@ class ApproverFormVisibilityTest extends TestCase
         $response->assertDontSee('TOPSECRETVALUE');
     }
 
+    public function test_primary_approver_of_multi_source_step_sees_instance(): void
+    {
+        $posPrimary = Position::query()->create(['name' => 'PosP'.self::$seq, 'code' => 'PP'.self::$seq]);
+        $posAnd = Position::query()->create(['name' => 'PosA'.self::$seq, 'code' => 'PA'.self::$seq]);
+
+        $requester = $this->makeUser('req-ms');
+        $primaryApprover = $this->makeUser('appr-primary');
+        $primaryApprover->forceFill(['position_id' => $posPrimary->id])->save();
+
+        $instance = $this->makeMultiSourceInstance($requester, primaryPositionId: $posPrimary->id, andSourcePositionId: $posAnd->id);
+
+        $count = ApprovalInstance::query()
+            ->pendingForApprover($primaryApprover->id, [], $posPrimary->id)
+            ->count();
+
+        $this->assertSame(1, $count, 'primary approver must see multi-source step');
+    }
+
+    public function test_and_source_approver_of_multi_source_step_sees_instance(): void
+    {
+        $posPrimary = Position::query()->create(['name' => 'PosP2'.self::$seq, 'code' => 'PP2'.self::$seq]);
+        $posAnd = Position::query()->create(['name' => 'PosA2'.self::$seq, 'code' => 'PA2'.self::$seq]);
+
+        $requester = $this->makeUser('req-as');
+        $andSourceApprover = $this->makeUser('appr-and');
+        $andSourceApprover->forceFill(['position_id' => $posAnd->id])->save();
+
+        $instance = $this->makeMultiSourceInstance($requester, primaryPositionId: $posPrimary->id, andSourcePositionId: $posAnd->id);
+
+        $count = ApprovalInstance::query()
+            ->pendingForApprover($andSourceApprover->id, [], $posAnd->id)
+            ->count();
+
+        $this->assertSame(1, $count, 'AND-source approver must see multi-source step');
+
+        unset($instance);
+    }
+
     // ---------- helpers ----------
 
     private function makeUser(string $tag): User
@@ -122,6 +161,44 @@ class ApproverFormVisibilityTest extends TestCase
             'is_active' => true,
             'is_super_admin' => false,
         ]);
+    }
+
+    private function makeMultiSourceInstance(User $requester, int $primaryPositionId, int $andSourcePositionId): ApprovalInstance
+    {
+        self::$seq++;
+
+        $workflow = ApprovalWorkflow::query()->create([
+            'name' => 'MS WF '.self::$seq,
+            'document_type' => 'ms_test',
+            'description' => null,
+            'is_active' => true,
+            'allow_requester_as_approver' => false,
+        ]);
+
+        $instance = ApprovalInstance::query()->create([
+            'workflow_id' => $workflow->id,
+            'department_id' => null,
+            'requester_user_id' => $requester->id,
+            'document_type' => 'ms_test',
+            'reference_no' => 'MS-'.self::$seq,
+            'payload' => [],
+            'current_step_no' => 1,
+            'status' => 'pending',
+        ]);
+
+        ApprovalInstanceStep::query()->create([
+            'approval_instance_id' => $instance->id,
+            'step_no' => 1,
+            'stage_name' => 'Quorum Stage',
+            'approver_type' => 'position',
+            'approver_ref' => (string) $primaryPositionId,
+            'approver_rules' => [['type' => 'position', 'ref' => (string) $andSourcePositionId, 'min_count' => 1]],
+            'min_approvals' => 2,
+            'approved_by' => [],
+            'action' => 'pending',
+        ]);
+
+        return $instance;
     }
 
     /**

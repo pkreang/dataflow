@@ -123,16 +123,34 @@ class ApprovalInstance extends Model
                                     }
                                 });
                         });
-                        // Multi-source steps (approver_rules JSON) — use LIKE for cross-DB compat
-                        $sq->orWhere(function ($multi) use ($userId, $roleNames, $positionId) {
+                        // Multi-source steps: check primary columns (parity with canUserActOnStep) AND rules JSON
+                        $sq->orWhere(function ($multi) use ($userRefs, $userId, $roleNames, $positionId) {
                             $multi->whereNotNull('approver_rules')
-                                ->where(function ($json) use ($userId, $roleNames, $positionId) {
-                                    $json->where('approver_rules', 'like', '%"type":"user","ref":"'.$userId.'"}%');
-                                    foreach ($roleNames as $role) {
-                                        $json->orWhere('approver_rules', 'like', '%"type":"role","ref":"'.addslashes($role).'"}%');
+                                ->where(function ($any) use ($userRefs, $userId, $roleNames, $positionId) {
+                                    // Primary approver columns (same logic as single-source branch)
+                                    $any->where(fn ($u) => $u->where('approver_type', 'user')->whereIn('approver_ref', $userRefs));
+                                    if (! empty($roleNames)) {
+                                        $any->orWhere(fn ($r) => $r->where('approver_type', 'role')->whereIn('approver_ref', $roleNames));
                                     }
                                     if ($positionId) {
-                                        $json->orWhere('approver_rules', 'like', '%"type":"position","ref":"'.$positionId.'"}%');
+                                        $any->orWhere(fn ($p) => $p->where('approver_type', 'position')->where('approver_ref', (string) $positionId));
+                                    }
+                                    // AND-source rules JSON
+                                    // MySQL JSON column adds spaces after ":" on read-back; SQLite stores verbatim.
+                                    // Use two OR-LIKE per field to handle both formats.
+                                    $any->orWhere(fn ($j) => $j
+                                        ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"user"%')->orWhere('approver_rules', 'like', '%"type": "user"%'))
+                                        ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$userId.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$userId.'"%')));
+                                    foreach ($roleNames as $role) {
+                                        $esc = addslashes($role);
+                                        $any->orWhere(fn ($j) => $j
+                                            ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"role"%')->orWhere('approver_rules', 'like', '%"type": "role"%'))
+                                            ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$esc.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$esc.'"%')));
+                                    }
+                                    if ($positionId) {
+                                        $any->orWhere(fn ($j) => $j
+                                            ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"position"%')->orWhere('approver_rules', 'like', '%"type": "position"%'))
+                                            ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$positionId.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$positionId.'"%')));
                                     }
                                 });
                         });

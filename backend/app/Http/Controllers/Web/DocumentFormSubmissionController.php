@@ -1123,7 +1123,8 @@ class DocumentFormSubmissionController extends Controller
         $positionId = session('user.position_id') ?? User::find($userId)?->position_id;
 
         return $instance->steps()
-            ->where(function ($q) use ($userRefs, $roleNames, $positionId) {
+            ->where(function ($q) use ($userRefs, $userId, $roleNames, $positionId) {
+                // Primary columns
                 $q->where(function ($uq) use ($userRefs) {
                     $uq->where('approver_type', 'user')->whereIn('approver_ref', $userRefs);
                 });
@@ -1136,6 +1137,21 @@ class DocumentFormSubmissionController extends Controller
                     $q->orWhere(function ($pq) use ($positionId) {
                         $pq->where('approver_type', 'position')->where('approver_ref', (string) $positionId);
                     });
+                }
+                // AND-source rules JSON (same space-tolerant double-LIKE as scopePendingForApprover)
+                $q->orWhere(fn ($j) => $j
+                    ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"user"%')->orWhere('approver_rules', 'like', '%"type": "user"%'))
+                    ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$userId.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$userId.'"%')));
+                foreach ($roleNames as $role) {
+                    $esc = addslashes($role);
+                    $q->orWhere(fn ($j) => $j
+                        ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"role"%')->orWhere('approver_rules', 'like', '%"type": "role"%'))
+                        ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$esc.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$esc.'"%')));
+                }
+                if ($positionId) {
+                    $q->orWhere(fn ($j) => $j
+                        ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"position"%')->orWhere('approver_rules', 'like', '%"type": "position"%'))
+                        ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$positionId.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$positionId.'"%')));
                 }
             })
             ->exists();
