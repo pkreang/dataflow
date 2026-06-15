@@ -1,6 +1,6 @@
 # Data Flow
 
-CMMS / maintenance management (Laravel app under `backend/`).
+ Workflow management (Laravel app under `backend/`).
 
 ## Local setup
 
