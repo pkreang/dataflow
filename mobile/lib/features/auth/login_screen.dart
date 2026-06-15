@@ -28,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
         deviceName: 'DataFlow Mobile',
       );
       AuthNotifier.instance.notify();
-      if (mounted) context.go('/home');
     } catch (e) {
       setState(() => _error = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     } finally {

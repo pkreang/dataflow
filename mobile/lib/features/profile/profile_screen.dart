@@ -33,7 +33,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout() async {
     await AuthService().logout();
     AuthNotifier.instance.notify();
-    if (mounted) context.go('/login');
   }
 
   @override
