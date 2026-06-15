@@ -88,7 +88,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_stage_name') }}</label>
-                                <input :name="`stages[${idx}][name]`" x-model="stage.name" required class="form-input mt-1" />
+                                <input :name="`stages[${idx}][name]`" x-model="stage.name" @input="checkValidity()" required class="form-input mt-1" />
                             </div>
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_approver_type') }}</label>
@@ -96,12 +96,16 @@
                                     <option value="position">{{ __('common.workflow_approver_position') }}</option>
                                     <option value="user">{{ __('common.workflow_approver_user') }}</option>
                                     <option value="role">{{ __('common.workflow_approver_role') }}</option>
+                                    <option value="direct_manager">{{ __('common.workflow_approver_direct_manager') }}</option>
+                                    <option value="org_head">{{ __('common.workflow_approver_org_head') }}</option>
+                                    <option value="org_parent_head">{{ __('common.workflow_approver_org_parent_head') }}</option>
+                                    <option value="org_n_up">{{ __('common.workflow_approver_org_n_up') }}</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_approver_ref') }}</label>
                                 <template x-if="stage.approver_type === 'role'">
-                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" required class="form-input mt-1">
+                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @change="checkValidity()" required class="form-input mt-1">
                                         <option value="">{{ __('common.workflow_placeholder_select_role') }}</option>
                                         <template x-for="role in roles" :key="`role-${role}`">
                                             <option :value="role" x-text="role"></option>
@@ -109,7 +113,7 @@
                                     </select>
                                 </template>
                                 <template x-if="stage.approver_type === 'user'">
-                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" required class="form-input mt-1">
+                                    <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @change="checkValidity()" required class="form-input mt-1">
                                         <option value="">{{ __('common.workflow_placeholder_select_user') }}</option>
                                         <template x-for="user in users" :key="`user-${user.id}`">
                                             <option :value="String(user.id)" x-text="user.label"></option>
@@ -118,7 +122,7 @@
                                 </template>
                                 <template x-if="stage.approver_type === 'position'">
                                     <div>
-                                        <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" required class="form-input mt-1">
+                                        <select :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @change="checkValidity()" required class="form-input mt-1">
                                             <option value="">{{ __('common.workflow_placeholder_select_position') }}</option>
                                             <template x-for="p in positions" :key="`pos-${p.id}`">
                                                 <option :value="String(p.id)" x-text="p.label"></option>
@@ -127,12 +131,101 @@
                                         <p x-show="stage.approver_ref" x-text="positionUsersPreview(stage.approver_ref)" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
                                     </div>
                                 </template>
+                                <template x-if="stage.approver_type === 'direct_manager'">
+                                    <div>
+                                        <input type="hidden" :name="`stages[${idx}][approver_ref]`" value="" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_direct_manager_note') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="stage.approver_type === 'org_head'">
+                                    <div>
+                                        <input type="hidden" :name="`stages[${idx}][approver_ref]`" value="" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_org_head_note') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="stage.approver_type === 'org_parent_head'">
+                                    <div>
+                                        <input type="hidden" :name="`stages[${idx}][approver_ref]`" value="" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_org_parent_head_note') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="stage.approver_type === 'org_n_up'">
+                                    <div>
+                                        <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">{{ __('common.workflow_org_n_up_levels') }}</label>
+                                        <input type="number" min="1" max="10" :name="`stages[${idx}][approver_ref]`" x-model="stage.approver_ref" @input="checkValidity()" required class="form-input" />
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.workflow_org_n_up_note') }}</p>
+                                    </div>
+                                </template>
                             </div>
                             <div>
                                 <label class="text-xs text-slate-500">{{ __('common.workflow_min_approvals') }}</label>
-                                <input type="number" min="1" :name="`stages[${idx}][min_approvals]`" x-model="stage.min_approvals" required class="form-input mt-1" />
+                                <input type="number" min="1" :name="`stages[${idx}][min_approvals]`" x-model="stage.min_approvals" @input="checkValidity()" required class="form-input mt-1" />
+                                {{-- multi-source: show source count --}}
+                                <p x-show="stage.approver_rules.length > 0" class="text-xs mt-1 text-center"
+                                   :class="Number(stage.min_approvals) > stageSourceCount(stage) ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-400 dark:text-slate-500'">
+                                    <span x-text="Number(stage.min_approvals) > stageSourceCount(stage) ? 'เกินจำนวนแหล่ง (' + stageSourceCount(stage) + ' แหล่ง)' : 'จาก ' + stageSourceCount(stage) + ' แหล่ง'"></span>
+                                </p>
+                                {{-- single-source: show people pool count --}}
+                                <p x-show="stage.approver_rules.length === 0 && stagePoolSize(stage).known && stagePoolSize(stage).total > 0" class="text-xs mt-1 text-center"
+                                   :class="Number(stage.min_approvals) > stagePoolSize(stage).total ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-400 dark:text-slate-500'">
+                                    <span x-text="Number(stage.min_approvals) > stagePoolSize(stage).total ? '⚠ pool ' + stagePoolSize(stage).total + ' คน' : 'จาก ' + stagePoolSize(stage).total + ' คน'"></span>
+                                </p>
+                                {{-- single-source role: no people count --}}
+                                <p x-show="stage.approver_rules.length === 0 && !stagePoolSize(stage).known" class="text-xs mt-1 text-center text-slate-400 dark:text-slate-500">มีบทบาทใน pool</p>
                             </div>
                         </div>
+                        {{-- Extra approver rules (multi-source) --}}
+                        <template x-for="(rule, ri) in stage.approver_rules" :key="ri">
+                            <div class="grid grid-cols-[auto_1fr_2fr_auto_auto] gap-2 items-center">
+                                <div class="flex items-center">
+                                    <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full">หรือ</span>
+                                </div>
+                                <select x-model="rule.type" @change="rule.ref = ''" class="form-input text-sm">
+                                    <option value="role">บทบาท</option>
+                                    <option value="position">ตำแหน่ง</option>
+                                    <option value="user">คน</option>
+                                </select>
+                                <div class="min-w-0">
+                                    <select x-show="rule.type === 'role'" x-model="rule.ref" class="form-input text-sm w-full">
+                                        <option value="">-- เลือกบทบาท --</option>
+                                        <template x-for="r in roles" :key="r">
+                                            <option :value="r" x-text="r"></option>
+                                        </template>
+                                    </select>
+                                    <select x-show="rule.type === 'position'" x-model="rule.ref" class="form-input text-sm w-full">
+                                        <option value="">-- เลือกตำแหน่ง --</option>
+                                        <template x-for="p in positions" :key="p.id">
+                                            <option :value="String(p.id)" x-text="p.label"></option>
+                                        </template>
+                                    </select>
+                                    <select x-show="rule.type === 'user'" x-model="rule.ref" class="form-input text-sm w-full">
+                                        <option value="">-- เลือกคน --</option>
+                                        <template x-for="u in users" :key="u.id">
+                                            <option :value="String(u.id)" x-text="u.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="w-14" x-show="rule.type !== 'user'" title="{{ __('common.workflow_rule_min_count_hint') }}">
+                                    <input type="number" min="1" x-model.number="rule.min_count"
+                                           class="form-input text-sm text-center w-full" />
+                                </div>
+                                <div x-show="rule.type === 'user'" class="w-14"></div>
+                                <div class="flex justify-center">
+                                    <button type="button" @click="stage.approver_rules.splice(ri, 1)"
+                                            class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 rounded">ลบ</button>
+                                </div>
+                            </div>
+                        </template>
+                        <div class="pt-1">
+                            <button type="button"
+                                    @click="if (!stage.approver_rules) stage.approver_rules = []; stage.approver_rules.push({type:'role', ref:'', min_count:1})"
+                                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                + เพิ่มแหล่งอนุมัติ (OR)
+                            </button>
+                        </div>
+                        <input type="hidden" :name="`stages[${idx}][approver_rules]`"
+                               :value="(stage.approver_rules && stage.approver_rules.length) ? JSON.stringify(stage.approver_rules) : ''">
+
                         <div class="flex items-center gap-2 pt-1">
                             <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                                 <input type="checkbox" :name="`stages[${idx}][require_signature]`" value="1"
@@ -142,6 +235,25 @@
                                 <span>{{ __('common.workflow_require_signature') }}</span>
                             </label>
                             <span class="text-xs text-slate-400">{{ __('common.workflow_require_signature_help') }}</span>
+                            @if($allowRequesterOverride ?? false)
+                            <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                                <input type="checkbox" :name="`stages[${idx}][allow_requester_override]`" value="1"
+                                       :checked="!!stage.allow_requester_override"
+                                       @change="stage.allow_requester_override = $event.target.checked"
+                                       class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                                <span>{{ __('common.workflow_allow_requester_override') }}</span>
+                            </label>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <label class="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ __('common.workflow_escalation_days') }}</label>
+                            <input type="number" min="1" max="365"
+                                   :name="`stages[${idx}][escalation_after_days]`"
+                                   :value="stage.escalation_after_days || ''"
+                                   @input="stage.escalation_after_days = $event.target.value ? parseInt($event.target.value) : null"
+                                   class="form-input w-20 text-center"
+                                   placeholder="—" />
+                            <span class="text-xs text-slate-400">{{ __('common.workflow_escalation_days_hint') }}</span>
                         </div>
                     </div>
                 </template>
@@ -227,6 +339,7 @@
                     name: data.name || '',
                     approver_type,
                     approver_ref,
+                    approver_rules: data.approver_rules || [],
                     min_approvals: data.min_approvals || 1,
                     require_signature: !!data.require_signature,
                 });
@@ -277,7 +390,7 @@
             checkValidity() {
                 this.isValid = this.stages.length > 0 && this.stages.every((s) =>
                     String(s.name || '').trim() !== '' &&
-                    String(s.approver_ref || '').trim() !== '' &&
+                    (['direct_manager','org_head','org_parent_head'].includes(s.approver_type) || String(s.approver_ref || '').trim() !== '') &&
                     Number(s.min_approvals || 0) >= 1
                 );
             },
@@ -290,6 +403,10 @@
                 if (t === 'role') return i.typeRole;
                 if (t === 'user') return i.typeUser;
                 if (t === 'position') return i.typePosition;
+                if (t === 'direct_manager') return i.typeDirectManager || '{{ __('common.workflow_approver_direct_manager') }}';
+                if (t === 'org_head') return '{{ __('common.workflow_approver_org_head') }}';
+                if (t === 'org_parent_head') return '{{ __('common.workflow_approver_org_parent_head') }}';
+                if (t === 'org_n_up') return '{{ __('common.workflow_approver_org_n_up') }}';
                 return t || '—';
             },
             positionUsersPreview(positionId) {
@@ -300,6 +417,24 @@
                 const count = users.length + ' ' + (this.i18n.people || '');
                 const preview = users.length > 5 ? users.slice(0, 5).join(', ') + '…' : users.join(', ');
                 return count + ': ' + preview;
+            },
+            stageSourceCount(stage) {
+                return 1 + (stage.approver_rules?.length ?? 0);
+            },
+            stagePoolSize(stage) {
+                let known = true, total = 0;
+                const primaryRules = [{ type: stage.approver_type, ref: stage.approver_ref }];
+                for (const r of primaryRules) {
+                    if (r.type === 'position') {
+                        const p = this.positions.find(p => String(p.id) === String(r.ref));
+                        total += p ? (p.users?.length ?? 0) : 0;
+                    } else if (r.type === 'user') {
+                        total += r.ref ? 1 : 0;
+                    } else {
+                        known = false;
+                    }
+                }
+                return { total, known };
             },
         };
     }

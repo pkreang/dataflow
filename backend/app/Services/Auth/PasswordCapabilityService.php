@@ -30,11 +30,13 @@ class PasswordCapabilityService
     }
 
     /**
-     * Whether the user may change the email stored in the app (admin user edit / profile).
-     * Same rule as password: directory identities (LDAP / Entra) are managed by the IdP.
+     * Email is the login credential and is immutable after user creation.
+     * Always returns false — neither admin nor self may edit email via the app.
+     * If a wrong email needs to be corrected, delete the user and recreate
+     * (or override via `php artisan tinker`).
      */
     public static function canEditEmailInApp(?User $user): bool
     {
-        return self::canChangePasswordInApp($user);
+        return false;
     }
 }

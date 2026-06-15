@@ -14,7 +14,10 @@
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.pm_am_plans') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ __('common.pm_am_plans_desc') }}</p>
         </div>
-        <a href="{{ route('maintenance.create-plan') }}" class="btn-primary">{{ __('common.create_pm_am_plan') }}</a>
+        <a href="{{ route('maintenance.create-plan') }}" class="btn-primary inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ __('common.add_pm_am_plan') }}
+        </a>
     </div>
 
     @if (session('success'))
@@ -41,7 +44,7 @@
                 <a href="{{ route('maintenance.show', $item) }}" class="block rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-white dark:bg-slate-900/20 hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
                     <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $item->reference_no ?: ('#' . $item->id) }}</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                        {{ __('common.approval_status_' . $item->status) }}
+                        <x-status-badge :status="$item->status" />
                         · {{ __('common.workflow_step_short') }} {{ $item->current_step_no }}
                         @if($item->department)
                             · {{ $item->department->name }}

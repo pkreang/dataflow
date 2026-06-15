@@ -38,6 +38,7 @@ return [
     'password' => 'The provided password is incorrect.',
     'password_change_required' => 'You must change your password before continuing.',
     'password_change_unavailable_hint' => 'Password change in this app is only for local accounts. Directory accounts use your organisation\'s password.',
+    'password_changed_please_relogin' => 'Password changed successfully. Please sign in again with your new password.',
     'password_managed_by_org' => 'Your password is managed by your organisation',
     'password_use_org_portal' => 'Change or reset it using your organisation\'s password portal or IT helpdesk—not in this application.',
     'reset_password_confirm' => 'Confirm new password',
@@ -97,4 +98,5 @@ return [
     'sign_in_with_microsoft' => 'Sign in with Microsoft',
     'super_admin_only' => 'This action requires an account flagged as instance super administrator (users.is_super_admin).',
     'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
+    'please_login' => 'Please sign in to continue',
 ];

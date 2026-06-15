@@ -26,9 +26,15 @@ return [
 
     // Document types
     'document_types' => [
-        'repair_request' => 'ใบแจ้งซ่อม',
-        'pm_am_plan' => 'แผน PM/AM',
+        'repair_request'          => 'ใบแจ้งซ่อม',
+        'pm_am_plan'              => 'แผน PM/AM',
         'spare_parts_requisition' => 'ใบเบิกอะไหล่',
+        'leave_request'           => 'ใบลา',
+        'expense_claim'           => 'ใบเบิกค่าใช้จ่าย',
+        'memo'                    => 'บันทึกข้อความ',
+        'it_request'              => 'แบบฟอร์ม IT',
+        'purchase_request'        => 'ใบขอซื้อ',
+        'purchase_order'          => 'ใบสั่งซื้อ',
     ],
 
     // Settings
@@ -48,16 +54,35 @@ return [
     'save_settings' => 'บันทึกการตั้งค่า',
     'settings_saved' => 'บันทึกการตั้งค่าการแจ้งเตือนเรียบร้อยแล้ว',
 
-    // LINE Notify
-    'line_notifications' => 'LINE Notify',
-    'line_notifications_desc' => 'ส่งการแจ้งเตือนผ่าน LINE Notify ผู้ใช้ต้องตั้งค่า token ในโปรไฟล์',
-    'line_token_hint' => 'ผู้ใช้สร้าง token ส่วนตัวได้ที่',
-    'line_notify_token' => 'LINE Notify Token',
-    'line_notify_token_placeholder' => 'วาง LINE Notify token ของคุณที่นี่',
-    'line_notify_token_hint' => 'สร้าง token ส่วนตัวได้ที่',
+    // LINE Messaging API (LINE Official Account) — แทน LINE Notify (ปิดบริการ 2025-03-31)
+    'line_notifications' => 'LINE Official Account',
+    'line_notifications_desc' => 'ส่งข้อความผ่าน LINE Messaging API ต้องมี LINE Official Account และผู้ใช้ที่เชื่อมบัญชีแล้ว',
+    'line_setup_hint' => 'สร้าง Messaging API channel แล้วคัดลอก Channel Access Token (long-lived) ได้ที่',
+    'line_channel_access_token' => 'Channel Access Token',
+    'line_channel_access_token_placeholder' => 'วาง Channel Access Token (long-lived) ที่นี่',
+    'line_channel_access_token_hint' => 'อยู่ที่แท็บ "Messaging API" ของ channel ใน LINE Developers console',
+    'line_channel_id' => 'Channel ID (ไม่บังคับ)',
+    'line_channel_id_placeholder' => 'เช่น 1234567890',
+    'line_test_send' => 'ทดสอบส่งไปยัง LINE ของฉัน',
+    'line_test_send_dispatched' => 'ส่งข้อความทดสอบแล้ว ตรวจที่แอป LINE',
+    'line_test_send_no_token' => 'ทดสอบส่งไม่ได้: ยังไม่ได้ตั้งค่า Channel Access Token',
+    'line_test_send_no_user_id' => 'ทดสอบส่งไม่ได้: บัญชีของคุณยังไม่เชื่อม LINE (ไปเชื่อมที่หน้าโปรไฟล์)',
+    'line_test_send_message' => 'ทดสอบส่งจาก :app — LINE Messaging API ใช้งานได้',
     'event_approval_pending_line_desc' => 'ส่ง LINE เมื่อมีเอกสารรอการอนุมัติ',
     'event_workflow_approved_line_desc' => 'ส่ง LINE เมื่อเอกสารได้รับการอนุมัติครบทุกขั้นตอน',
     'event_workflow_rejected_line_desc' => 'ส่ง LINE เมื่อเอกสารถูกปฏิเสธ',
+    // LINE Login (เชื่อมบัญชี)
+    'line_login_section' => 'LINE Login (เชื่อมบัญชี)',
+    'line_login_section_hint' => 'สร้าง LINE Login channel แยกต่างหาก ผู้ใช้จะกด "เชื่อม LINE" ที่หน้าโปรไฟล์ ระบบจะเก็บ LINE userId ของผู้ใช้',
+    'line_login_channel_id' => 'LINE Login Channel ID',
+    'line_login_channel_secret' => 'LINE Login Channel Secret',
+    'line_login_callback_url' => 'Callback URL (ใส่ใน allowlist ของ channel)',
+    'line_link_account' => 'เชื่อมบัญชี LINE',
+    'line_linked' => 'เชื่อม LINE แล้ว',
+    'line_unlink' => 'ยกเลิกการเชื่อม LINE',
+    'line_link_success' => 'เชื่อมบัญชี LINE สำเร็จ (:name)',
+    'line_unlink_success' => 'ยกเลิกการเชื่อม LINE แล้ว',
+    'line_link_not_configured' => 'ยังไม่ได้ตั้งค่า LINE Login กรุณาให้ admin ตั้ง Channel ID และ Secret',
 
     // Outbound mail (SMTP) — Settings → Notifications
     'mail_outbound_title' => 'การส่งอีเมลออก (SMTP)',
@@ -81,4 +106,8 @@ return [
     'mail_encryption_ssl' => 'SSL (SMTPS)',
     'mail_from_address' => 'อีเมลผู้ส่ง',
     'mail_from_name' => 'ชื่อผู้ส่ง',
+    'escalation_reminder_title' => 'รออนุมัติ — กรุณาดำเนินการ',
+    'escalation_reminder_body' => 'เอกสาร :reference (ขั้น: :step) รออนุมัติมา :days วันแล้ว กรุณาตรวจสอบ',
+    'substitution_assigned_title' => 'คุณถูกกำหนดเป็นผู้อนุมัติแทน',
+    'substitution_assigned_body' => 'คุณจะอนุมัติแทน :from_name ตั้งแต่ :starts_at ถึง :ends_at',
 ];

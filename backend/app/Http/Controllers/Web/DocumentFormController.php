@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
@@ -22,6 +23,8 @@ use Illuminate\View\View;
 
 class DocumentFormController extends Controller
 {
+    use HasPerPage;
+
     public function __construct(private readonly FormSchemaService $schemaService) {}
 
     private const TABLE_COLUMN_TYPES = ['text', 'number', 'select', 'checkbox', 'date', 'lookup'];
@@ -38,7 +41,7 @@ class DocumentFormController extends Controller
         return [
             'text', 'textarea', 'number', 'date', 'select', 'checkbox', 'radio', 'file', 'multi_file',
             'time', 'datetime', 'email', 'phone', 'signature', 'currency', 'lookup', 'table', 'section',
-            'auto_number', 'image', 'multi_select', 'group', 'page_break', 'qr_code',
+            'auto_number', 'image', 'multi_select', 'group', 'page_break', 'qr_code', 'formula',
         ];
     }
 
@@ -54,36 +57,90 @@ class DocumentFormController extends Controller
         'email', 'phone', 'select', 'multi_select', 'radio', 'checkbox', 'lookup',
     ];
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $forms = DocumentForm::query()
+        $perPage = $this->resolvePerPage($request, 'document_forms_per_page');
+        $search = trim((string) $request->input('search', ''));
+
+        $query = DocumentForm::query()
             ->withCount('fields')
             ->with(['workflowPolicies.workflow', 'workflowPolicies.ranges'])
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
 
-        return view('settings.document-forms.index', compact('forms'));
+        if ($search !== '') {
+            $needle = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
+            $query->where(function ($q) use ($needle) {
+                $q->where('name', 'like', $needle)
+                    ->orWhere('form_key', 'like', $needle)
+                    ->orWhere('document_type', 'like', $needle);
+            });
+        }
+
+        $forms = $query->paginate($perPage)->withQueryString();
+        $totalForms = $forms->total();
+
+        return view('settings.document-forms.index', compact('forms', 'perPage', 'search', 'totalForms'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $lookupSources = LookupRegistry::sources();
         $workflowStepsByDocType = $this->workflowStepsByDocType();
         $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
+        $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
+        $preset = ['document_type' => $request->query('document_type')];
+        $allowedDepartmentIds = [];
 
-        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers'));
+        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs', 'preset', 'allowedDepartmentIds'));
     }
 
     public function edit(DocumentForm $documentForm): View
     {
-        $documentForm->load('fields');
+        $documentForm->load(['fields', 'departments']);
         $lookupSources = LookupRegistry::sources();
         $workflowStepsByDocType = $this->workflowStepsByDocType();
         $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
+        $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
+        $allowedDepartmentIds = $documentForm->departments->pluck('id')->all();
 
-        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers'));
+        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs', 'allowedDepartmentIds'));
+    }
+
+    /**
+     * Map of `document_type` → running-number config snapshot used by the form
+     * builder to surface (a) the live next-number preview beside the document
+     * type picker and (b) a per-field preview next to any `auto_number` field.
+     * Returning a flat array keyed by document_type lets the Alpine state look
+     * up `runningNumberConfigs[currentDocumentType]` in O(1) on every change.
+     *
+     * @return array<string, array{prefix:string,digit_count:int,include_year:bool,include_month:bool,reset_mode:string,last_number:int,is_active:bool,preview:string}>
+     */
+    private function runningNumberConfigsForBuilder(): array
+    {
+        $now = now();
+        $out = [];
+
+        foreach (\App\Models\RunningNumberConfig::all() as $config) {
+            $preview = $config->prefix
+                .($config->include_year ? $now->format('Y') : '')
+                .($config->include_month ? $now->format('m') : '')
+                .'-'.str_pad((string) ($config->last_number + 1), $config->digit_count, '0', STR_PAD_LEFT);
+
+            $out[$config->document_type] = [
+                'prefix' => (string) $config->prefix,
+                'digit_count' => (int) $config->digit_count,
+                'include_year' => (bool) $config->include_year,
+                'include_month' => (bool) $config->include_month,
+                'reset_mode' => (string) $config->reset_mode,
+                'last_number' => (int) $config->last_number,
+                'is_active' => (bool) $config->is_active,
+                'preview' => $preview,
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -100,7 +157,7 @@ class DocumentFormController extends Controller
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get(['id', 'first_name', 'last_name'])
-            ->map(fn (User $u) => ['id' => (int) $u->id, 'name' => $u->name])
+            ->map(fn (User $u) => ['id' => (int) $u->id, 'name' => $u->full_name])
             ->all();
     }
 
@@ -149,6 +206,22 @@ class DocumentFormController extends Controller
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Prefix a field-level validation error with the field's 1-based position
+     * + display label/key so users editing complex forms (20+ fields) can
+     * find the offending row instead of scanning identical messages.
+     */
+    private function formatFieldError(int $index, array $field, string $messageKey): string
+    {
+        $position = $index + 1;
+        $label = trim((string) ($field['label_th'] ?? $field['label'] ?? $field['label_en'] ?? ''));
+        $key = trim((string) ($field['field_key'] ?? ''));
+        $name = $label !== '' ? $label : ($key !== '' ? $key : (string) __('common.document_form_field_untitled'));
+
+        return (string) __('common.document_form_field_error_prefix', ['n' => $position, 'name' => $name])
+            .' '.(string) __($messageKey);
+    }
+
     private function validatedDocumentFormPayload(Request $request, ?DocumentForm $existing = null): array
     {
         $sourceKeys = LookupRegistry::sourceKeys();
@@ -164,7 +237,12 @@ class DocumentFormController extends Controller
             'document_type' => ['required', 'string', 'max:50', Rule::exists('document_types', 'code')->where('is_active', true)],
             'description' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
+            'evaluation_enabled' => ['nullable', 'boolean'],
+            'target_document_types' => ['nullable', 'array'],
+            'target_document_types.*' => ['string', 'max:50'],
             'layout_columns' => ['nullable', 'integer', Rule::in([1, 2, 3, 4])],
+            'allowed_departments'   => ['nullable', 'array'],
+            'allowed_departments.*' => ['integer', 'exists:departments,id'],
             'table_name' => [
                 'required', 'string', 'max:64',
                 'regex:/^[a-z][a-z0-9_]*$/',
@@ -188,15 +266,18 @@ class DocumentFormController extends Controller
             'fields.*.table_columns' => ['nullable', 'string', 'max:65535'],
             'fields.*.group_options' => ['nullable', 'string', 'max:65535'],
             'fields.*.qr_options' => ['nullable', 'string', 'max:2000'],
+            'fields.*.expression' => ['nullable', 'string', 'max:500'],
+            'fields.*.decimals' => ['nullable', 'integer', 'min:0', 'max:8'],
             'fields.*.col_span' => ['nullable', 'integer', 'min:0', 'max:4'],
             'fields.*.visibility_rules' => ['nullable', 'string', 'max:65535'],
             'fields.*.required_rules' => ['nullable', 'string', 'max:65535'],
+            'fields.*.required_at_step' => ['nullable', 'string', 'max:500'],
             'fields.*.validation_rules' => ['nullable', 'string', 'max:65535'],
             'fields.*.editable_by' => ['nullable', 'string', 'max:2000'],
             'fields.*.visible_to_departments' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $validator->after(function (\Illuminate\Validation\Validator $v) use ($request, $sourceKeys): void {
+        $validator->after(function (\Illuminate\Validation\Validator $v) use ($request, $sourceKeys, $existing): void {
             $fields = $request->input('fields');
             if (! is_array($fields)) {
                 return;
@@ -212,13 +293,20 @@ class DocumentFormController extends Controller
                     continue;
                 }
                 if (isset($seenKeys[$key])) {
-                    $v->errors()->add("fields.{$i}.field_key", __('validation.document_form.duplicate_field_key'));
-                    $v->errors()->add("fields.{$seenKeys[$key]}.field_key", __('validation.document_form.duplicate_field_key'));
+                    $v->errors()->add("fields.{$i}.field_key", $this->formatFieldError($i, $field, 'validation.document_form.duplicate_field_key'));
+                    $prev = $seenKeys[$key];
+                    $v->errors()->add("fields.{$prev}.field_key", $this->formatFieldError($prev, $fields[$prev], 'validation.document_form.duplicate_field_key'));
 
                     continue;
                 }
-                if (in_array($key, FormSchemaService::RESERVED_COLUMNS, true)) {
-                    $v->errors()->add("fields.{$i}.field_key", __('validation.document_form.field_key_reserved'));
+                // Reserved keys collide with system columns IF the field type creates a real
+                // DB column. SKIP_TYPES (section/auto_number/page_break/qr_code) don't add
+                // columns, so they're allowed to use reserved keys like reference_no — this
+                // is in fact how auto_number is wired to show the system reference_no value.
+                $fieldType = $field['field_type'] ?? '';
+                if (in_array($key, FormSchemaService::RESERVED_COLUMNS, true)
+                    && ! in_array($fieldType, FormSchemaService::SKIP_TYPES, true)) {
+                    $v->errors()->add("fields.{$i}.field_key", $this->formatFieldError($i, $field, 'validation.document_form.field_key_reserved'));
 
                     continue;
                 }
@@ -244,7 +332,7 @@ class DocumentFormController extends Controller
 
                 if ($type === 'lookup') {
                     if (empty($field['lookup_source']) || ! in_array($field['lookup_source'], $sourceKeys, true)) {
-                        $v->errors()->add("fields.{$i}.lookup_source", __('validation.document_form.lookup_source_required'));
+                        $v->errors()->add("fields.{$i}.lookup_source", $this->formatFieldError($i, $field, 'validation.document_form.lookup_source_required'));
                     }
                     if (! empty($field['depends_on'])) {
                         $parentKey = (string) $field['depends_on'];
@@ -259,12 +347,12 @@ class DocumentFormController extends Controller
                             }
                         }
                         if (! is_array($parent) || ($parent['field_type'] ?? '') !== 'lookup') {
-                            $v->errors()->add("fields.{$i}.depends_on", __('validation.document_form.depends_on_invalid'));
+                            $v->errors()->add("fields.{$i}.depends_on", $this->formatFieldError($i, $field, 'validation.document_form.depends_on_invalid'));
                         }
                         if (empty($field['foreign_key'])) {
-                            $v->errors()->add("fields.{$i}.foreign_key", __('validation.document_form.foreign_key_required'));
+                            $v->errors()->add("fields.{$i}.foreign_key", $this->formatFieldError($i, $field, 'validation.document_form.foreign_key_required'));
                         } elseif (! preg_match('/^[a-z_]+$/', (string) $field['foreign_key'])) {
-                            $v->errors()->add("fields.{$i}.foreign_key", __('validation.document_form.foreign_key_invalid'));
+                            $v->errors()->add("fields.{$i}.foreign_key", $this->formatFieldError($i, $field, 'validation.document_form.foreign_key_invalid'));
                         }
                     }
                 }
@@ -277,7 +365,7 @@ class DocumentFormController extends Controller
                         $raw = $field['options_raw'] ?? '';
                         $lines = array_values(array_filter(array_map('trim', explode("\n", (string) $raw))));
                         if (count($lines) < 1) {
-                            $v->errors()->add("fields.{$i}.options_raw", __('validation.document_form.options_required'));
+                            $v->errors()->add("fields.{$i}.options_raw", $this->formatFieldError($i, $field, 'validation.document_form.options_required'));
                         }
                     }
                 }
@@ -285,49 +373,49 @@ class DocumentFormController extends Controller
                 if ($type === 'table') {
                     $raw = $field['table_columns'] ?? '';
                     if ($raw === '' || $raw === null) {
-                        $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_columns_required'));
+                        $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_columns_required'));
 
                         continue;
                     }
                     $decoded = json_decode((string) $raw, true);
                     if (! is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
-                        $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_columns_invalid_json'));
+                        $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_columns_invalid_json'));
 
                         continue;
                     }
                     if (count($decoded) < 1) {
-                        $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_columns_required'));
+                        $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_columns_required'));
 
                         continue;
                     }
                     if (count($decoded) > self::MAX_TABLE_COLUMNS) {
-                        $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_columns_too_many'));
+                        $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_columns_too_many'));
 
                         continue;
                     }
                     $colKeys = [];
                     foreach ($decoded as $col) {
                         if (! is_array($col)) {
-                            $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_column_invalid'));
+                            $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_column_invalid'));
 
                             continue 2;
                         }
                         $ck = isset($col['key']) ? (string) $col['key'] : '';
                         if ($ck === '' || ! preg_match('/^[a-zA-Z0-9_-]+$/', $ck)) {
-                            $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_column_key_invalid'));
+                            $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_column_key_invalid'));
 
                             continue 2;
                         }
                         $colKeys[] = $ck;
                         $ct = isset($col['type']) ? (string) $col['type'] : 'text';
                         if (! in_array($ct, self::TABLE_COLUMN_TYPES, true)) {
-                            $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_column_type_invalid'));
+                            $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_column_type_invalid'));
 
                             continue 2;
                         }
                     }
                     if (count($colKeys) !== count(array_unique($colKeys))) {
-                        $v->errors()->add("fields.{$i}.table_columns", __('validation.document_form.table_column_keys_duplicate'));
+                        $v->errors()->add("fields.{$i}.table_columns", $this->formatFieldError($i, $field, 'validation.document_form.table_column_keys_duplicate'));
                     }
                 }
             }
@@ -340,13 +428,18 @@ class DocumentFormController extends Controller
     {
         $validated = $this->validatedDocumentFormPayload($request);
 
-        DB::transaction(function () use ($validated) {
+        $form = null;
+        DB::transaction(function () use ($validated, &$form) {
             $form = DocumentForm::create([
                 'form_key' => $validated['form_key'],
                 'name' => $validated['name'],
                 'document_type' => $validated['document_type'],
                 'description' => $validated['description'] ?? null,
                 'is_active' => (bool) ($validated['is_active'] ?? true),
+                'evaluation_enabled' => (bool) ($validated['evaluation_enabled'] ?? false),
+                'target_document_types' => $validated['document_type'] === 'evaluation'
+                    ? array_values(array_filter($validated['target_document_types'] ?? []))
+                    : null,
                 'layout_columns' => (int) ($validated['layout_columns'] ?? 1),
                 'submission_table' => $validated['table_name'],
             ]);
@@ -368,14 +461,25 @@ class DocumentFormController extends Controller
                     'options' => $this->parseOptions($field),
                     'visibility_rules' => $this->parseJsonField($field['visibility_rules'] ?? null),
                     'required_rules' => $this->parseJsonField($field['required_rules'] ?? null),
+                    'required_at_step' => $this->parseRequiredAtStep($field),
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
                     'visible_to_departments' => $this->parseDepartmentIds($field),
                 ]);
             }
 
-            $this->schemaService->createTable($form->load('fields'));
+            $form->departments()->sync($validated['allowed_departments'] ?? []);
         });
+
+        // DDL outside DB::transaction — MySQL implicit-commits on CREATE TABLE,
+        // which would orphan the outer commit (PDO "no active transaction").
+        try {
+            $this->schemaService->createTable($form->load('fields'));
+        } catch (\Throwable $e) {
+            Schema::dropIfExists($form->submission_table);
+            $form->delete();
+            throw $e;
+        }
 
         $message = __('common.saved');
         if ($warning = $this->autoNumberWarning($validated['fields'], $validated['document_type'])) {
@@ -387,15 +491,25 @@ class DocumentFormController extends Controller
 
     public function update(Request $request, DocumentForm $documentForm): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $documentForm->update(['is_active' => ! $documentForm->is_active]);
+            return redirect()->route('settings.document-forms.index')->with('success', __('common.saved'));
+        }
+
         $validated = $this->validatedDocumentFormPayload($request, $documentForm);
 
-        DB::transaction(function () use ($validated, $documentForm) {
+        $needsCreateTable = false;
+        DB::transaction(function () use ($validated, $documentForm, &$needsCreateTable) {
             $documentForm->update([
                 'form_key' => $validated['form_key'],
                 'name' => $validated['name'],
                 'document_type' => $validated['document_type'],
                 'description' => $validated['description'] ?? null,
                 'is_active' => (bool) ($validated['is_active'] ?? true),
+                'evaluation_enabled' => (bool) ($validated['evaluation_enabled'] ?? false),
+                'target_document_types' => $validated['document_type'] === 'evaluation'
+                    ? array_values(array_filter($validated['target_document_types'] ?? []))
+                    : null,
                 'layout_columns' => (int) ($validated['layout_columns'] ?? 1),
             ]);
 
@@ -417,20 +531,29 @@ class DocumentFormController extends Controller
                     'options' => $this->parseOptions($field),
                     'visibility_rules' => $this->parseJsonField($field['visibility_rules'] ?? null),
                     'required_rules' => $this->parseJsonField($field['required_rules'] ?? null),
+                    'required_at_step' => $this->parseRequiredAtStep($field),
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
                     'visible_to_departments' => $this->parseDepartmentIds($field),
                 ]);
             }
 
+            $documentForm->departments()->sync($validated['allowed_departments'] ?? []);
+
             // First-time table creation for forms that had no dedicated table yet
             if (! $documentForm->hasDedicatedTable() && ! empty($validated['table_name'])) {
                 $documentForm->update(['submission_table' => $validated['table_name']]);
-                $this->schemaService->createTable($documentForm->load('fields'));
-            } else {
-                $this->schemaService->syncTable($documentForm, $documentForm->fields()->get());
+                $needsCreateTable = true;
             }
         });
+
+        // DDL outside DB::transaction — MySQL implicit-commits on CREATE/ALTER TABLE.
+        // syncTable() self-heals via its own hasTable() guard if a prior DDL left partial state.
+        if ($needsCreateTable) {
+            $this->schemaService->createTable($documentForm->load('fields'));
+        } else {
+            $this->schemaService->syncTable($documentForm, $documentForm->fields()->get());
+        }
 
         $message = __('common.updated');
         if ($warning = $this->autoNumberWarning($validated['fields'], $validated['document_type'])) {
@@ -563,6 +686,8 @@ class DocumentFormController extends Controller
                     'visible_to_departments' => $field->visible_to_departments,
                     'editable_by' => $field->editable_by,
                     'visibility_rules' => $field->visibility_rules,
+                    'required_rules' => $field->required_rules,
+                    'required_at_step' => $field->required_at_step ?? [],
                     'validation_rules' => $field->validation_rules,
                 ]);
             }
@@ -576,6 +701,10 @@ class DocumentFormController extends Controller
 
     public function destroy(DocumentForm $documentForm): RedirectResponse
     {
+        if ($documentForm->form_key === 'evaluation_default') {
+            return back()->with('error', __('common.cannot_delete_default_evaluation_form'));
+        }
+
         if (DocumentFormSubmission::where('form_id', $documentForm->id)->exists()) {
             return redirect()->route('settings.document-forms.index')
                 ->with('error', __('common.cannot_delete_document_form'));
@@ -625,6 +754,26 @@ class DocumentFormController extends Controller
         // QR code: template + size + label position; no payload column.
         if ($fieldType === 'qr_code') {
             return $this->parseQrOptions($field);
+        }
+
+        // Formula: arithmetic expression over other field keys + optional
+        // display precision. Syntax-validate at save time so admins catch
+        // typos before users hit them.
+        if ($fieldType === 'formula') {
+            $expression = trim((string) ($field['expression'] ?? ''));
+            $decimals = max(0, min(8, (int) ($field['decimals'] ?? 2)));
+            if ($expression === '') {
+                return null;
+            }
+            try {
+                (new \App\Support\FormulaEvaluator())->evaluate($expression, []);
+            } catch (\InvalidArgumentException $e) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'formula' => __('common.formula_syntax_error', ['error' => $e->getMessage()]),
+                ]);
+            }
+
+            return ['expression' => $expression, 'decimals' => $decimals];
         }
 
         // multi_select supports either a lookup source OR hardcoded options.
@@ -879,6 +1028,33 @@ class DocumentFormController extends Controller
      * Normalise `visible_to_departments` into a list of integer IDs. Unknown
      * IDs are dropped silently. Empty list → null (visible to everyone).
      */
+    private function parseRequiredAtStep(array $field): ?array
+    {
+        $raw = $field['required_at_step'] ?? null;
+        if (! $raw) {
+            return null;
+        }
+        $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
+        if (! is_array($decoded) || empty($decoded)) {
+            return null;
+        }
+        $steps = array_values(array_filter(
+            array_map(function ($s) {
+                if (is_string($s) && str_starts_with($s, 'step_')) {
+                    return (int) substr($s, 5);
+                }
+                if (is_numeric($s)) {
+                    return (int) $s;
+                }
+
+                return null;
+            }, $decoded),
+            fn ($v) => $v !== null && $v > 0
+        ));
+
+        return $steps ?: null;
+    }
+
     private function parseDepartmentIds(array $field): ?array
     {
         $decoded = $this->decodeJsonList($field['visible_to_departments'] ?? null);

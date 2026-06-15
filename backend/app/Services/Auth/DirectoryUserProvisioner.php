@@ -54,9 +54,9 @@ class DirectoryUserProvisioner
             return null;
         }
 
-        $roleName = (string) Setting::get('auth_default_role', 'viewer');
+        $roleName = (string) Setting::get('auth_default_role', 'employee');
         if ($roleName === '') {
-            $roleName = 'viewer';
+            $roleName = 'employee';
         }
 
         $local = explode('@', $email)[0];
@@ -78,7 +78,7 @@ class DirectoryUserProvisioner
         if (Role::query()->where('name', $roleName)->where('guard_name', 'web')->exists()) {
             $user->assignRole($roleName);
         } else {
-            $user->assignRole('viewer');
+            $user->assignRole('employee');
         }
 
         $this->syncRolesFromDirectoryHints($user, $directoryGroupHints);

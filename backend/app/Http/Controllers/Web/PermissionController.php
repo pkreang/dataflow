@@ -5,13 +5,26 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 
-class PermissionController extends Controller
+class PermissionController extends Controller implements HasMiddleware
 {
+    /**
+     * Listing permissions stays open to any authenticated user (see
+     * SettingsMenuAccessTest); creating / editing / deleting is super-admin only.
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('super-admin', except: ['index']),
+        ];
+    }
+
     public function index(): View
     {
         $permissions = Permission::orderBy('name')->get();

@@ -5,15 +5,17 @@
 @section('breadcrumb')
     <x-breadcrumb :items="[
         ['label' => __('common.forms_index_title'), 'url' => route('forms.index')],
-        ['label' => __('common.my_submissions'), 'url' => route('forms.my-submissions')],
+        ['label' => $submission->form->name, 'url' => route('forms.list-by-form', $submission->form)],
         ['label' => __('common.edit')],
     ]" />
 @endsection
 
 @section('content')
+{{-- Holiday calendar for live WORKDAYS() evaluation (server recomputes on save) --}}
+<script>window.__HOLIDAYS__ = @json(app(\App\Support\WorkdayCalculator::class)->activeDates());</script>
 <div style="width:100%;max-width:100%">
     <div class="mb-6">
-        <a href="{{ route('forms.my-submissions') }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.my_submissions') }}</a>
+        <a href="{{ route('forms.list-by-form', $submission->form) }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ $submission->form->name }}</a>
         <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mt-2">{{ $submission->form->name }}</h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
             <span class="badge-yellow">{{ __('common.draft') }}</span>
@@ -24,6 +26,23 @@
         <div class="alert-success mb-4">
             {{ session('success') }}
         </div>
+    @endif
+
+    @if (session('autosubmit'))
+        @if(($overrideStages ?? collect())->isEmpty() || session()->has('picked_approvers'))
+            {{-- No picker, or the choice was already made on the create page
+                 (carried via flash) — proceed straight to submit. --}}
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const submitForm = document.getElementById('submit-draft-form');
+                    if (submitForm) submitForm.submit();
+                });
+            </script>
+        @else
+            {{-- This workflow lets the requester pick an approver — pause the
+                 auto-submit so the picker is actually seen before sending. --}}
+            <div class="alert-info mb-4"><p class="text-sm">{{ __('common.pick_approver_before_submit') }}</p></div>
+        @endif
     @endif
 
     @if($errors->any())
@@ -40,8 +59,11 @@
         $form = $submission->form;
         $viewerId = (int) (session('user.id') ?? 0);
         // Only the owner gets the implicit 'requester' role token. Assigned
-        // editors edit fields purely through their user:{id} grant.
-        $viewerEditorRole = ((int) $submission->user_id === $viewerId) ? 'requester' : null;
+        // editors edit fields purely through their user:{id} grant — except
+        // the on-behalf creator, who authored the document and edits as
+        // 'requester' in full.
+        $viewerEditorRole = ((int) $submission->user_id === $viewerId || $submission->isCreator($viewerId))
+            ? 'requester' : null;
     @endphp
 
     {{-- Update draft form --}}
@@ -125,14 +147,38 @@
         </div>
     </form>
 
+    @if(($overrideStages ?? collect())->isNotEmpty())
+        {{-- override: requester may optionally substitute the approver for these
+             stages. Full-width card above the action bar; the selects post with
+             the submit form via the form= attribute. --}}
+        <div class="card mt-4 p-4 border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10">
+            <p class="text-sm font-semibold text-blue-800 dark:text-blue-200">{{ __('common.submit_pick_approver_label') }}</p>
+            <div class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($overrideStages as $overrideStage)
+                    <div>
+                        <label class="text-xs text-slate-500 dark:text-slate-400">{{ $overrideStage->name }}</label>
+                        @php $flashPick = (string) (session('picked_approvers')[$overrideStage->step_no] ?? ''); @endphp
+                        <select form="submit-draft-form" name="picked_approvers[{{ $overrideStage->step_no }}]" class="form-input mt-1 w-full">
+                            <option value="">{{ __('common.submit_pick_approver_use_default') }}</option>
+                            @foreach(($eligibleApprovers ?? collect()) as $appr)
+                                <option value="{{ $appr['id'] }}" @selected($flashPick !== '' && $flashPick === (string) $appr['id'])>{{ $appr['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- Action bar --}}
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
         {{-- Delete draft --}}
         <form method="POST"
               action="{{ route('forms.draft.destroy', $submission) }}"
-              onsubmit="return confirm('{{ __('common.confirm_delete') }}')" novalidate>
+              novalidate>
             @csrf @method('DELETE')
-            <button type="submit" class="btn-danger">
+            <button type="button" class="btn-danger"
+                    @click="window.dispatchEvent(new CustomEvent('confirm-open', {detail:{message:'{{ addslashes(__('common.confirm_delete')) }}', danger:true, form:$el.closest('form')}}))">
                 {{ __('common.delete_draft') }}
             </button>
         </form>
@@ -144,11 +190,13 @@
             </button>
 
             {{-- Submit to workflow --}}
-            <form method="POST"
+            <form id="submit-draft-form"
+                  method="POST"
                   action="{{ route('forms.draft.submit', $submission) }}"
-                  onsubmit="return confirm('{{ __('common.confirm_submit_form') }}')" novalidate>
+                  novalidate>
                 @csrf
-                <button type="submit" class="btn-primary">
+                <button type="button" class="btn-primary"
+                        @click="window.dispatchEvent(new CustomEvent('confirm-open', {detail:{message:'{{ addslashes(__('common.confirm_submit_form')) }}', okLabel:'{{ addslashes(__('common.submit_form')) }}', danger:false, form:$el.closest('form')}}))">
                     {{ __('common.submit_form') }}
                 </button>
             </form>

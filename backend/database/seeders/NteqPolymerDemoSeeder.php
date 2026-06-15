@@ -8,20 +8,19 @@ use App\Models\Company;
 use App\Models\Department;
 use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
-use App\Models\DocumentFormField;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentType;
 use App\Models\Equipment;
+use App\Models\EquipmentCategory;
+use App\Models\EquipmentLocation;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
 use App\Models\PmPlan;
 use App\Models\PmTaskItem;
-use App\Models\SparePart;
-use App\Models\EquipmentCategory;
-use App\Models\EquipmentLocation;
 use App\Models\Position;
-use App\Models\User;
 use App\Models\RunningNumberConfig;
+use App\Models\SparePart;
+use App\Models\User;
 use App\Services\FormSchemaService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Schema;
@@ -89,7 +88,7 @@ class NteqPolymerDemoSeeder extends Seeder
             $dept = Department::updateOrCreate(['code' => $d['code']], ['name' => $d['name'], 'description' => $d['description']]);
             $deptMap[$d['code']] = $dept;
         }
-        $this->command?->info('Departments: ' . count($departments));
+        $this->command?->info('Departments: '.count($departments));
 
         // ── 4. Positions (8) ────────────────────────────────
         $positions = [
@@ -108,21 +107,21 @@ class NteqPolymerDemoSeeder extends Seeder
             $pos = Position::updateOrCreate(['code' => $p['code']], ['name' => $p['name'], 'description' => $p['description'], 'is_active' => true]);
             $posMap[$p['code']] = $pos;
         }
-        $this->command?->info('Positions: ' . count($positions));
+        $this->command?->info('Positions: '.count($positions));
 
         // ── 5. Users (8 + update admin) ─────────────────────
         $approverRole = Role::where('name', 'approver')->where('guard_name', 'web')->first();
-        $viewerRole = Role::where('name', 'viewer')->where('guard_name', 'web')->first();
+        $employeeRole = Role::where('name', 'employee')->where('guard_name', 'web')->first();
 
         $users = [
-            ['email' => 'somchai@nteq.test',    'first_name' => 'สมชาย',   'last_name' => 'เดินเครื่อง', 'dept' => 'PROD',  'pos' => 'OPERATOR',    'role' => $viewerRole],
+            ['email' => 'somchai@nteq.test',    'first_name' => 'สมชาย',   'last_name' => 'เดินเครื่อง', 'dept' => 'PROD',  'pos' => 'OPERATOR',    'role' => $employeeRole],
             ['email' => 'somsri@nteq.test',     'first_name' => 'สมศรี',   'last_name' => 'คุมงาน',     'dept' => 'PROD',  'pos' => 'SHIFT_LEAD',  'role' => $approverRole],
             ['email' => 'wichai@nteq.test',     'first_name' => 'วิชัย',   'last_name' => 'ซ่อมเก่ง',   'dept' => 'MAINT', 'pos' => 'SUPERVISOR',  'role' => $approverRole],
             ['email' => 'pranee@nteq.test',     'first_name' => 'ปราณี',   'last_name' => 'จัดการดี',    'dept' => 'PROD',  'pos' => 'DEPT_MGR',    'role' => $approverRole],
             ['email' => 'manop@nteq.test',      'first_name' => 'มานพ',    'last_name' => 'สร้างสุข',    'dept' => 'MAINT', 'pos' => 'DEPT_MGR',    'role' => $approverRole],
             ['email' => 'suda@nteq.test',       'first_name' => 'สุดา',    'last_name' => 'วงศ์ประเสริฐ', 'dept' => 'QC',    'pos' => 'DEPT_MGR',    'role' => $approverRole],
             ['email' => 'somkit@nteq.test',     'first_name' => 'สมคิด',   'last_name' => 'ใหญ่มาก',   'dept' => 'MGMT',  'pos' => 'PLANT_MGR',   'role' => $approverRole],
-            ['email' => 'nida@nteq.test',       'first_name' => 'นิดา',   'last_name' => 'ตรวจเข้ม',   'dept' => 'QC',    'pos' => 'LAB_TECH',    'role' => $viewerRole],
+            ['email' => 'nida@nteq.test',       'first_name' => 'นิดา',   'last_name' => 'ตรวจเข้ม',   'dept' => 'QC',    'pos' => 'LAB_TECH',    'role' => $employeeRole],
             ['email' => 'preecha@nteq.test',    'first_name' => 'ปรีชา',   'last_name' => 'ปลอดภัย',   'dept' => 'EHS',   'pos' => 'EHS_OFFICER', 'role' => $approverRole],
             ['email' => 'malee@nteq.test',      'first_name' => 'มะลิ',   'last_name' => 'จัดซื้อดี',   'dept' => 'PROC',  'pos' => 'SUPERVISOR',  'role' => $approverRole],
         ];
@@ -155,7 +154,7 @@ class NteqPolymerDemoSeeder extends Seeder
                 'company_id' => $company->id,
             ]);
         }
-        $this->command?->info('Users: ' . count($users) . ' + admin updated');
+        $this->command?->info('Users: '.count($users).' + admin updated');
 
         // ── 6. Equipment Categories ─────────────────────────
         $categories = [
@@ -204,10 +203,10 @@ class NteqPolymerDemoSeeder extends Seeder
             ['code' => 'BALER-001', 'name' => 'Baling Press #1',    'cat' => 'BALER',   'loc' => 'PACK_C',  'serial' => 'BP-2018-001', 'manufacturer' => 'Bollegraaf',        'model' => 'HBC-50',       'criticality' => 'B', 'purchase_date' => '2018-07-22', 'runtime_hours' => 31200.00],
             ['code' => 'CONV-001',  'name' => 'Conveyor Belt A1',   'cat' => 'CONV',    'loc' => 'PROD_A1', 'serial' => 'CB-2018-001', 'manufacturer' => 'Thai Conveyor Co.', 'model' => 'TCC-BLT-600',  'criticality' => 'B', 'purchase_date' => '2018-04-01', 'runtime_hours' => 42360.00],
             ['code' => 'CONV-002',  'name' => 'Conveyor Belt A2',   'cat' => 'CONV',    'loc' => 'PROD_A2', 'serial' => 'CB-2018-002', 'manufacturer' => 'Thai Conveyor Co.', 'model' => 'TCC-BLT-600',  'criticality' => 'B', 'purchase_date' => '2018-10-15', 'runtime_hours' => 40120.50],
-            ['code' => 'BOIL-001',  'name' => 'Boiler #1',          'cat' => 'BOILER',  'loc' => 'UTIL',    'serial' => 'BL-2017-001', 'manufacturer' => 'Bosch Thermotechnik','model' => 'BTH-STM-5T',  'criticality' => 'A', 'purchase_date' => '2017-11-30', 'runtime_hours' => 48790.00],
+            ['code' => 'BOIL-001',  'name' => 'Boiler #1',          'cat' => 'BOILER',  'loc' => 'UTIL',    'serial' => 'BL-2017-001', 'manufacturer' => 'Bosch Thermotechnik', 'model' => 'BTH-STM-5T',  'criticality' => 'A', 'purchase_date' => '2017-11-30', 'runtime_hours' => 48790.00],
             ['code' => 'WWT-001',   'name' => 'Aeration Tank #1',   'cat' => 'WWT',     'loc' => 'WWT_OUT', 'serial' => 'WT-2018-001', 'manufacturer' => 'Siemens',           'model' => 'AER-AT-200',   'criticality' => 'B', 'purchase_date' => '2018-05-18', 'runtime_hours' => 39860.25],
             ['code' => 'FK-001',    'name' => 'Forklift Toyota 3T', 'cat' => 'FKLIFT',  'loc' => 'WH_D',    'serial' => 'FL-2020-001', 'manufacturer' => 'Toyota',            'model' => '8FGU30',       'criticality' => 'C', 'purchase_date' => '2020-01-10', 'runtime_hours' => 8420.75],
-            ['code' => 'MV-001',    'name' => 'Mooney Viscometer',  'cat' => 'LABINST', 'loc' => 'LAB',     'serial' => 'MV-2019-001', 'manufacturer' => 'Alpha Technologies','model' => 'MV2000VS',     'criticality' => 'C', 'purchase_date' => '2019-04-25', 'runtime_hours' => 6150.00],
+            ['code' => 'MV-001',    'name' => 'Mooney Viscometer',  'cat' => 'LABINST', 'loc' => 'LAB',     'serial' => 'MV-2019-001', 'manufacturer' => 'Alpha Technologies', 'model' => 'MV2000VS',     'criticality' => 'C', 'purchase_date' => '2019-04-25', 'runtime_hours' => 6150.00],
         ];
 
         foreach ($equipmentList as $eq) {
@@ -228,7 +227,7 @@ class NteqPolymerDemoSeeder extends Seeder
                 ]
             );
         }
-        $this->command?->info('Equipment: ' . count($equipmentList) . ' items');
+        $this->command?->info('Equipment: '.count($equipmentList).' items');
 
         // ── 8b. Spare Parts ─────────────────────────────────
         $spareParts = [
@@ -248,7 +247,7 @@ class NteqPolymerDemoSeeder extends Seeder
                 ['name' => $sp['name'], 'unit_cost' => $sp['unit_cost'], 'current_stock' => $sp['current_stock'], 'min_stock' => $sp['min_stock'], 'is_active' => true]
             );
         }
-        $this->command?->info('Spare Parts: ' . count($spareParts) . ' items');
+        $this->command?->info('Spare Parts: '.count($spareParts).' items');
 
         // ── 8c. PM Plans (Phase 2A demo) ────────────────────
         $eqMap = Equipment::whereIn('code', ['BOIL-001', 'SHRED-001', 'DRY-001'])->pluck('id', 'code');
@@ -324,14 +323,14 @@ class NteqPolymerDemoSeeder extends Seeder
                 ]);
             }
         }
-        $this->command?->info('PM Plans: ' . count($pmPlans) . ' plans seeded');
+        $this->command?->info('PM Plans: '.count($pmPlans).' plans seeded');
 
         // Generate demo WOs for the 2 date-based plans (SHRED runtime-based needs next_due_runtime set)
         $generator = app(\App\Services\Cmms\PmWorkOrderGenerator::class);
         foreach (PmPlan::whereIn('equipment_id', [$eqMap['BOIL-001'], $eqMap['DRY-001']])->get() as $plan) {
             $generator->generate($plan);
         }
-        $this->command?->info('PM Work Orders: ' . \App\Models\PmWorkOrder::count() . ' demo WOs generated');
+        $this->command?->info('PM Work Orders: '.\App\Models\PmWorkOrder::count().' demo WOs generated');
 
         // ── 9. Workflow: แจ้งซ่อม 3 ขั้น ────────────────────
         $wfMaint = ApprovalWorkflow::updateOrCreate(
@@ -453,7 +452,7 @@ class NteqPolymerDemoSeeder extends Seeder
             ['value' => 'electrician',     'label_en' => 'Electrician',     'label_th' => 'ช่างไฟฟ้า',       'sort_order' => 1],
             ['value' => 'mechanic',        'label_en' => 'Mechanic',        'label_th' => 'ช่างกล',           'sort_order' => 2],
             ['value' => 'welder',          'label_en' => 'Welder',          'label_th' => 'ช่างเชื่อม',       'sort_order' => 3],
-            ['value' => 'instrumentation', 'label_en' => 'Instrumentation', 'label_th' => 'ช่างเครื่องมือวัด','sort_order' => 4],
+            ['value' => 'instrumentation', 'label_en' => 'Instrumentation', 'label_th' => 'ช่างเครื่องมือวัด', 'sort_order' => 4],
             ['value' => 'hvac',            'label_en' => 'HVAC',            'label_th' => 'ช่าง HVAC',        'sort_order' => 5],
             ['value' => 'plumber',         'label_en' => 'Plumber',         'label_th' => 'ช่างท่อ',          'sort_order' => 6],
             ['value' => 'general',         'label_en' => 'General',         'label_th' => 'ช่างทั่วไป',       'sort_order' => 7],
@@ -561,7 +560,7 @@ class NteqPolymerDemoSeeder extends Seeder
                 'options' => ['source' => 'impact_severity']],
             ['field_key' => 'quality_impact',     'label_th' => 'ผลกระทบต่อคุณภาพ',  'label_en' => 'Quality Impact',         'field_type' => 'lookup',    'is_required' => true,  'sort_order' => 18,
                 'options' => ['source' => 'impact_severity']],
-            ['field_key' => 'environmental_impact','label_th' => 'ผลกระทบต่อสิ่งแวดล้อม', 'label_en' => 'Environmental Impact','field_type' => 'lookup',   'is_required' => true,  'sort_order' => 19,
+            ['field_key' => 'environmental_impact', 'label_th' => 'ผลกระทบต่อสิ่งแวดล้อม', 'label_en' => 'Environmental Impact', 'field_type' => 'lookup',   'is_required' => true,  'sort_order' => 19,
                 'options' => ['source' => 'impact_severity']],
 
             // ── Section: ความปลอดภัย (Safety / Permits) ──

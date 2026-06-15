@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\EquipmentLocation;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +11,8 @@ use Illuminate\View\View;
 
 class EquipmentLocationController extends Controller
 {
+    use HasPerPage;
+
     public function browse(): View
     {
         $locations = EquipmentLocation::query()
@@ -23,6 +26,7 @@ class EquipmentLocationController extends Controller
 
     public function index(Request $request): View
     {
+        $perPage = $this->resolvePerPage($request, 'equipment_locations_per_page');
         $query = EquipmentLocation::query()->orderBy('name');
 
         if ($search = $request->input('search')) {
@@ -33,9 +37,9 @@ class EquipmentLocationController extends Controller
             });
         }
 
-        $locations = $query->paginate(15)->withQueryString();
+        $locations = $query->paginate($perPage)->withQueryString();
 
-        return view('settings.equipment-locations.index', compact('locations'));
+        return view('settings.equipment-locations.index', compact('locations', 'perPage'));
     }
 
     public function create(): View
@@ -45,9 +49,11 @@ class EquipmentLocationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:equipment_locations,code',
+            'code' => ['required', 'string', 'max:50', 'unique:equipment_locations,code'],
             'building' => 'nullable|string|max:255',
             'floor' => 'nullable|string|max:100',
             'zone' => 'nullable|string|max:100',
@@ -57,7 +63,7 @@ class EquipmentLocationController extends Controller
 
         EquipmentLocation::create([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'building' => $validated['building'] ?? null,
             'floor' => $validated['floor'] ?? null,
             'zone' => $validated['zone'] ?? null,
@@ -75,9 +81,16 @@ class EquipmentLocationController extends Controller
 
     public function update(Request $request, EquipmentLocation $equipmentLocation): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $equipmentLocation->update(['is_active' => ! $equipmentLocation->is_active]);
+            return redirect()->route('settings.equipment-locations.index')->with('success', __('common.saved'));
+        }
+
+        $request->merge(['code' => $this->normalizeCode($request->input('code'))]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => "required|string|max:50|unique:equipment_locations,code,{$equipmentLocation->id}",
+            'code' => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('equipment_locations', 'code')->ignore($equipmentLocation->id)],
             'building' => 'nullable|string|max:255',
             'floor' => 'nullable|string|max:100',
             'zone' => 'nullable|string|max:100',
@@ -87,7 +100,7 @@ class EquipmentLocationController extends Controller
 
         $equipmentLocation->update([
             'name' => $validated['name'],
-            'code' => strtoupper($validated['code']),
+            'code' => $validated['code'],
             'building' => $validated['building'] ?? null,
             'floor' => $validated['floor'] ?? null,
             'zone' => $validated['zone'] ?? null,
@@ -108,5 +121,10 @@ class EquipmentLocationController extends Controller
         $equipmentLocation->delete();
 
         return redirect()->route('settings.equipment-locations.index')->with('success', __('common.deleted'));
+    }
+
+    private function normalizeCode(mixed $raw): string
+    {
+        return strtoupper(trim((string) $raw));
     }
 }

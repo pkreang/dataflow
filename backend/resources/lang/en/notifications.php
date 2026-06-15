@@ -26,9 +26,15 @@ return [
 
     // Document types
     'document_types' => [
-        'repair_request' => 'Repair Request',
-        'pm_am_plan' => 'PM/AM Plan',
+        'repair_request'          => 'Repair Request',
+        'pm_am_plan'              => 'PM/AM Plan',
         'spare_parts_requisition' => 'Spare Parts Requisition',
+        'leave_request'           => 'Leave Request',
+        'expense_claim'           => 'Expense Claim',
+        'memo'                    => 'Memo',
+        'it_request'              => 'IT Request',
+        'purchase_request'        => 'Purchase Request',
+        'purchase_order'          => 'Purchase Order',
     ],
 
     // Settings
@@ -48,16 +54,35 @@ return [
     'save_settings' => 'Save Settings',
     'settings_saved' => 'Notification settings saved successfully.',
 
-    // LINE Notify
-    'line_notifications' => 'LINE Notify',
-    'line_notifications_desc' => 'Send notifications via LINE Notify. Users must configure their token in profile.',
-    'line_token_hint' => 'Users generate personal tokens at',
-    'line_notify_token' => 'LINE Notify Token',
-    'line_notify_token_placeholder' => 'Paste your LINE Notify token here',
-    'line_notify_token_hint' => 'Generate a personal token at',
+    // LINE Messaging API (LINE Official Account) — replaces LINE Notify (discontinued 2025-03-31)
+    'line_notifications' => 'LINE Official Account',
+    'line_notifications_desc' => 'Push messages via the LINE Messaging API. Requires a LINE Official Account and a linked user.',
+    'line_setup_hint' => 'Create a Messaging API channel and copy its long-lived Channel Access Token at',
+    'line_channel_access_token' => 'Channel Access Token',
+    'line_channel_access_token_placeholder' => 'Paste the long-lived Channel Access Token',
+    'line_channel_access_token_hint' => 'Found under "Messaging API" tab of your channel in the LINE Developers console.',
+    'line_channel_id' => 'Channel ID (optional)',
+    'line_channel_id_placeholder' => 'e.g. 1234567890',
+    'line_test_send' => 'Test send to my LINE',
+    'line_test_send_dispatched' => 'Test message dispatched. Check your LINE app.',
+    'line_test_send_no_token' => 'Cannot test send: Channel Access Token is not configured.',
+    'line_test_send_no_user_id' => 'Cannot test send: your account is not linked to a LINE user (link via your profile).',
+    'line_test_send_message' => 'Test push from :app — LINE Messaging API is working.',
     'event_approval_pending_line_desc' => 'Send LINE message when a document requires approval.',
     'event_workflow_approved_line_desc' => 'Send LINE message when a document is fully approved.',
     'event_workflow_rejected_line_desc' => 'Send LINE message when a document is rejected.',
+    // LINE Login (account linking)
+    'line_login_section' => 'LINE Login (account linking)',
+    'line_login_section_hint' => 'Create a separate LINE Login channel — users click "Link LINE" in their profile and the system stores their LINE userId.',
+    'line_login_channel_id' => 'LINE Login Channel ID',
+    'line_login_channel_secret' => 'LINE Login Channel Secret',
+    'line_login_callback_url' => 'Callback URL (add to channel allowlist)',
+    'line_link_account' => 'Link LINE Account',
+    'line_linked' => 'LINE account linked',
+    'line_unlink' => 'Unlink LINE',
+    'line_link_success' => 'LINE account linked successfully (:name).',
+    'line_unlink_success' => 'LINE account unlinked.',
+    'line_link_not_configured' => 'LINE Login is not configured. Ask the admin to set the Channel ID and Secret.',
 
     // Outbound mail (SMTP) — Settings → Notifications
     'mail_outbound_title' => 'Outbound email (SMTP)',
@@ -81,4 +106,8 @@ return [
     'mail_encryption_ssl' => 'SSL (SMTPS)',
     'mail_from_address' => 'From address',
     'mail_from_name' => 'From name',
+    'escalation_reminder_title' => 'Approval Pending — Action Required',
+    'escalation_reminder_body' => 'Document :reference (step: :step) has been awaiting your approval for :days day(s). Please review it.',
+    'substitution_assigned_title' => 'You have been assigned as an approval substitute',
+    'substitution_assigned_body' => 'You will act as substitute for :from_name from :starts_at to :ends_at.',
 ];

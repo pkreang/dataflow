@@ -27,7 +27,7 @@ class SettingSeeder extends Seeder
             'auth_entra_enabled' => '0',
             'auth_ldap_enabled' => '0',
             'auth_local_super_admin_only' => '0',
-            'auth_default_role' => 'viewer',
+            'auth_default_role' => 'employee',
             'entra_tenant_id' => '',
             'entra_client_id' => '',
             'ldap_host' => '',
@@ -54,7 +54,13 @@ class SettingSeeder extends Seeder
             'notifications.approval_pending_email' => '1',
             'notifications.workflow_approved_email' => '1',
             'notifications.workflow_rejected_email' => '1',
-            'notifications.line_enabled' => '1',
+            /** LINE Messaging API (LINE Official Account) — replaces LINE Notify (discontinued 2025-03-31) */
+            'line_messaging.enabled' => '0',
+            'line_messaging.channel_access_token' => '',
+            'line_messaging.channel_id' => '',
+            /** LINE Login — for account linking flow (users link their LINE userId via OAuth) */
+            'line_login.channel_id' => '',
+            'line_login.channel_secret' => '',
             'notifications.approval_pending_line' => '1',
             'notifications.workflow_approved_line' => '1',
             'notifications.workflow_rejected_line' => '1',

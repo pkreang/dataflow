@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ReportDashboard;
 use App\Support\DataSourceRegistry;
@@ -12,14 +13,19 @@ use Illuminate\View\View;
 
 class ReportDashboardController extends Controller
 {
-    public function index(): View
+    use HasPerPage;
+
+    public function index(Request $request): View
     {
+        $perPage = $this->resolvePerPage($request, 'dashboards_per_page');
+
         $dashboards = ReportDashboard::query()
             ->withCount('widgets')
             ->orderBy('name')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
-        return view('settings.dashboards.index', compact('dashboards'));
+        return view('settings.dashboards.index', compact('dashboards', 'perPage'));
     }
 
     public function create(): View
@@ -107,6 +113,11 @@ class ReportDashboardController extends Controller
 
     public function update(Request $request, ReportDashboard $dashboard): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $dashboard->update(['is_active' => ! $dashboard->is_active]);
+            return redirect()->route('settings.dashboards.index')->with('success', __('common.saved'));
+        }
+
         $validated = $request->validate(array_merge([
             'name'                => 'required|string|max:255',
             'description'         => 'nullable|string',

@@ -2,30 +2,30 @@
 
 namespace App\Providers;
 
-use App\Events\Approval\WorkflowCompleted;
-use App\Events\Approval\WorkflowPartialApproval;
-use App\Events\Approval\WorkflowStarted;
-use App\Events\Approval\WorkflowStepAdvanced;
-use App\Events\SparePartStockLow;
-use App\Listeners\Approval\SendApprovalPendingNotification;
-use App\Listeners\Approval\SendPartialApprovalNotification;
-use App\Listeners\Approval\SendWorkflowOutcomeNotification;
-use App\Listeners\SendStockLowNotification;
+use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflowStage;
+use App\Models\Department;
 use App\Models\DocumentType;
+use App\Models\Position;
 use App\Models\Setting;
+use App\Models\User;
+use App\Observers\DepartmentObserver;
 use App\Observers\DocumentTypeObserver;
 use App\Observers\PermissionObserver;
+use App\Observers\PositionObserver;
 use App\Observers\RoleObserver;
 use App\Observers\SettingObserver;
+use App\Observers\UserObserver;
 use App\Observers\WorkflowStageObserver;
 use App\Policies\RolePolicy;
+use App\Services\ApproverIdentity;
 use App\Services\Auth\PasswordCapabilityService;
+use App\Services\EvaluationFormResolver;
 use App\Services\Mail\ApplyDatabaseMailConfig;
 use App\Services\NavigationService;
 use App\Support\OrganizationTranslations;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -38,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(NavigationService::class);
+        $this->app->singleton(EvaluationFormResolver::class);
     }
 
     public function boot(): void
@@ -52,12 +53,6 @@ class AppServiceProvider extends ServiceProvider
             return config('app.url').'/reset-password?token='.$token.'&email='.urlencode($notifiable->getEmailForPasswordReset());
         });
 
-        Event::listen(WorkflowStarted::class, SendApprovalPendingNotification::class);
-        Event::listen(WorkflowStepAdvanced::class, SendApprovalPendingNotification::class);
-        Event::listen(WorkflowCompleted::class, SendWorkflowOutcomeNotification::class);
-        Event::listen(WorkflowPartialApproval::class, SendPartialApprovalNotification::class);
-        Event::listen(SparePartStockLow::class, SendStockLowNotification::class);
-
         // System change-log observers — see SystemChangeLog + app/Observers/.
         // Observers swallow exceptions internally, so a logging failure can
         // never block the underlying admin save.
@@ -66,6 +61,9 @@ class AppServiceProvider extends ServiceProvider
         DocumentType::observe(DocumentTypeObserver::class);
         Role::observe(RoleObserver::class);
         Permission::observe(PermissionObserver::class);
+        User::observe(UserObserver::class);
+        Department::observe(DepartmentObserver::class);
+        Position::observe(PositionObserver::class);
 
         Gate::before(function ($user, $ability) {
             if ($user?->is_super_admin ?? false) {
@@ -83,9 +81,28 @@ class AppServiceProvider extends ServiceProvider
                 $menus = $navService->getMenus($perms, $isSuperAdmin, $userDeptId);
                 $view->with('navigationMenus', $menus);
                 $view->with('pinnedMenus', $userId > 0 ? $navService->getPinnedMenus($userId, $menus) : collect());
+
+                // Sidebar badges: route => count. Generic map so future menus can
+                // opt in without re-plumbing. Today only the approval inbox is
+                // badged with the user's pending-approval count (same predicate as
+                // /approvals/my). 60s TTL keeps it cheap; nav-badge staleness ≤60s
+                // is acceptable — no cross-user event invalidation needed.
+                $menuBadges = [];
+                if ($userId > 0) {
+                    $identity = app(ApproverIdentity::class)->fromSession();
+                    $menuBadges['/approvals/my'] = Cache::remember(
+                        "pending_approvals_count:{$userId}",
+                        60,
+                        fn () => ApprovalInstance::query()
+                            ->pendingForApprover($identity['userId'], $identity['roles'], $identity['positionId'])
+                            ->count()
+                    );
+                }
+                $view->with('menuBadges', $menuBadges);
             } else {
                 $view->with('navigationMenus', collect());
                 $view->with('pinnedMenus', collect());
+                $view->with('menuBadges', []);
             }
 
             $layoutUser = session('user', []);

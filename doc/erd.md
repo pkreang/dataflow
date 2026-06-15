@@ -869,7 +869,7 @@ approval_instance_steps (1 per stage)
 | `super-admin` | true | Bypass ทุก permission check (`Gate::before`) |
 | `admin` | true | Full access ทุก module |
 | `regional-admin` | false | **Phase 2 — ยังไม่ implement:** region scoping ยังไม่มีใน DB |
-| `viewer` | false | Read-only ทุก module |
+| `employee` | false | Read-only โมดูลธุรกิจ (ไม่รวม users/roles/permissions) — default role ของ user ใหม่ |
 
 ---
 

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
+use App\Models\DocumentForm;
 use App\Models\DocumentType;
 use App\Models\RunningNumberConfig;
 use Illuminate\Http\RedirectResponse;
@@ -11,11 +13,28 @@ use Illuminate\View\View;
 
 class RunningNumberController extends Controller
 {
-    public function index(): View
-    {
-        $configs = RunningNumberConfig::orderBy('document_type')->get();
+    use HasPerPage;
 
-        return view('settings.running-numbers.index', compact('configs'));
+    public function index(Request $request): View
+    {
+        $perPage = $this->resolvePerPage($request, 'running_numbers_per_page');
+        $configs = RunningNumberConfig::query()
+            ->orderBy('document_type')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        // Group form names by document_type so the index can show "used by"
+        // beside each running-number row. Running numbers are keyed per
+        // document_type (not per form) — multiple forms with the same type
+        // share one number lane, which is non-obvious without seeing it here.
+        $formsByType = DocumentForm::query()
+            ->orderBy('name')
+            ->get(['name', 'document_type'])
+            ->groupBy('document_type')
+            ->map(fn ($forms) => $forms->pluck('name')->all())
+            ->all();
+
+        return view('settings.running-numbers.index', compact('configs', 'formsByType', 'perPage'));
     }
 
     public function create(): View
@@ -44,6 +63,11 @@ class RunningNumberController extends Controller
 
     public function update(Request $request, RunningNumberConfig $runningNumberConfig): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $runningNumberConfig->update(['is_active' => ! $runningNumberConfig->is_active]);
+            return redirect()->route('settings.running-numbers.index')->with('success', __('common.saved'));
+        }
+
         $rules = $this->rules();
         $rules['document_type'] = "required|string|max:50|unique:running_number_configs,document_type,{$runningNumberConfig->id}";
         $validated = $request->validate($rules);

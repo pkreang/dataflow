@@ -56,7 +56,7 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
             ->action(__('notifications.view_document'), url($this->documentUrl()));
     }
 
-    public function toLineNotify(object $notifiable): string
+    public function toLineMessage(object $notifiable): string
     {
         $ref = $this->instance->reference_no ?? "#{$this->instance->id}";
 
@@ -72,7 +72,14 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
 
     private function documentTypeLabel(): string
     {
-        return __("notifications.document_types.{$this->instance->document_type}");
+        $key = "notifications.document_types.{$this->instance->document_type}";
+        if (\Illuminate\Support\Facades\Lang::has($key)) {
+            return __($key);
+        }
+        $formName = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
+            ->with('form:id,name')
+            ->first()?->form?->name;
+        return $formName ?? $this->instance->document_type;
     }
 
     private function documentUrl(): string
@@ -81,7 +88,16 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
             'repair_request' => "/repair-requests/{$this->instance->id}",
             'pm_am_plan' => "/maintenance/{$this->instance->id}",
             'spare_parts_requisition' => "/spare-parts/requisition/{$this->instance->id}",
-            default => "/approvals/my-approvals",
+            default => $this->eformSubmissionUrl(),
         };
+    }
+
+    private function eformSubmissionUrl(): string
+    {
+        $submissionId = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
+            ->value('id');
+        return $submissionId
+            ? route('forms.submission.show', $submissionId, false)
+            : '/approvals/my-approvals';
     }
 }

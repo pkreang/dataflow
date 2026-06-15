@@ -152,13 +152,120 @@ class DashboardWidgetDataController extends Controller
             if ($dateTo) {
                 $query->whereDate($dateField, '<=', $dateTo);
             }
+
+            // Built-in date presets ("this month", "last 30 days") let seeded
+            // widgets bake in a window without requiring the user to pick dates.
+            // Skipped when the request supplies an explicit date range — the
+            // dashboard's date picker always wins so power users can override.
+            if (! $dateFrom && ! $dateTo && ! empty($config['date_preset'])) {
+                $this->applyDatePreset($query, $dateField, $config['date_preset']);
+            }
         }
 
         if ($departmentId && isset($source['filter_fields']['department_id'])) {
             $query->where('department_id', $departmentId);
         }
 
+        // Static filters captured at design-time (e.g. status=draft, requester
+        // ={current_user}) — applied AFTER the request-driven filters so they
+        // act as a baseline scope the user can't escape from the dashboard UI.
+        $this->applyConfiguredFilters($query, $config, $source, $request);
+
         return [$query, $config, $source];
+    }
+
+    /**
+     * Apply config['filters'] to the query, whitelisted against the source's
+     * filter_fields. Supports the {current_user} token which resolves to the
+     * authenticated user's id at request time so a single seeded dashboard can
+     * scope KPIs ("งานของฉัน") per viewer instead of needing one per user.
+     *
+     * Tokens that can't be resolved (e.g. {current_user} on a request with no
+     * authenticated user) skip the filter rather than produce a 500 — keeps
+     * widget render resilient when a guest endpoint slips through.
+     */
+    private function applyConfiguredFilters($query, array $config, array $source, Request $request): void
+    {
+        $filters = $config['filters'] ?? [];
+        if (! is_array($filters) || empty($filters)) {
+            return;
+        }
+
+        $allowed = $source['filter_fields'] ?? [];
+
+        foreach ($filters as $field => $rawValue) {
+            if (! isset($allowed[$field])) {
+                continue;
+            }
+
+            $value = $this->resolveFilterValue($rawValue, $request);
+            if ($value === null) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $query->whereIn($field, $value);
+            } else {
+                $query->where($field, $value);
+            }
+        }
+    }
+
+    /**
+     * Resolve a filter value, expanding runtime tokens. Currently only
+     * {current_user} → authenticated user id; null when unresolvable so the
+     * caller can drop the clause entirely.
+     */
+    private function resolveFilterValue($value, Request $request)
+    {
+        if ($value === '{current_user}') {
+            return $request->user()?->id;
+        }
+        if (is_array($value)) {
+            $resolved = [];
+            foreach ($value as $v) {
+                $r = $this->resolveFilterValue($v, $request);
+                if ($r !== null) {
+                    $resolved[] = $r;
+                }
+            }
+
+            return $resolved ?: null;
+        }
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Apply a fixed-window date preset relative to "now". Unknown presets are
+     * a no-op so renaming/removing a preset doesn't break stored widgets.
+     */
+    private function applyDatePreset($query, string $dateField, string $preset): void
+    {
+        $now = \Illuminate\Support\Carbon::now();
+
+        switch ($preset) {
+            case 'today':
+                $query->whereDate($dateField, $now->toDateString());
+                break;
+            case 'this_week':
+                $query->whereBetween($dateField, [
+                    $now->copy()->startOfWeek()->toDateTimeString(),
+                    $now->copy()->endOfWeek()->toDateTimeString(),
+                ]);
+                break;
+            case 'this_month':
+                $query->whereYear($dateField, $now->year)
+                    ->whereMonth($dateField, $now->month);
+                break;
+            case 'last_30_days':
+                $query->whereDate($dateField, '>=', $now->copy()->subDays(30)->toDateString());
+                break;
+            case 'this_year':
+                $query->whereYear($dateField, $now->year);
+                break;
+            // unknown preset → silently ignored
+        }
     }
 
     private function buildWidgetCsv($query, array $config, array $source, ReportDashboardWidget $widget): string
@@ -340,13 +447,56 @@ class DashboardWidgetDataController extends Controller
             ->limit(20)
             ->get();
 
-        $labels = $results->pluck($groupBy)->map(fn ($v) => (string) ($v ?? 'N/A'))->toArray();
+        $rawLabels = $results->pluck($groupBy)->map(fn ($v) => $v ?? null)->toArray();
+        $labels = $this->resolveLabels($groupBy, $rawLabels);
         $data = $results->pluck('agg_value')->map(fn ($v) => (float) $v)->toArray();
 
         return response()->json([
             'labels' => $labels,
             'datasets' => [['data' => $data]],
         ]);
+    }
+
+    /**
+     * Resolve raw FK values (e.g. department_id=3) to human-readable labels
+     * (e.g. "ฝ่ายควบคุมคุณภาพ") for chart axis/legend display. Falls back to the
+     * raw value if no mapping is found.
+     */
+    private function resolveLabels(string $groupBy, array $rawLabels): array
+    {
+        $map = $this->labelMapFor($groupBy);
+
+        if ($map === null) {
+            return array_map(fn ($v) => (string) ($v ?? 'N/A'), $rawLabels);
+        }
+
+        return array_map(function ($v) use ($map) {
+            if ($v === null) return 'N/A';
+            return (string) ($map[$v] ?? $v);
+        }, $rawLabels);
+    }
+
+    private function labelMapFor(string $column): ?array
+    {
+        return match ($column) {
+            'department_id' => $this->lookupTable('departments', 'name'),
+            'user_id', 'requester_user_id', 'assignee_user_id' => $this->userNameLookup(),
+            'workflow_id' => $this->lookupTable('approval_workflows', 'name'),
+            default => null,
+        };
+    }
+
+    private function lookupTable(string $table, string $labelCol): array
+    {
+        return DB::table($table)->pluck($labelCol, 'id')->toArray();
+    }
+
+    private function userNameLookup(): array
+    {
+        return DB::table('users')
+            ->select('id', DB::raw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,''))) as full_name"))
+            ->pluck('full_name', 'id')
+            ->toArray();
     }
 
     private function tableData($query, array $config, array $source, Request $request): JsonResponse
@@ -377,8 +527,34 @@ class DashboardWidgetDataController extends Controller
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
             ->get()
-            ->map(fn ($row) => $row->only($selectColumns))
+            ->map(function ($row) use ($selectColumns) {
+                // Eloquent Models expose only(); stdClass rows from DB::table() do not.
+                $arr = is_object($row) && method_exists($row, 'only')
+                    ? $row->only($selectColumns)
+                    : array_intersect_key((array) $row, array_flip($selectColumns));
+                return $arr;
+            })
             ->toArray();
+
+        // Resolve FK columns (department_id → name, user_id → full name, etc.)
+        // so the table shows human-readable values instead of raw integer IDs.
+        $maps = [];
+        foreach ($selectColumns as $col) {
+            $m = $this->labelMapFor($col);
+            if ($m !== null) {
+                $maps[$col] = $m;
+            }
+        }
+        if (! empty($maps)) {
+            foreach ($rows as &$row) {
+                foreach ($maps as $col => $map) {
+                    if (isset($row[$col])) {
+                        $row[$col] = $map[$row[$col]] ?? $row[$col];
+                    }
+                }
+            }
+            unset($row);
+        }
 
         return response()->json([
             'columns' => $selectColumns,

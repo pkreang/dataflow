@@ -7,6 +7,7 @@ use App\Models\ApprovalWorkflow;
 use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
+use App\Models\Position;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,15 +31,18 @@ class DocumentFormWorkflowPolicyController extends Controller
             ->orderBy('name')
             ->get();
         $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
+        $positions = Position::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('settings.document-forms.policy', compact('documentForm', 'policy', 'workflows', 'departments'));
+        return view('settings.document-forms.policy', compact('documentForm', 'policy', 'workflows', 'departments', 'positions'));
     }
 
     public function update(Request $request, DocumentForm $documentForm): RedirectResponse
     {
         $validated = $request->validate([
             'department_id' => 'nullable|integer|exists:departments,id',
+            'position_id' => 'nullable|integer|exists:positions,id',
             'use_amount_condition' => 'nullable|boolean',
+            'amount_field_key' => 'nullable|string|max:100',
             'workflow_id' => 'nullable|integer|exists:approval_workflows,id',
             'ranges' => 'nullable|array',
             'ranges.*.min_amount' => 'required_with:ranges|numeric|min:0',
@@ -64,9 +68,11 @@ class DocumentFormWorkflowPolicyController extends Controller
                 [
                     'form_id' => $documentForm->id,
                     'department_id' => $validated['department_id'] ?? null,
+                    'position_id' => $validated['position_id'] ?? null,
                 ],
                 [
                     'use_amount_condition' => $useAmountCondition,
+                    'amount_field_key' => $useAmountCondition ? ($validated['amount_field_key'] ?? null) : null,
                     'workflow_id' => $useAmountCondition ? null : (int) $validated['workflow_id'],
                 ]
             );

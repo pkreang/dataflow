@@ -49,6 +49,7 @@
         :empty-message="__('common.no_equipment_categories')"
         :empty-cta-href="route('settings.equipment.create')"
         :empty-cta-label="__('common.add_equipment_category')"
+        :disable-pagination="true"
     >
         @foreach ($categories as $category)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
@@ -61,11 +62,14 @@
                 <td class="px-4 py-2 whitespace-nowrap text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.equipment.edit', $category), 'icon' => 'edit'],
+                        ['label' => $category->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.equipment.update', $category), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.equipment.destroy', $category), 'icon' => 'delete', 'confirm' => __('common.are_you_sure'), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
                     ]" />
                 </td>
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$categories" :perPage="$perPage" id="equipment-categories-pagination" />
 </div>
 @endsection

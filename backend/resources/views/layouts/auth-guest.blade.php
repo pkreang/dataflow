@@ -2,16 +2,8 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="min-h-full">
 <head>
     <script>
-        (function () {
-            try {
-                var t = localStorage.getItem('theme');
-                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-            } catch (e) {}
-        })();
+        // Light-only — never apply `dark` class.
+        try { document.documentElement.classList.remove('dark'); } catch (e) {}
     </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -41,7 +33,7 @@
         $loginBgColor = $rawLoginBg;
     }
 @endphp
-    {{-- All background on body via normal flow — no fixed layers / z-index stacking (avoids “dead” hit targets in Chrome). --}}
+    {{-- All background on body via normal flow — no fixed layers / z-index stacking (avoids "dead" hit targets in Chrome). --}}
     <style>
         .auth-guest-body {
             min-height: 100dvh;
@@ -77,6 +69,10 @@
                 @endif
                 <h2 class="login-welcome-title">{{ $welcomeTitle ?? __('common.login_welcome', ['app' => config('app.name')]) }}</h2>
                 <p class="login-welcome-desc">{{ $welcomeSubtitle ?? __('common.login_welcome_subtitle') }}</p>
+                @if ($loginIllustration ?? null)
+                    <img src="{{ asset('storage/' . $loginIllustration) }}" alt="Login illustration"
+                         class="max-h-40 w-auto object-contain mt-6 opacity-95">
+                @endif
             </div>
 
             <div class="login-form-pane flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-10 bg-white dark:bg-gray-900 min-w-0">

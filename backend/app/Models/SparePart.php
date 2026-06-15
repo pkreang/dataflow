@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,9 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SparePart extends Model
 {
+    use HasAutoCode;
     use HasFactory;
 
     protected $fillable = [
+        'auto_code',
         'code',
         'name',
         'description',
@@ -58,5 +61,10 @@ class SparePart extends Model
     public function requisitionItems(): HasMany
     {
         return $this->hasMany(SparePartRequisitionItem::class);
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'SP';
     }
 }

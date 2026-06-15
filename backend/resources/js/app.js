@@ -1,9 +1,12 @@
 import './bootstrap';
+import './formula-evaluator';
 import Alpine from 'alpinejs';
 import anchor from '@alpinejs/anchor';
 import Chart from 'chart.js/auto';
 import QRCode from 'qrcode';
+import Sortable from 'sortablejs';
 window.Chart = Chart;
+window.Sortable = Sortable;
 
 // ต้องกำหนดก่อน Alpine.start()
 window.Alpine = Alpine;
@@ -55,33 +58,16 @@ Alpine.store('pinnedMenus', {
     },
 });
 
-// Dark mode store
+// Theme store — app is light-only. Kept as a no-op so existing
+// `$store.theme.toggle()` / `$store.theme.dark` references don't blow up.
 Alpine.store('theme', {
     dark: false,
     init() {
-        // Precedence: server-provided (logged-in user's preference, set via <meta>)
-        // → localStorage → OS preference. Keeps existing per-browser toggle working
-        // while letting a signed-in user's choice follow them across devices.
-        const serverPref = document.querySelector('meta[name="user-theme"]')?.content;
-        const saved = localStorage.getItem('theme');
-        let effective;
-        if (serverPref === 'dark' || serverPref === 'light') {
-            effective = serverPref;
-        } else if (saved === 'dark' || saved === 'light') {
-            effective = saved;
-        } else {
-            effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        this.dark = effective === 'dark';
-        this.apply();
+        document.documentElement.classList.remove('dark');
     },
-    toggle() {
-        this.dark = !this.dark;
-        localStorage.setItem('theme', this.dark ? 'dark' : 'light');
-        this.apply();
-    },
+    toggle() { /* light-only */ },
     apply() {
-        document.documentElement.classList.toggle('dark', this.dark);
+        document.documentElement.classList.remove('dark');
     }
 });
 
@@ -165,7 +151,7 @@ Alpine.data('userIndex', (initialQuery = '') => ({
     }
 }));
 
-/** Thai subdistrict autocomplete: fills subdistrict, district, province, postal; locks อำเภอ/จังหวัด/รหัส after pick */
+/** Thai subdistrict autocomplete: fills subdistrict, district, province, postal after pick (all fields stay editable) */
 Alpine.data('thaiSubdistrictPicker', (config) => ({
     searchUrl: config.searchUrl,
     query: '',
@@ -174,26 +160,17 @@ Alpine.data('thaiSubdistrictPicker', (config) => ({
     results: [],
     timer: null,
     highlighted: -1,
-    pickerLocked: false,
-    lastPickedSub: '',
     init() {
         this.$nextTick(() => {
             const sub = this.$refs.subdistrict;
             if (sub?.value) {
                 this.query = sub.value;
-                this.lastPickedSub = sub.value.trim();
             }
         });
     },
     onSubdistrictInput(e) {
         this.query = e.target.value;
-        if (this.pickerLocked && this.query.trim() !== (this.lastPickedSub || '').trim()) {
-            this.pickerLocked = false;
-        }
         this.onInput();
-    },
-    unlockPickerFields() {
-        this.pickerLocked = false;
     },
     onInput() {
         this.open = true;
@@ -237,8 +214,6 @@ Alpine.data('thaiSubdistrictPicker', (config) => ({
         this.$refs.province.value = item.p;
         this.$refs.postal.value = item.z;
         this.query = item.t;
-        this.lastPickedSub = item.t.trim();
-        this.pickerLocked = true;
         this.open = false;
         this.results = [];
         this.highlighted = -1;
@@ -549,22 +524,65 @@ Alpine.data('dashboardWidget', (widgetId, dashboardId, widgetType) => ({
 
         const chartType = canvas.dataset.chartType || 'bar';
 
+        const isCircle = ['pie','doughnut'].includes(chartType === 'donut' ? 'doughnut' : chartType);
+        const labels = this.data.labels || [];
+        const seriesData = (this.data.datasets?.[0]?.data) || [];
+        const palette = [
+            '#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6',
+            '#06B6D4','#F97316','#84CC16','#EC4899','#6366F1',
+        ];
+
+        // For bar/line charts grouped by category, provide one color per bar
+        // and use the labels as legend entries so users can map color → category.
+        let dataset;
+        if (isCircle) {
+            dataset = {
+                data: seriesData,
+                backgroundColor: palette,
+                borderColor: '#fff',
+                borderWidth: 2,
+            };
+        } else {
+            dataset = {
+                label: '',
+                data: seriesData,
+                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                borderColor: labels.map((_, i) => palette[i % palette.length]),
+                borderWidth: 1,
+            };
+        }
+
         this.chartInstance = new window.Chart(canvas, {
             type: chartType === 'donut' ? 'doughnut' : chartType,
-            data: {
-                labels: this.data.labels || [],
-                datasets: [{
-                    data: (this.data.datasets?.[0]?.data) || [],
-                    backgroundColor: [
-                        '#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6',
-                        '#06B6D4','#F97316','#84CC16','#EC4899','#6366F1',
-                    ],
-                }]
-            },
+            data: { labels, datasets: [dataset] },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: ['pie','doughnut'].includes(chartType) } }
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: isCircle ? 'right' : 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 11 },
+                            // For bar/line, the dataset has 1 entry — synthesize per-label legend
+                            // entries so each color maps to its category.
+                            generateLabels: isCircle ? undefined : (chart) => {
+                                const ds = chart.data.datasets[0] || {};
+                                return (chart.data.labels || []).map((label, i) => ({
+                                    text: label,
+                                    fillStyle: Array.isArray(ds.backgroundColor) ? ds.backgroundColor[i] : ds.backgroundColor,
+                                    strokeStyle: Array.isArray(ds.borderColor) ? ds.borderColor[i] : ds.borderColor,
+                                    index: i,
+                                }));
+                            },
+                        },
+                    },
+                },
+                scales: isCircle ? {} : {
+                    x: { ticks: { font: { size: 10 } } },
+                    y: { ticks: { font: { size: 10 } }, beginAtZero: true },
+                },
             }
         });
     },
@@ -675,6 +693,18 @@ document.addEventListener(
         if (!btn.matches('.btn-primary, .btn-secondary, .btn-danger')) return;
         if (btn.hasAttribute('data-no-submit-loading')) return;
         if (btn.disabled) return;
+        // Preserve the submitter's name/value before disabling. Disabling a submit
+        // button *during* the submit event drops it from the serialized form body,
+        // so a `<button name="action" value="approved">` would post no `action`.
+        // Mirror it into a hidden input so the value still reaches the server.
+        if (btn.name) {
+            const mirror = document.createElement('input');
+            mirror.type = 'hidden';
+            mirror.name = btn.name;
+            mirror.value = btn.value;
+            mirror.setAttribute('data-submitter-mirror', '');
+            form.appendChild(mirror);
+        }
         btn.disabled = true;
         btn.setAttribute('aria-busy', 'true');
         btn.classList.add('opacity-60', 'cursor-not-allowed');

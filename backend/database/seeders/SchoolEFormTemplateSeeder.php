@@ -45,7 +45,9 @@ class SchoolEFormTemplateSeeder extends Seeder
             ->whereNotIn('document_type', self::SCHOOL_DOCUMENT_TYPE_CODES)
             ->delete();
 
+        $this->seedCompany();
         $this->seedDepartments();
+        $this->seedDirectorPosition();
 
         // Ensure the shared `leave_type` lookup list exists (idempotent — same key
         // as BodindechaDemoSeeder so running either seeder is safe).
@@ -67,18 +69,19 @@ class SchoolEFormTemplateSeeder extends Seeder
             );
         }
 
+        $leaveFields = $this->leaveFormFields();
+
+        // Consolidate to 1 leave form — routing handled by position-based policies
+        DocumentForm::query()
+            ->whereIn('form_key', ['school_leave_head_default', 'school_leave_exec_default'])
+            ->delete();
+
         $leaveForm = $this->syncForm(
             'school_leave_default',
-            'คำขอลา (ตัวอย่าง)',
+            'ใบลาโรงเรียน',
             'school_leave_request',
-            'เทมเพลตโรงเรียน: ปรับฟิลด์และ workflow ในเมนูตั้งค่า',
-            [
-                ['field_key' => 'title', 'label' => 'หัวเรื่อง', 'field_type' => 'text', 'is_required' => true, 'sort_order' => 1],
-                ['field_key' => 'leave_type', 'label' => 'ประเภทการลา', 'field_type' => 'lookup', 'is_required' => true, 'sort_order' => 2, 'options' => ['source' => 'leave_type']],
-                ['field_key' => 'start_date', 'label' => 'วันเริ่ม', 'field_type' => 'date', 'is_required' => true, 'sort_order' => 3],
-                ['field_key' => 'end_date', 'label' => 'วันสิ้นสุด', 'field_type' => 'date', 'is_required' => true, 'sort_order' => 4],
-                ['field_key' => 'detail', 'label' => 'เหตุผล / รายละเอียด', 'field_type' => 'textarea', 'is_required' => false, 'sort_order' => 5],
-            ]
+            'ฟอร์มใบลาสำหรับทุกตำแหน่ง — routing อัตโนมัติตามตำแหน่งผู้ยื่น',
+            $leaveFields
         );
 
         $procForm = $this->syncForm(
@@ -111,13 +114,42 @@ class SchoolEFormTemplateSeeder extends Seeder
             ? 'เทมเพลตโรงเรียน: หัวหน้าฝ่ายวิชาการ → รองผู้อำนวยการ'
             : 'เทมเพลตโรงเรียน: ขั้นเดียวตามตำแหน่งหรือผู้ใช้ (ไม่ผูกกับ role approver)';
 
-        $wLeave = $this->syncWorkflow('โรงเรียน — อนุมัติการลา', 'school_leave_request', $flowHint, $stages);
+        // Tier-1 workflow: ครู/บุคลากรทั่วไป → หัวหน้าฝ่าย → รองผอ.
+        $wLeave1 = $this->syncWorkflow('โรงเรียน — อนุมัติการลา', 'school_leave_request', $flowHint, $stages);
+        // Tier-2 workflow: หัวหน้าฝ่าย → รองผอ. → ผอ.
+        $wLeave2 = $this->syncWorkflow(
+            'โรงเรียน — อนุมัติการลา (หัวหน้าฝ่าย)',
+            'school_leave_request',
+            'เทมเพลตโรงเรียน tier 2: รองผู้อำนวยการ → ผู้อำนวยการ',
+            $this->headApprovalStages()
+        );
+        // Tier-3 workflow: ผู้บริหาร → ผอ. อย่างเดียว
+        $wLeave3 = $this->syncWorkflow(
+            'โรงเรียน — อนุมัติการลา (ผู้บริหาร)',
+            'school_leave_request',
+            'เทมเพลตโรงเรียน tier 3: ผู้อำนวยการอนุมัติ',
+            $this->execApprovalStages()
+        );
         $wProc = $this->syncWorkflow('โรงเรียน — อนุมัติขอซื้อ', 'school_procurement', $flowHint, $stages);
         $wAct = $this->syncWorkflow('โรงเรียน — อนุมัติกิจกรรม', 'school_activity', $flowHint, $stages);
 
-        $this->syncGlobalPolicy($leaveForm, $wLeave);
-        $this->syncGlobalPolicy($procForm, $wProc);
-        $this->syncGlobalPolicy($actForm, $wAct);
+        // Leave form: global fallback → tier1; position-specific → tier2/tier3
+        $this->syncPolicy($leaveForm, null, null, $wLeave1);
+        $headPos  = Position::query()->where('code', 'SCH_ACAD_HEAD')->first();
+        $vicePos  = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
+        $dirPos   = Position::query()->where('code', 'SCH_DIRECTOR')->first();
+        if ($headPos) {
+            $this->syncPolicy($leaveForm, null, $headPos->id, $wLeave2);
+        }
+        if ($vicePos) {
+            $this->syncPolicy($leaveForm, null, $vicePos->id, $wLeave3);
+        }
+        if ($dirPos) {
+            $this->syncPolicy($leaveForm, null, $dirPos->id, $wLeave3);
+        }
+
+        $this->syncPolicy($procForm, null, null, $wProc);
+        $this->syncPolicy($actForm, null, null, $wAct);
 
         $this->command?->info('SchoolEFormTemplateSeeder: school departments, forms, workflows, policies.');
     }
@@ -263,16 +295,88 @@ class SchoolEFormTemplateSeeder extends Seeder
         return $form;
     }
 
-    private function syncGlobalPolicy(DocumentForm $form, ApprovalWorkflow $workflow): void
+    private function syncPolicy(DocumentForm $form, ?int $departmentId, ?int $positionId, ApprovalWorkflow $workflow): void
     {
         DocumentFormWorkflowPolicy::query()->updateOrCreate(
             [
-                'form_id' => $form->id,
-                'department_id' => null,
+                'form_id'       => $form->id,
+                'department_id' => $departmentId,
+                'position_id'   => $positionId,
             ],
             [
                 'use_amount_condition' => false,
-                'workflow_id' => $workflow->id,
+                'workflow_id'          => $workflow->id,
+            ]
+        );
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function leaveFormFields(): array
+    {
+        return [
+            ['field_key' => 'title',      'label' => 'หัวเรื่อง',                'field_type' => 'text',     'is_required' => true,  'sort_order' => 1],
+            ['field_key' => 'leave_type', 'label' => 'ประเภทการลา',             'field_type' => 'lookup',   'is_required' => true,  'sort_order' => 2, 'options' => ['source' => 'leave_type']],
+            ['field_key' => 'start_date', 'label' => 'วันเริ่ม',                'field_type' => 'date',     'is_required' => true,  'sort_order' => 3],
+            ['field_key' => 'end_date',   'label' => 'วันสิ้นสุด',              'field_type' => 'date',     'is_required' => true,  'sort_order' => 4],
+            ['field_key' => 'detail',     'label' => 'เหตุผล / รายละเอียด',    'field_type' => 'textarea', 'is_required' => false, 'sort_order' => 5],
+        ];
+    }
+
+    private function seedDirectorPosition(): void
+    {
+        Position::query()->updateOrCreate(
+            ['code' => 'SCH_DIRECTOR'],
+            ['name' => 'ผู้อำนวยการ', 'is_active' => true]
+        );
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function headApprovalStages(): array
+    {
+        $vice     = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
+        $director = Position::query()->where('code', 'SCH_DIRECTOR')->first();
+
+        if ($vice && $director) {
+            return [
+                ['step_no' => 1, 'name' => 'รองผู้อำนวยการอนุมัติ', 'approver_type' => 'position', 'approver_ref' => (string) $vice->id],
+                ['step_no' => 2, 'name' => 'ผู้อำนวยการอนุมัติ',    'approver_type' => 'position', 'approver_ref' => (string) $director->id],
+            ];
+        }
+
+        return $this->schoolApprovalStages();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function execApprovalStages(): array
+    {
+        $director = Position::query()->where('code', 'SCH_DIRECTOR')->first();
+
+        if ($director) {
+            return [
+                ['step_no' => 1, 'name' => 'ผู้อำนวยการอนุมัติ', 'approver_type' => 'position', 'approver_ref' => (string) $director->id],
+            ];
+        }
+
+        return $this->schoolApprovalStages();
+    }
+
+    private function seedCompany(): void
+    {
+        $company = \App\Models\Company::updateOrCreate(
+            ['code' => 'SCH_DEMO'],
+            [
+                'name'      => 'โรงเรียนสาธิต (Demo)',
+                'tax_id'    => '0000000000000',
+                'is_active' => true,
+            ]
+        );
+
+        \App\Models\Branch::updateOrCreate(
+            ['code' => 'SCH_MAIN'],
+            [
+                'company_id' => $company->id,
+                'name'       => 'สาขาหลัก',
+                'is_active'  => true,
             ]
         );
     }

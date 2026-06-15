@@ -10,6 +10,7 @@
 @endsection
 
 @section('content')
+@php $viewerIsSuperAdmin = (bool) session('user.is_super_admin', false); @endphp
     @if (session('success'))
         <div class="alert-success mb-4 text-sm text-green-800 dark:text-green-200">
             {{ session('success') }}
@@ -23,10 +24,13 @@
 
     <div class="flex items-center justify-end gap-4 mb-6">
         <span class="text-sm text-slate-500 dark:text-slate-400">{{ $total }} {{ __('common.total') }}</span>
+        @if($viewerIsSuperAdmin)
         <a href="{{ route('permissions.create') }}"
-           class="btn-primary inline-flex items-center gap-1">
-            + {{ __('common.create') }}
+           class="btn-primary inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ __('common.add_permission') }}
         </a>
+        @endif
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -49,6 +53,7 @@
                         @endphp
                         <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-full text-xs font-medium {{ $colors }}">
                             <span title="{{ $perm['name'] ?? '' }}">{{ \App\Support\PermissionDisplay::label($perm['name'] ?? '') }}</span>
+                            @if($viewerIsSuperAdmin)
                             <a href="{{ route('permissions.edit', $perm['id']) }}"
                                class="shrink-0 p-0.5 rounded text-current opacity-80 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10"
                                title="{{ __('common.edit') }}">
@@ -77,6 +82,7 @@
                                     </button>
                                 </form>
                             @endif
+                            @endif {{-- viewerIsSuperAdmin --}}
                         </span>
                     @endforeach
                 </div>

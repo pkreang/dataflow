@@ -4,17 +4,25 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalInstance;
+use App\Models\ApprovalInstanceStep;
+use App\Models\ApprovalWorkflowStage;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormSubmission;
+use App\Models\Setting;
 use App\Models\SubmissionActivityLog;
 use App\Models\User;
+use App\Models\UserSubstitution;
 use App\Services\ApprovalFlowService;
+use App\Services\ApproverIdentity;
 use App\Services\FormSchemaService;
 use App\Support\DateExpressionResolver;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -24,7 +32,10 @@ class DocumentFormSubmissionController extends Controller
 {
     use HasPerPage;
 
-    public function __construct(private readonly FormSchemaService $schemaService) {}
+    public function __construct(
+        private readonly FormSchemaService $schemaService,
+        private readonly ApprovalFlowService $approvalFlow,
+    ) {}
 
     public function index(): View
     {
@@ -33,6 +44,7 @@ class DocumentFormSubmissionController extends Controller
 
         $forms = DocumentForm::query()
             ->where('is_active', true)
+            ->where('document_type', '!=', 'evaluation') // eval forms triggered via parent submission only
             ->visibleToUser($userDeptId)
             ->orderBy('name')
             ->get()
@@ -50,7 +62,7 @@ class DocumentFormSubmissionController extends Controller
         $submissions = DocumentFormSubmission::query()
             ->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
-                  ->orWhereJsonContains('assigned_editor_user_ids', $userId);
+                    ->orWhereJsonContains('assigned_editor_user_ids', $userId);
             })
             ->with(['form', 'instance'])
             ->latest()
@@ -60,11 +72,12 @@ class DocumentFormSubmissionController extends Controller
         return view('forms.my-submissions', compact('submissions'));
     }
 
-    public function listByForm(DocumentForm $documentForm, Request $request): View
+    public function listByForm(DocumentForm $documentForm, Request $request, ApproverIdentity $approverIdentity): View
     {
         $userId = (int) (session('user.id') ?? 0);
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
+        $identity = $approverIdentity->fromSession();
 
         abort_if(! $documentForm->is_active, 404);
         // Super-admins bypass the department-scope check so they can monitor /
@@ -75,20 +88,56 @@ class DocumentFormSubmissionController extends Controller
             404
         );
 
-        $searchable = $documentForm->fields()->where('is_searchable', true)->orderBy('sort_order')->get();
+        // Drop searchable columns the viewer can't see by department, mirroring
+        // the field-level visibility in dynamic-field.blade.php. Without this the
+        // approver-pending rows below would surface restricted searchable values
+        // in the list columns (the list renderer doesn't honor visible_to_departments).
+        $searchable = $documentForm->fields()
+            ->where('is_searchable', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->filter(fn ($field) => $isSuperAdmin || $this->fieldVisibleToDept($field, $userDeptId))
+            ->values();
         $filters = $this->extractFilters($request, $searchable);
+
+        // Instances of this form related to the viewer: (a) currently awaiting
+        // their approval, PLUS (b) ones they have already acted on (approved /
+        // rejected any step) — so an approver keeps sight of requests they
+        // handled, not only the ones still pending. Two cheap queries (a user's
+        // pending + acted sets are tiny), merged and fed into the main query via
+        // whereIn so the paginated query stays single and counts stay correct.
+        $relatedInstanceIds = $isSuperAdmin
+            ? []
+            : array_values(array_unique(array_merge(
+                ApprovalInstance::query()
+                    ->pendingForApprover($identity['userId'], $identity['roles'], $identity['positionId'])
+                    ->pluck('id')
+                    ->all(),
+                // Query the steps table directly (not whereHas) to dodge the
+                // larastan custom-relation-return-type false positive.
+                ApprovalInstanceStep::query()
+                    ->where('acted_by_user_id', $identity['userId'])
+                    ->pluck('approval_instance_id')
+                    ->all()
+            )));
 
         $showCancelled = (bool) $request->query('show_cancelled');
         $query = DocumentFormSubmission::query()
             ->when($showCancelled, fn ($q) => $q->withTrashed())
             ->where('document_form_submissions.form_id', $documentForm->id)
             // Super-admins see every submission for the form (monitoring/support).
-            // Everyone else is scoped to their own submissions plus drafts where
-            // they were granted edit access via assigned_editor_user_ids.
-            ->when(! $isSuperAdmin, function ($q) use ($userId) {
-                $q->where(function ($inner) use ($userId) {
+            // Everyone else is scoped to their own submissions, drafts where they
+            // were granted edit access (assigned_editor_user_ids), plus any
+            // submission of this form awaiting their approval OR one they already
+            // acted on — so approvers find both pending work and their handled
+            // requests in the form's own list, not only the /approvals/my inbox.
+            ->when(! $isSuperAdmin, function ($q) use ($userId, $relatedInstanceIds) {
+                $q->where(function ($inner) use ($userId, $relatedInstanceIds) {
                     $inner->where('document_form_submissions.user_id', $userId)
-                          ->orWhereJsonContains('document_form_submissions.assigned_editor_user_ids', $userId);
+                        ->orWhereJsonContains('document_form_submissions.assigned_editor_user_ids', $userId);
+                    if (! empty($relatedInstanceIds)) {
+                        $inner->orWhereIn('document_form_submissions.approval_instance_id', $relatedInstanceIds);
+                    }
                 });
             });
 
@@ -103,8 +152,12 @@ class DocumentFormSubmissionController extends Controller
         $this->applyFieldFilters($query, $documentForm, $searchable, $filters);
 
         $perPage = $this->resolvePerPage($request, 'list_by_form_per_page');
+        $with = ['instance', 'latestActivity.user', 'submittedActivity'];
+        if ($documentForm->document_type === 'evaluation') {
+            $with[] = 'originalSubmission.form';
+        }
         $submissions = $query->select('document_form_submissions.*')
-            ->with(['instance', 'latestActivity.user', 'submittedActivity'])
+            ->with($with)
             ->latest('document_form_submissions.id')
             ->paginate($perPage)
             ->withQueryString();
@@ -116,6 +169,7 @@ class DocumentFormSubmissionController extends Controller
             'filters' => $filters,
             'showCancelled' => $showCancelled,
             'perPage' => $perPage,
+            'relatedInstanceIds' => $relatedInstanceIds,
         ]);
     }
 
@@ -214,14 +268,39 @@ class DocumentFormSubmissionController extends Controller
     public function create(DocumentForm $documentForm): View
     {
         abort_if(! $documentForm->is_active, 404);
+        // Evaluation forms must be filled via the "Evaluate" button on an approved
+        // parent submission — not by directly navigating to forms.create.
+        abort_if($documentForm->document_type === 'evaluation', 403,
+            'Evaluation forms can only be filled via the "Evaluate" button on an approved submission.');
         $documentForm->load('fields');
 
-        return view('forms.create', ['form' => $documentForm]);
+        // "Submit on behalf of" — permission-gated picker of active users.
+        $onBehalfUsers = $this->canCreateForOthers()
+            ? User::query()->where('is_active', true)
+                ->where('id', '!=', (int) (session('user.id') ?? 0))
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email'])
+            : collect();
+
+        // Requester-override: offer the approver picker up-front on creation.
+        [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
+            $documentForm,
+            session('user.department_id') ?? User::find((int) (session('user.id') ?? 0))?->department_id,
+        );
+
+        return view('forms.create', [
+            'form' => $documentForm,
+            'onBehalfUsers' => $onBehalfUsers,
+            'overrideStages' => $overrideStages,
+            'eligibleApprovers' => $eligibleApprovers,
+        ]);
     }
 
     public function storeDraft(Request $request, DocumentForm $documentForm): RedirectResponse
     {
         abort_if(! $documentForm->is_active, 404);
+        abort_if($documentForm->document_type === 'evaluation', 403,
+            'Evaluation forms must be submitted through the "Evaluate" button on a parent submission.');
         $documentForm->load('fields');
 
         $spec = $this->buildPayloadRules($documentForm, (array) $request->input('fields', []));
@@ -229,21 +308,41 @@ class DocumentFormSubmissionController extends Controller
         $payload = $validated['fields'] ?? [];
 
         $payload = $this->processFileUploads($documentForm, $payload, $request);
+        $payload = $this->recomputeFormulaFields($documentForm, $payload);
 
         $userId = (int) (session('user.id') ?? 0);
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+
+        // "Submit on behalf of": the document is OWNED by the beneficiary;
+        // the logged-in creator is recorded in created_by_user_id and kept as
+        // an assigned editor so they retain draft access. Permission-gated
+        // server-side — without it the parameter is silently ignored.
+        $ownerId = $userId;
+        $createdById = null;
+        $onBehalfId = (int) $request->input('on_behalf_of_user_id', 0);
+        if ($onBehalfId && $onBehalfId !== $userId && $this->canCreateForOthers()) {
+            $beneficiary = User::query()->where('is_active', true)->find($onBehalfId);
+            abort_unless($beneficiary !== null, 422);
+            $ownerId = $beneficiary->id;
+            $createdById = $userId;
+        }
+
+        $userDeptId = $createdById
+            ? User::find($ownerId)?->department_id
+            : (session('user.department_id') ?? User::find($userId)?->department_id);
 
         $submission = DocumentFormSubmission::create([
             'form_id' => $documentForm->id,
-            'user_id' => $userId,
+            'user_id' => $ownerId,
+            'created_by_user_id' => $createdById,
             'department_id' => $userDeptId,
             'payload' => $payload,
             'status' => 'draft',
+            'assigned_editor_user_ids' => $createdById ? [$createdById] : null,
         ]);
 
         // Dual-write: insert into fdata_* table
         $fdataRowId = $this->writeFdataRow($documentForm, $payload, [
-            'user_id' => $userId,
+            'user_id' => $ownerId,
             'department_id' => $userDeptId,
             'status' => 'draft',
         ]);
@@ -254,7 +353,22 @@ class DocumentFormSubmissionController extends Controller
 
         SubmissionActivityLog::record($submission->id, $userId, 'created');
 
-        return redirect()->route('forms.draft.edit', $submission)->with('success', __('common.saved'));
+        // Picker was shown on the create page → carry the choice (even "use
+        // default") through the redirect so the auto-submit can proceed.
+        $flash = [];
+        if ($request->has('picked_approvers')) {
+            $flash['picked_approvers'] = collect((array) $request->input('picked_approvers', []))
+                ->mapWithKeys(fn ($uid, $stepNo) => [(int) $stepNo => (int) $uid])
+                ->all();
+        }
+
+        if ($request->input('_intent') === 'submit') {
+            return redirect()->route('forms.draft.edit', $submission)
+                ->with(array_merge($flash, ['autosubmit' => true]));
+        }
+
+        return redirect()->route('forms.draft.edit', $submission)
+            ->with(array_merge($flash, ['success' => __('common.saved')]));
     }
 
     public function editDraft(DocumentFormSubmission $submission): View
@@ -262,7 +376,55 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeOwnerDraft($submission);
         $submission->load('form.fields');
 
-        return view('forms.edit-draft', compact('submission'));
+        [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
+            $submission->form()->first(),
+            $submission->department_id,
+        );
+
+        return view('forms.edit-draft', compact('submission', 'overrideStages', 'eligibleApprovers'));
+    }
+
+    /**
+     * Requester-override picker data: when the admin feature is on AND the
+     * resolved workflow has stages with allow_requester_override=true, return
+     * those stages + the eligible approver pool. Shared by the create page
+     * (pick up-front) and the edit-draft page (pick before submitting).
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
+     */
+    private function resolveOverridePicker(?DocumentForm $form, ?int $departmentId): array
+    {
+        if (! $form || ! Setting::getBool('approval.allow_requester_override', false)) {
+            return [collect(), collect()];
+        }
+
+        $workflow = $this->approvalFlow->previewWorkflow(
+            $form->document_type,
+            $departmentId,
+            (int) (session('user.id') ?? 0),
+            $form->form_key,
+        );
+        $overrideStages = $workflow
+            ? ApprovalWorkflowStage::query()
+                ->where('workflow_id', $workflow->id)
+                ->where('is_active', true)
+                ->where('allow_requester_override', true)
+                ->orderBy('step_no')
+                ->get()
+            : collect();
+
+        $eligibleApprovers = $overrideStages->isNotEmpty()
+            ? User::permission('approval.approve')
+                ->orderBy('first_name')
+                ->get()
+                ->map(fn (User $u) => [
+                    'id' => $u->id,
+                    'label' => trim($u->first_name.' '.$u->last_name).' ('.$u->email.')',
+                ])
+                ->values()
+            : collect();
+
+        return [$overrideStages, $eligibleApprovers];
     }
 
     public function updateDraft(Request $request, DocumentFormSubmission $submission): RedirectResponse
@@ -283,13 +445,18 @@ class DocumentFormSubmissionController extends Controller
 
         // Non-owners (assigned editors) only get to write fields whose
         // editable_by tokens grant them access via 'user:{id}'. Owner keeps
-        // full write across all fields tagged 'requester' (or any token).
+        // full write across all fields tagged 'requester' (or any token);
+        // the on-behalf creator counts as owner for field editing.
         $userId = (int) (session('user.id') ?? 0);
-        $isOwner = (int) $submission->user_id === $userId;
+        $isOwner = (int) $submission->user_id === $userId || $submission->isCreator($userId);
         if (! $isOwner) {
             $allowed = $this->filterPayloadForAssignee($submission, $payload, $userId);
             $payload = array_merge($submission->payload ?? [], $allowed);
         }
+
+        // Recompute formula fields server-side — never trust the client value
+        // since the hidden mirror input is editable via devtools.
+        $payload = $this->recomputeFormulaFields($submission->form, $payload);
 
         // Capture per-field diff BEFORE the update so we can record what changed.
         // Computed against the post-filter payload (what's actually persisted),
@@ -390,28 +557,79 @@ class DocumentFormSubmissionController extends Controller
     public function returnToDraft(DocumentFormSubmission $submission): RedirectResponse
     {
         $this->authorizeReturnToDraft($submission);
-        $submission->load('form');
 
         $userId = (int) (session('user.id') ?? 0);
-        $form = $submission->form;
+        $fromInstanceId = $submission->approval_instance_id;
 
-        $submission->update(['status' => 'draft']);
-
-        if ($submission->fdata_row_id && $form?->hasDedicatedTable()) {
-            $this->schemaService->updateRow($form, $submission->fdata_row_id, $submission->payload ?? [], [
-                'status' => 'draft',
-            ]);
-        }
+        $this->applyReturnToDraft($submission);
 
         SubmissionActivityLog::record($submission->id, $userId, 'returned_to_draft', [
-            'from_approval_instance_id' => $submission->approval_instance_id,
+            'from_approval_instance_id' => $fromInstanceId,
         ]);
 
         return redirect()->route('forms.draft.edit', $submission)
             ->with('success', __('common.returned_to_draft'));
     }
 
-    public function submit(DocumentFormSubmission $submission, ApprovalFlowService $approvalFlowService): RedirectResponse
+    /**
+     * Approver action — send a submitted request back instead of approving or
+     * rejecting it. `requester` flips the submission to an editable draft;
+     * `previous_step` rewinds the workflow one approval stage. The workflow
+     * mutation and actor authorization happen inside ApprovalFlowService.
+     */
+    public function sendBack(Request $request, DocumentFormSubmission $submission, ApprovalFlowService $approvalFlowService): RedirectResponse
+    {
+        $validated = $request->validate([
+            'destination' => 'required|in:requester,previous_step',
+            'comment' => 'required|string|max:1000',
+        ]);
+
+        abort_unless($submission->approval_instance_id, 404);
+
+        $userId = (int) (session('user.id') ?? 0);
+
+        try {
+            $approvalFlowService->sendBack(
+                $submission->approval_instance_id,
+                $userId,
+                $validated['destination'],
+                $validated['comment'],
+            );
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['send_back' => $e->getMessage()]);
+        }
+
+        if ($validated['destination'] === 'requester') {
+            $this->applyReturnToDraft($submission);
+        }
+
+        SubmissionActivityLog::record($submission->id, $userId, 'sent_back', [
+            'destination' => $validated['destination'],
+            'comment' => $validated['comment'],
+        ]);
+
+        return redirect()->route('approvals.my')
+            ->with('success', __('common.send_back_success'));
+    }
+
+    /**
+     * Flip a submission back to an editable draft, mirroring the change into
+     * the dedicated fdata_* row when the form uses one. Shared by
+     * returnToDraft() (owner action) and sendBack() (approver action).
+     */
+    private function applyReturnToDraft(DocumentFormSubmission $submission): void
+    {
+        $submission->loadMissing('form');
+        $submission->update(['status' => 'draft']);
+
+        if ($submission->fdata_row_id && $submission->form?->hasDedicatedTable()) {
+            $this->schemaService->updateRow($submission->form, $submission->fdata_row_id, $submission->payload ?? [], [
+                'status' => 'draft',
+            ]);
+        }
+    }
+
+    public function submit(DocumentFormSubmission $submission, Request $request, ApprovalFlowService $approvalFlowService, \App\Services\LeaveValidationService $leaveValidator): RedirectResponse
     {
         $this->authorizeOwnerOnlyDraft($submission);
         $submission->load('form');
@@ -419,17 +637,69 @@ class DocumentFormSubmissionController extends Controller
         $form = $submission->form;
         $userId = (int) (session('user.id') ?? 0);
 
+        // On-behalf: the workflow requester is the document OWNER, not whoever
+        // pressed submit — routing (direct_manager/org_head), requester
+        // exclusion and overlap checks all follow the owner.
+        $ownerId = (int) $submission->user_id;
+
+        // requester_pick: map[step_no => chosen user_id]. start() validates that
+        // the chosen user actually holds approval.approve before trusting it.
+        $pickedApprovers = collect($request->input('picked_approvers', []))
+            ->mapWithKeys(fn ($uid, $stepNo) => [(int) $stepNo => (int) $uid])
+            ->all();
+
+        // Extract amount for amount-based routing if policy configures an amount_field_key
+        $payload = (array) ($submission->payload ?? []);
+        $amount = null;
+        $amountPolicy = \App\Models\DocumentFormWorkflowPolicy::query()
+            ->where('form_id', $submission->form_id)
+            ->where('use_amount_condition', true)
+            ->whereNotNull('amount_field_key')
+            ->first();
+        if ($amountPolicy !== null && $amountPolicy->amount_field_key !== null) {
+            $rawAmount = $payload[$amountPolicy->amount_field_key] ?? null;
+            if (is_numeric($rawAmount)) {
+                $amount = (float) $rawAmount;
+            }
+        }
+
+        // Leave overlap guard: runs for any form that stores date_from / date_to
+        // (currently only leave_request forms). No-op for all other form types.
+        if (isset($payload['date_from'], $payload['date_to'])) {
+            try {
+                $leaveValidator->checkOverlap(
+                    userId: $ownerId,
+                    formId: $form->id,
+                    dateFrom: (string) $payload['date_from'],
+                    dateTo: (string) $payload['date_to'],
+                    excludeId: $submission->id,
+                );
+            } catch (\RuntimeException $e) {
+                return redirect()->back()->withErrors([
+                    'submit' => __('common.'.$e->getMessage()),
+                ]);
+            }
+        }
+
         try {
+            $positionId = (int) (User::find($ownerId)?->position_id ?? 0);
             $instance = $approvalFlowService->start(
                 documentType: $form->document_type,
                 departmentId: $submission->department_id,
-                requesterUserId: $userId,
+                requesterUserId: $ownerId,
                 referenceNo: null,
-                payload: $submission->payload ?? [],
+                payload: $payload,
                 formKey: $form->form_key,
+                amount: $amount,
+                pickedApprovers: $pickedApprovers,
+                positionId: $positionId,
             );
         } catch (RuntimeException $e) {
-            return redirect()->back()->withErrors(['submit' => $e->getMessage()]);
+            $message = $e->getMessage() === 'requester_pick_invalid_approver'
+                ? __('common.requester_pick_invalid_approver')
+                : $e->getMessage();
+
+            return redirect()->back()->withErrors(['submit' => $message]);
         }
 
         $submission->update([
@@ -456,6 +726,15 @@ class DocumentFormSubmissionController extends Controller
     {
         $this->authorizeView($submission);
 
+        // Opening the document clears its bell notifications for this viewer —
+        // users rarely click the notification itself.
+        if ($submission->approval_instance_id) {
+            \App\Support\NotificationCleanup::markInstanceRead(
+                (int) $submission->approval_instance_id,
+                (int) (session('user.id') ?? 0),
+            );
+        }
+
         $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department']);
         $activity = SubmissionActivityLog::with('user')
             ->where('submission_id', $submission->id)
@@ -466,6 +745,30 @@ class DocumentFormSubmissionController extends Controller
         $userId = (int) (session('user.id') ?? 0);
         $isOwner = (int) $submission->user_id === $userId;
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
+
+        // Approver inline-edit: when this viewer is the current pending approver,
+        // resolve their step token so fields tagged editable_by=['step_N'] (or
+        // 'user:{id}') render editable on the submission view. Everyone else —
+        // owner, prior/next-step approvers, non-pending — gets 'view_only'
+        // (read-only, no regression). The PATCH route re-filters server-side.
+        $editorRole = $this->resolveEditorRole($submission, $userId);
+        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $editorUserId = $userId ?: null;
+
+        // Whether this viewer may act (approve/reject) on the document right now.
+        // Distinct from $editorRole (field-edit): $canAct ALSO requires the
+        // approval.approve permission so the action card never renders for a user
+        // whose POST to approvals.act would 403. Mirrors RepairRequestController::show.
+        $canAct = false;
+        $instance = $submission->instance;
+        if ($instance && $instance->status === 'pending'
+            && in_array('approval.approve', session('user_permissions', []), true)) {
+            $currentStep = $instance->steps->firstWhere('step_no', $instance->current_step_no);
+            if ($currentStep && $currentStep->action === 'pending') {
+                $canAct = $this->approvalFlow->canUserActOnStep($instance, $currentStep, $userId);
+            }
+        }
+
         // Only the owner / super-admin can manage assigned editors, and only
         // while the submission is still a draft (post-submit, the workflow
         // owns who-can-edit).
@@ -500,7 +803,34 @@ class DocumentFormSubmissionController extends Controller
             'canManageAssignedEditors',
             'assignedEditorRows',
             'assignableUsers',
+            'editorRole',
+            'userDeptId',
+            'editorUserId',
+            'canAct',
         ));
+    }
+
+    /**
+     * Approver edit-context resolver: returns 'step_N' when the viewer is the
+     * approver currently able to act on this submission's pending instance, else
+     * 'view_only'. Mirrors PurchaseRequestController::resolveEditorRole so the
+     * dynamic-form view honors the same field-level editable_by step tokens.
+     */
+    private function resolveEditorRole(DocumentFormSubmission $submission, int $userId): string
+    {
+        $instance = $submission->instance;
+        if (! $instance || $instance->status !== 'pending') {
+            return 'view_only';
+        }
+
+        $currentStep = $instance->steps->firstWhere('step_no', $instance->current_step_no);
+        if ($currentStep
+            && $currentStep->action === 'pending'
+            && $this->approvalFlow->canUserActOnStep($instance, $currentStep, $userId)) {
+            return 'step_'.$instance->current_step_no;
+        }
+
+        return 'view_only';
     }
 
     /**
@@ -532,6 +862,26 @@ class DocumentFormSubmissionController extends Controller
         SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
 
         return view('forms.print-submission', compact('submission'));
+    }
+
+    public function downloadPdf(DocumentFormSubmission $submission): HttpResponse
+    {
+        $this->authorizeView($submission);
+        abort_if($submission->status === 'draft', 404);
+
+        $submission->load(['form.fields', 'instance.steps', 'department', 'user']);
+
+        $pdf = Pdf::loadView('pdf.submission', compact('submission'))
+            ->setPaper('a4', 'portrait')
+            ->setWarnings(false);
+
+        $filename = ($submission->reference_no
+            ? preg_replace('/[^A-Za-z0-9\-_]/', '-', $submission->reference_no)
+            : 'submission-'.$submission->id).'.pdf';
+
+        SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
+
+        return $pdf->download($filename);
     }
 
     /**
@@ -650,7 +1000,6 @@ class DocumentFormSubmissionController extends Controller
 
     // ── Private helpers ─────────────────────────────────────
 
-
     /**
      * Edit-draft gate: owner OR an assigned editor may write field values to
      * a draft. Status must be 'draft' — assignees cannot edit submitted /
@@ -665,16 +1014,25 @@ class DocumentFormSubmissionController extends Controller
         abort_unless($submission->status === 'draft', 403);
     }
 
+    /** Holder of submission.create_for_others (or super-admin) may file on behalf. */
+    private function canCreateForOthers(): bool
+    {
+        return (bool) session('user.is_super_admin', false)
+            || in_array('submission.create_for_others', session('user_permissions', []), true);
+    }
+
     /**
      * Lifecycle-changing actions (submit, destroy, return-to-draft) stay
      * owner-only — assignees collaborate on content, not workflow state.
      * Submitting as an assignee would also confuse downstream "requester"
-     * lookups in the approval flow.
+     * lookups in the approval flow. Exception: the on-behalf CREATOR filed
+     * the document and may drive its lifecycle (the workflow still treats
+     * the owner as requester).
      */
     private function authorizeOwnerOnlyDraft(DocumentFormSubmission $submission): void
     {
         $userId = (int) (session('user.id') ?? 0);
-        abort_unless((int) $submission->user_id === $userId, 403);
+        abort_unless((int) $submission->user_id === $userId || $submission->isCreator($userId), 403);
         abort_unless($submission->status === 'draft', 403);
     }
 
@@ -685,14 +1043,14 @@ class DocumentFormSubmissionController extends Controller
     private function authorizeReturnToDraft(DocumentFormSubmission $submission): void
     {
         $userId = (int) (session('user.id') ?? 0);
-        abort_unless((int) $submission->user_id === $userId, 403);
+        abort_unless((int) $submission->user_id === $userId || $submission->isCreator($userId), 403);
         abort_unless($submission->effective_status === 'rejected', 403);
     }
 
     private function authorizeView(DocumentFormSubmission $submission): void
     {
         $userId = (int) (session('user.id') ?? 0);
-        $isOwner = (int) $submission->user_id === $userId;
+        $isOwner = (int) $submission->user_id === $userId || $submission->isCreator($userId);
         $isAssignee = $submission->isAssignedEditor($userId);
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
         if ($isOwner || $isAssignee || $isSuperAdmin) {
@@ -727,6 +1085,23 @@ class DocumentFormSubmissionController extends Controller
      * blanket `approval.approve` permission (which exposed every pending submission to
      * every approver) while still letting auditors who handled the doc look back at it.
      */
+    /**
+     * Department-based field visibility — same predicate as dynamic-field.blade.php:
+     * a field with no visible_to_departments is visible to all; otherwise only to
+     * users whose department is listed. Used to drop restricted columns from the
+     * searchable list before rendering.
+     */
+    private function fieldVisibleToDept(DocumentFormField $field, int|string|null $userDeptId): bool
+    {
+        $depts = $field->visible_to_departments;
+        if (empty($depts)) {
+            return true;
+        }
+
+        return $userDeptId !== null
+            && in_array((int) $userDeptId, array_map('intval', $depts), true);
+    }
+
     private function isApproverForSubmission(DocumentFormSubmission $submission, int $userId): bool
     {
         $instance = $submission->instance;
@@ -734,7 +1109,12 @@ class DocumentFormSubmissionController extends Controller
             return false;
         }
 
-        $userIdStr = (string) $userId;
+        // รวม principal ที่ user นี้เป็น active substitute ให้ — ให้เห็นเอกสาร
+        // ที่ principal เป็น approver ได้ (สอดคล้อง scopePendingForApprover)
+        $userRefs = array_map('strval', array_merge(
+            [$userId],
+            UserSubstitution::activePrincipalsFor($userId, now())
+        ));
         $roleNames = collect(session('user.roles', []))
             ->map(fn ($r) => is_array($r) ? ($r['name'] ?? '') : $r)
             ->filter()
@@ -743,9 +1123,10 @@ class DocumentFormSubmissionController extends Controller
         $positionId = session('user.position_id') ?? User::find($userId)?->position_id;
 
         return $instance->steps()
-            ->where(function ($q) use ($userIdStr, $roleNames, $positionId) {
-                $q->where(function ($uq) use ($userIdStr) {
-                    $uq->where('approver_type', 'user')->where('approver_ref', $userIdStr);
+            ->where(function ($q) use ($userRefs, $userId, $roleNames, $positionId) {
+                // Primary columns
+                $q->where(function ($uq) use ($userRefs) {
+                    $uq->where('approver_type', 'user')->whereIn('approver_ref', $userRefs);
                 });
                 if (! empty($roleNames)) {
                     $q->orWhere(function ($rq) use ($roleNames) {
@@ -756,6 +1137,21 @@ class DocumentFormSubmissionController extends Controller
                     $q->orWhere(function ($pq) use ($positionId) {
                         $pq->where('approver_type', 'position')->where('approver_ref', (string) $positionId);
                     });
+                }
+                // AND-source rules JSON (same space-tolerant double-LIKE as scopePendingForApprover)
+                $q->orWhere(fn ($j) => $j
+                    ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"user"%')->orWhere('approver_rules', 'like', '%"type": "user"%'))
+                    ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$userId.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$userId.'"%')));
+                foreach ($roleNames as $role) {
+                    $esc = addslashes($role);
+                    $q->orWhere(fn ($j) => $j
+                        ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"role"%')->orWhere('approver_rules', 'like', '%"type": "role"%'))
+                        ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$esc.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$esc.'"%')));
+                }
+                if ($positionId) {
+                    $q->orWhere(fn ($j) => $j
+                        ->where(fn ($t) => $t->where('approver_rules', 'like', '%"type":"position"%')->orWhere('approver_rules', 'like', '%"type": "position"%'))
+                        ->where(fn ($r) => $r->where('approver_rules', 'like', '%"ref":"'.$positionId.'"%')->orWhere('approver_rules', 'like', '%"ref": "'.$positionId.'"%')));
                 }
             })
             ->exists();
@@ -795,7 +1191,7 @@ class DocumentFormSubmissionController extends Controller
                 continue;
             }
 
-            $dir = 'forms/' . $form->form_key;
+            $dir = 'forms/'.$form->form_key;
 
             if ($type === 'multi_file') {
                 $files = $request->file("fields.{$key}");
@@ -813,6 +1209,7 @@ class DocumentFormSubmissionController extends Controller
                     // No new uploads — keep existing array
                     $payload[$key] = $existingPayload[$key] ?? [];
                 }
+
                 continue;
             }
 
@@ -831,7 +1228,7 @@ class DocumentFormSubmissionController extends Controller
     /**
      * @return array{rules: array, attributes: array}
      */
-    private function buildPayloadRules(DocumentForm $form, array $submittedPayload = []): array
+    public function buildPayloadRules(DocumentForm $form, array $submittedPayload = []): array
     {
         $rules = [];
         $attributes = [];
@@ -849,10 +1246,10 @@ class DocumentFormSubmissionController extends Controller
                 $opts = is_array($field->options) ? $field->options : [];
                 $minRows = (int) ($opts['min_rows'] ?? 0);
                 $maxRows = (int) ($opts['max_rows'] ?? 200);
-                $arrRules = ['array', 'max:' . $maxRows];
+                $arrRules = ['array', 'max:'.$maxRows];
                 if ($field->is_required || $minRows > 0) {
                     $arrRules[] = 'required';
-                    $arrRules[] = 'min:' . max(1, $minRows);
+                    $arrRules[] = 'min:'.max(1, $minRows);
                 } else {
                     $arrRules[] = 'nullable';
                 }
@@ -874,6 +1271,7 @@ class DocumentFormSubmissionController extends Controller
                     $rules["{$key}.*.{$innerKey}"] = $innerRules;
                     $attributes["{$key}.*.{$innerKey}"] = $inner['label'] ?? $innerKey;
                 }
+
                 continue;
             }
 
@@ -892,49 +1290,51 @@ class DocumentFormSubmissionController extends Controller
             }
             $fieldRules = $isRequired ? ['required'] : ['nullable'];
 
-            $fieldRules[] = match ($field->field_type) {
-                'number', 'currency' => 'numeric',
-                'date' => 'date',
-                'email' => 'email',
-                'checkbox', 'multi_select', 'multi_file' => 'array',
-                'image' => 'file|image|max:5120',
-                'file' => 'file|max:10240',
-                default => 'string',
-            };
+            // NOTE: rules are an ARRAY — Laravel does not split pipe-joined
+            // strings inside arrays, so each rule must be its own element.
+            $fieldRules = array_merge($fieldRules, match ($field->field_type) {
+                'number', 'currency', 'formula' => ['numeric'],
+                'date' => ['date'],
+                'email' => ['email'],
+                'checkbox', 'multi_select', 'multi_file' => ['array'],
+                'image' => ['file', 'image', 'max:5120'],
+                'file' => ['file', 'max:10240'],
+                default => ['string'],
+            });
 
             // multi_file: validate each uploaded file individually under .*
             if ($field->field_type === 'multi_file') {
-                $rules[$key . '.*'] = ['file', 'max:10240'];
+                $rules[$key.'.*'] = ['file', 'max:10240'];
             }
 
             // Apply configurable validation_rules from field definition
             $vr = $field->validation_rules;
             if (is_array($vr) && count($vr)) {
                 if (! empty($vr['min_length'])) {
-                    $fieldRules[] = 'min:' . (int) $vr['min_length'];
+                    $fieldRules[] = 'min:'.(int) $vr['min_length'];
                 }
                 if (! empty($vr['max_length'])) {
-                    $fieldRules[] = 'max:' . (int) $vr['max_length'];
+                    $fieldRules[] = 'max:'.(int) $vr['max_length'];
                 }
                 if (! empty($vr['regex'])) {
-                    $fieldRules[] = 'regex:/' . str_replace('/', '\/', $vr['regex']) . '/';
+                    $fieldRules[] = 'regex:/'.str_replace('/', '\/', $vr['regex']).'/';
                 }
                 if (isset($vr['min']) && $vr['min'] !== '' && in_array($field->field_type, ['number', 'currency'])) {
-                    $fieldRules[] = 'min:' . $vr['min'];
+                    $fieldRules[] = 'min:'.$vr['min'];
                 }
                 if (isset($vr['max']) && $vr['max'] !== '' && in_array($field->field_type, ['number', 'currency'])) {
-                    $fieldRules[] = 'max:' . $vr['max'];
+                    $fieldRules[] = 'max:'.$vr['max'];
                 }
                 if (! empty($vr['min_date']) && $field->field_type === 'date') {
                     $resolved = DateExpressionResolver::resolve($vr['min_date']);
                     if ($resolved) {
-                        $fieldRules[] = 'after_or_equal:' . $resolved;
+                        $fieldRules[] = 'after_or_equal:'.$resolved;
                     }
                 }
                 if (! empty($vr['max_date']) && $field->field_type === 'date') {
                     $resolved = DateExpressionResolver::resolve($vr['max_date']);
                     if ($resolved) {
-                        $fieldRules[] = 'before_or_equal:' . $resolved;
+                        $fieldRules[] = 'before_or_equal:'.$resolved;
                     }
                 }
             }
@@ -988,6 +1388,12 @@ class DocumentFormSubmissionController extends Controller
                 return false;
             }
         }
+
         return true;
+    }
+
+    private function recomputeFormulaFields(DocumentForm $form, array $payload): array
+    {
+        return \App\Support\FormulaFields::recompute($form, $payload);
     }
 }

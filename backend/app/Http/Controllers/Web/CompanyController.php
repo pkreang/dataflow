@@ -69,7 +69,6 @@ class CompanyController extends Controller
             'fax' => 'nullable|string|max:20',
             'website' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'address' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_active' => 'boolean',
         ], StructuredAddressValidation::rules()), [], array_merge([
@@ -82,7 +81,6 @@ class CompanyController extends Controller
             'fax' => __('company.fax'),
             'website' => __('company.website'),
             'description' => __('common.description'),
-            'address' => __('company.legacy_address'),
             'logo' => __('company.logo'),
         ], StructuredAddressValidation::attributeNames()));
 
@@ -171,13 +169,11 @@ class CompanyController extends Controller
                     ->where(fn ($q) => $q->where('company_id', $company->id))
                     ->ignore($branch->id),
             ],
-            'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'is_active' => 'nullable|boolean',
         ], StructuredAddressValidation::rules()), [], array_merge([
             'name' => __('company.branch_name'),
             'code' => __('company.branch_code'),
-            'address' => __('company.legacy_address'),
             'phone' => __('company.branch_phone'),
         ], StructuredAddressValidation::attributeNames()));
 
@@ -185,7 +181,6 @@ class CompanyController extends Controller
             [
                 'name' => $validated['name'],
                 'code' => $validated['code'],
-                'address' => $validated['address'] ?? null,
                 'phone' => $validated['phone'] ?? null,
                 'is_active' => $request->boolean('is_active', true),
             ],
@@ -222,6 +217,11 @@ class CompanyController extends Controller
 
     public function update(Request $request, Company $company): RedirectResponse
     {
+        if ($request->has('toggle_active')) {
+            $company->update(['is_active' => ! $company->is_active]);
+            return redirect()->route('companies.index')->with('success', __('common.saved'));
+        }
+
         $validated = $request->validate(array_merge([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50|unique:companies,code,'.$company->id,
@@ -232,7 +232,6 @@ class CompanyController extends Controller
             'fax' => 'nullable|string|max:20',
             'website' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'address' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_active' => 'boolean',
         ], StructuredAddressValidation::rules()), [], array_merge([
@@ -245,7 +244,6 @@ class CompanyController extends Controller
             'fax' => __('company.fax'),
             'website' => __('company.website'),
             'description' => __('common.description'),
-            'address' => __('company.legacy_address'),
             'logo' => __('company.logo'),
         ], StructuredAddressValidation::attributeNames()));
 

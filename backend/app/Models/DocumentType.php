@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoCode;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class DocumentType extends Model
 {
+    use HasAutoCode;
+
     protected $fillable = [
+        'auto_code',
         'code',
         'label_en',
         'label_th',
@@ -49,11 +53,36 @@ class DocumentType extends Model
     }
 
     /**
+     * Look up an active document type by code (cached via allActive()).
+     */
+    public static function resolveByCode(?string $code): ?self
+    {
+        if ($code === null || $code === '') {
+            return null;
+        }
+
+        return self::allActive()->firstWhere('code', $code);
+    }
+
+    /**
+     * Icon name for a document type code, or null if not found / unset.
+     */
+    public static function iconFor(?string $code): ?string
+    {
+        return self::resolveByCode($code)?->icon;
+    }
+
+    /**
      * Flush cached types when saving/deleting.
      */
     protected static function booted(): void
     {
         static::saved(fn () => Cache::forget('document_types_active'));
         static::deleted(fn () => Cache::forget('document_types_active'));
+    }
+
+    protected function autoCodePrefix(): string
+    {
+        return 'DOCTYPE';
     }
 }

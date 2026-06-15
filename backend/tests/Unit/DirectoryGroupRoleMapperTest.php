@@ -25,10 +25,10 @@ class DirectoryGroupRoleMapperTest extends TestCase
     public function test_matches_substring_case_insensitive(): void
     {
         Role::create(['name' => 'approver', 'guard_name' => 'web']);
-        Role::create(['name' => 'viewer', 'guard_name' => 'web']);
+        Role::create(['name' => 'employee', 'guard_name' => 'web']);
         Setting::set('auth_directory_group_role_map', json_encode([
             ['pattern' => 'cn=app-approvers', 'role' => 'approver'],
-            ['pattern' => 'other', 'role' => 'viewer'],
+            ['pattern' => 'other', 'role' => 'employee'],
         ]));
 
         $hints = ['CN=App-Approvers,OU=Groups,DC=corp,DC=local'];
@@ -39,7 +39,7 @@ class DirectoryGroupRoleMapperTest extends TestCase
 
     public function test_filters_nonexistent_roles(): void
     {
-        Role::create(['name' => 'viewer', 'guard_name' => 'web']);
+        Role::create(['name' => 'employee', 'guard_name' => 'web']);
         Setting::set('auth_directory_group_role_map', json_encode([
             ['pattern' => 'grp', 'role' => 'ghost-role'],
         ]));

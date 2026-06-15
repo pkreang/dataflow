@@ -29,6 +29,15 @@
     </div>
     @endif
 
+    @if(session('error'))
+    <div class="alert-error">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/>
+        </svg>
+        {{ session('error') }}
+    </div>
+    @endif
+
     {{-- Last login / security card --}}
     <div class="card p-4">
         <div class="flex items-center justify-between mb-2">
@@ -208,6 +217,7 @@
                     @else
                         <input type="email" id="email" value="{{ $user->email }}" readonly
                                class="form-input bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 cursor-not-allowed">
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.email_readonly_hint') }}</p>
                     @endif
                 </div>
 
@@ -266,26 +276,44 @@
                 </div>
 
                 <div>
-                    <label for="line_notify_token" class="form-label">
+                    <label class="form-label">
                         <span class="inline-flex items-center gap-1.5">
                             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755z"/></svg>
-                            {{ __('notifications.line_notify_token') }}
+                            LINE Official Account
                         </span>
                     </label>
-                    <input type="text" name="line_notify_token" id="line_notify_token" value="{{ old('line_notify_token', $user->line_notify_token) }}"
-                           placeholder="{{ __('notifications.line_notify_token_placeholder') }}" class="form-input">
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {{ __('notifications.line_notify_token_hint') }}
-                        <a href="https://notify-bot.line.me/" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">notify-bot.line.me</a>
-                    </p>
+                    @if($user->line_user_id)
+                        <div class="flex items-center gap-3 mt-1">
+                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                {{ __('notifications.line_linked') }}
+                            </span>
+                        </div>
+                    @else
+                        <a href="{{ route('auth.line.redirect') }}" class="btn-secondary inline-flex items-center gap-2 mt-1">
+                            <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755z"/></svg>
+                            {{ __('notifications.line_link_account') }}
+                        </a>
+                    @endif
                 </div>
 
             </div>
+
             <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
                 <a href="{{ url()->previous() }}" class="btn-secondary">{{ __('common.cancel') }}</a>
                 <button type="submit" class="btn-primary">{{ __('common.save') }}</button>
             </div>
         </form>
+
+        @if($user->line_user_id)
+            {{-- Unlink LINE — MUST be outside the main profile form (nested forms are invalid HTML) --}}
+            <form method="POST" action="{{ route('auth.line.unlink') }}" class="mt-2 px-4">
+                @csrf
+                <button type="submit" class="text-xs text-red-600 dark:text-red-400 hover:underline">
+                    {{ __('notifications.line_unlink') }}
+                </button>
+            </form>
+        @endif
     </div>
 
     {{-- Connected account / SSO info --}}
@@ -326,6 +354,32 @@
                 ✓ {{ __('common.email_verified') }} · {{ $user->email_verified_at->format('d M Y') }}
             </p>
         @endif
+    </div>
+
+    {{-- Home dashboard preference --}}
+    <div class="card p-6">
+        <h3 class="font-semibold text-slate-900 dark:text-slate-100">{{ __('common.home_dashboard') }}</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">{{ __('common.home_dashboard_desc') }}</p>
+        <form method="POST" action="{{ route('profile.home-dashboard.update') }}" class="flex flex-wrap items-end gap-3">
+            @csrf
+            @method('PATCH')
+            <div class="flex-1 min-w-[240px]">
+                <label for="home_dashboard_id" class="form-label">{{ __('common.dashboard') }}</label>
+                <select name="home_dashboard_id" id="home_dashboard_id" class="form-input mt-1">
+                    <option value="">{{ __('common.use_system_default') }}</option>
+                    @foreach($availableHomeDashboards as $dashboardOption)
+                        <option value="{{ $dashboardOption->id }}"
+                            @selected(old('home_dashboard_id', $user->home_dashboard_id) == $dashboardOption->id)>
+                            {{ $dashboardOption->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('home_dashboard_id')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+            <button type="submit" class="btn-primary">{{ __('common.save') }}</button>
+        </form>
     </div>
 
     {{-- Notification preferences --}}

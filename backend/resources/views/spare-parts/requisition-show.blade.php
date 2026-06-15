@@ -210,21 +210,7 @@
             </div>
 
             @if ($canAct)
-                <div class="card p-5">
-                    <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-3">{{ __('common.approval_actions_title') }}</h3>
-                    <form method="POST" action="{{ route('approvals.act', $instance) }}" class="space-y-3" novalidate>
-                        @csrf
-                        <div>
-                            <label class="form-label">{{ __('common.approval_comment') }}</label>
-                            <textarea name="comment" rows="2" placeholder="{{ __('common.approval_comment_placeholder') }}"
-                                      class="form-input mt-1"></textarea>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="submit" name="action" value="approved" class="btn-primary">{{ __('common.approve') }}</button>
-                            <button type="submit" name="action" value="rejected" class="btn-danger">{{ __('common.reject') }}</button>
-                        </div>
-                    </form>
-                </div>
+                <x-approval-action :instance="$instance" />
             @endif
         </div>
     </div>

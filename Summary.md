@@ -142,6 +142,11 @@ Logic หลักใน `app/Services/ApprovalFlowService.php`
 - **`navigation_menus`** รองรับ branch scoping — เมนูบางรายการแสดงเฉพาะสาขาที่กำหนด
 - **`BranchScopingController`** — จัดการ isolation ข้อมูลตามสาขาของผู้ใช้
 
+### ปฏิทินวันหยุด & ตารางกะ (เพิ่ม 2026-06-12)
+
+- **ปฏิทินวันหยุด** (`/settings/holidays`, org-wide ชุดเดียว): ตาราง `holidays` → `App\Support\WorkdayCalculator` → ฟังก์ชัน **`WORKDAYS(date_from, date_to)`** ในฟอร์ม = จำนวนวันหักวันหยุด (ไม่หักเสาร์-อาทิตย์ by design) — ฟอร์มใบลาทุกตัวเปลี่ยนมาใช้แล้ว; `HolidaySeeder` ใส่วันหยุดไทย 2026 ให้เริ่มต้น
+- **ตารางกะ** (`/settings/shifts`): ทะเบียนกะ (รองรับกะข้ามคืน) + มอบหมายกะต่อ user แบบช่วงวันที่ + วันทำงานต่อสัปดาห์ — `User::currentShift()` แสดงในหน้า Users; roster รายวัน/หมุนเวียนยังเป็น backlog
+
 ### Navigation (sidebar)
 
 - ข้อมูลจากตาราง **`navigation_menus`**

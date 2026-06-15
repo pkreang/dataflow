@@ -10,10 +10,7 @@
 @endsection
 
 @section('content')
-@php
-    $totalForms = $forms->count();
-@endphp
-<div x-data="{ search: '' }" class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-2">
         <div>
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.document_forms') }}</h2>
@@ -21,24 +18,25 @@
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.document_forms_list_subtitle', ['count' => $totalForms]) }}</p>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{{ route('settings.document-forms.create') }}" class="btn-primary">
+            <a href="{{ route('settings.document-forms.create') }}" class="btn-primary inline-flex items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                {{ __('common.add') }}
+                {{ __('common.add_document_form') }}
             </a>
         </div>
     </div>
 
     {{-- Search --}}
-    <div class="mb-5">
+    <form method="GET" action="{{ route('settings.document-forms.index') }}" class="mb-5">
         <div class="relative max-w-sm">
             <svg class="w-4 h-4 text-slate-400 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
-            <input type="text" x-model="search" placeholder="{{ __('common.search_forms_placeholder') }}"
-                   class="form-input w-full" style="padding-left: 2.5rem;">
+            <input type="text" name="search" value="{{ $search }}" placeholder="{{ __('common.search_forms_placeholder') }}"
+                   class="form-input w-full" style="padding-left: 2.5rem;"
+                   onchange="this.form.submit()">
         </div>
-    </div>
+    </form>
 
     @if (session('error'))
         <div class="alert-error mb-4">{{ session('error') }}</div>
@@ -54,24 +52,18 @@
             ['key' => 'document_type', 'label' => __('common.document_type')],
             ['key' => 'fields', 'label' => __('common.fields')],
             ['key' => 'workflow_policy', 'label' => __('common.workflow_policy')],
-            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'updated_at', 'label' => __('common.updated_at')],
+            ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'actions', 'label' => __('common.actions'), 'class' => 'text-right'],
         ]"
         :rows="$forms"
         :empty-message="__('common.no_data')"
         :empty-cta-href="route('settings.document-forms.create')"
         :empty-cta-label="__('common.add')"
+        :disable-pagination="true"
     >
         @foreach ($forms as $form)
-            @php
-                $searchBlob = Str::lower($form->name . ' ' . $form->form_key . ' ' . $form->document_type);
-            @endphp
-            <tr
-                class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150"
-                data-search="{{ e($searchBlob) }}"
-                x-show="!search.trim() || ($el.dataset.search || '').includes(search.toLowerCase())"
-            >
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
                 <td class="px-4 py-3 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-violet-500 flex items-center justify-center shrink-0">
@@ -84,7 +76,12 @@
                     </div>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap">
-                    <span class="badge-gray">{{ $form->document_type }}</span>
+                    <span class="inline-flex items-center gap-1.5">
+                        @if ($iconName = \App\Models\DocumentType::iconFor($form->document_type))
+                            <x-nav-icon :name="$iconName" class="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                        @endif
+                        <span class="badge-gray">{{ $form->document_type }}</span>
+                    </span>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                     {{ $form->fields_count }}
@@ -101,6 +98,9 @@
                         <span class="badge-gray">{{ __('common.policy_summary_not_configured') }}</span>
                     @endif
                 </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                    {{ $form->updated_at ? $form->updated_at->format('M d, Y') : '-' }}
+                </td>
                 <td class="px-4 py-3 whitespace-nowrap">
                     @if ($form->is_active)
                         <span class="badge-green">{{ __('common.active') }}</span>
@@ -108,12 +108,10 @@
                         <span class="badge-red">{{ __('common.inactive') }}</span>
                     @endif
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                    {{ $form->updated_at ? $form->updated_at->format('M d, Y') : '-' }}
-                </td>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('settings.document-forms.edit', $form), 'icon' => 'edit'],
+                        ['label' => $form->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.document-forms.update', $form), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.workflow_policy'), 'href' => route('settings.document-forms.policy.edit', $form)],
                         ['label' => __('common.clone'), 'method' => 'POST', 'action' => route('settings.document-forms.clone', $form)],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('settings.document-forms.destroy', $form), 'icon' => 'delete', 'confirm' => __('common.delete_confirm_msg', ['name' => $form->name]), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
@@ -122,5 +120,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$forms" :perPage="$perPage" id="document-forms-pagination" />
 </div>
 @endsection

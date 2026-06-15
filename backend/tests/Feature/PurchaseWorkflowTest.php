@@ -95,10 +95,10 @@ class PurchaseWorkflowTest extends TestCase
         $this->assertDatabaseHas('approval_workflows', ['name' => 'PO - Standard',     'document_type' => 'purchase_order']);
     }
 
-    public function test_purchase_request_web_route_removed_for_school_product(): void
+    public function test_purchase_request_web_route_requires_auth(): void
     {
         $response = $this->get('/purchase-requests');
-        $response->assertNotFound();
+        $response->assertRedirect();
     }
 
     public function test_purchase_request_items_table_exists(): void

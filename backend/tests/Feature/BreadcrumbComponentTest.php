@@ -22,50 +22,31 @@ class BreadcrumbComponentTest extends TestCase
         $this->assertStringNotContainsString('href="https://app.test/users"', $html);
     }
 
-    public function test_two_item_trail_does_not_auto_prepend_home(): void
+    public function test_no_auto_prepend_regardless_of_trail_size(): void
     {
-        // Threshold raised to 3 — 2-item trail must NOT pull Dashboard in front.
-        // Section-level pages (e.g. /settings/branding, /forms/{key}/submissions)
-        // render their own intermediate as the visible root.
+        // Component renders exactly the items the caller passed — no
+        // Dashboard auto-prepend at any size. Dashboard is sidebar-reachable;
+        // a "Dashboard /" prefix on every page is noise.
         $homeUrl = route('dashboard');
-        $html = $this->render([
-            ['label' => 'Settings', 'url' => 'https://app.test/settings'],
-            ['label' => 'Detail'],
-        ]);
 
-        $this->assertSame(0, substr_count($html, 'href="'.$homeUrl.'"'),
-            'Home link should be absent on 2-item trail under the new threshold');
-        $this->assertStringContainsString('>Settings</a>', $html);
-        $this->assertStringContainsString('>Detail</span>', $html);
+        foreach ([1, 2, 3, 4] as $size) {
+            $items = [];
+            for ($i = 0; $i < $size - 1; $i++) {
+                $items[] = ['label' => "Mid {$i}", 'url' => 'https://app.test/x'];
+            }
+            $items[] = ['label' => 'Leaf'];
+
+            $html = $this->render($items);
+
+            $this->assertSame(0, substr_count($html, 'href="'.$homeUrl.'"'),
+                "Home link should be absent on {$size}-item trail");
+        }
     }
 
-    public function test_three_or_more_item_trail_auto_prepends_home(): void
+    public function test_caller_can_explicitly_include_home(): void
     {
-        $homeUrl = route('dashboard');
-        $html = $this->render([
-            ['label' => 'Settings', 'url' => 'https://app.test/settings'],
-            ['label' => 'Lookups', 'url' => 'https://app.test/settings/lookups'],
-            ['label' => 'Edit'],
-        ]);
-
-        $this->assertSame(1, substr_count($html, 'href="'.$homeUrl.'"'),
-            'Home should appear exactly once for 3-item trails');
-    }
-
-    public function test_single_item_trail_does_not_auto_prepend_home(): void
-    {
-        // 1-item (top-level) trail must NOT pull Dashboard in front — that
-        // duplicates the page <h1> and the sidebar Home link.
-        $html = $this->render([['label' => 'Custom Page']]);
-
-        $homeUrl = route('dashboard');
-        $this->assertSame(0, substr_count($html, 'href="'.$homeUrl.'"'),
-            'Home link should be absent on single-item trail');
-        $this->assertStringContainsString('>Custom Page</span>', $html);
-    }
-
-    public function test_does_not_double_prepend_when_caller_already_includes_home(): void
-    {
+        // If the caller wants Home as the first crumb, they include it
+        // themselves. The component renders it once, like any other item.
         $homeUrl = route('dashboard');
 
         $html = $this->render([
@@ -78,9 +59,8 @@ class BreadcrumbComponentTest extends TestCase
 
     public function test_empty_items_renders_no_crumbs(): void
     {
-        // Caller passed no items → trail stays empty (0 items < 2 threshold).
-        // This is the historical contract: an empty <ol> is fine; nothing
-        // crashes, no Dashboard label is forced into existence.
+        // Caller passed no items → trail stays empty. An empty <ol> is fine;
+        // nothing crashes, no Dashboard label is forced into existence.
         $html = $this->render([]);
 
         $this->assertStringContainsString('<nav aria-label="Breadcrumb">', $html);

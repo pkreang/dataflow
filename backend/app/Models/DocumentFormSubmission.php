@@ -13,10 +13,12 @@ class DocumentFormSubmission extends Model
     protected $fillable = [
         'form_id',
         'user_id',
+        'created_by_user_id',
         'department_id',
         'payload',
         'status',
         'approval_instance_id',
+        'parent_submission_id',
         'reference_no',
         'fdata_row_id',
         'deleted_by',
@@ -43,6 +45,7 @@ class DocumentFormSubmission extends Model
             return false;
         }
         $ids = $this->assigned_editor_user_ids ?? [];
+
         return in_array($userId, array_map('intval', $ids), true);
     }
 
@@ -83,6 +86,24 @@ class DocumentFormSubmission extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    /** Filed by someone other than the document owner ("submit on behalf"). */
+    public function isOnBehalf(): bool
+    {
+        return $this->created_by_user_id !== null
+            && (int) $this->created_by_user_id !== (int) $this->user_id;
+    }
+
+    /** True when the given user is the person who actually filed this document. */
+    public function isCreator(?int $userId): bool
+    {
+        return $userId && (int) $this->created_by_user_id === (int) $userId;
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class);
@@ -91,6 +112,24 @@ class DocumentFormSubmission extends Model
     public function instance()
     {
         return $this->belongsTo(ApprovalInstance::class, 'approval_instance_id');
+    }
+
+    /**
+     * Parent submission — set when this row is an evaluation/feedback for
+     * another submission. NULL for normal first-class submissions.
+     */
+    public function originalSubmission()
+    {
+        return $this->belongsTo(self::class, 'parent_submission_id');
+    }
+
+    /**
+     * Child submissions that reference this one as their parent.
+     * For approved work items, this surfaces the requester's evaluation.
+     */
+    public function evaluations()
+    {
+        return $this->hasMany(self::class, 'parent_submission_id');
     }
 
     /**
@@ -169,7 +208,7 @@ class DocumentFormSubmission extends Model
     {
         $isOwner = (int) $this->user_id === (int) $viewer['id'];
         $isAssignee = $this->isAssignedEditor((int) $viewer['id']);
-        $canView = $isOwner || $isAssignee || $viewer['can_approve'] || $viewer['is_super_admin'];
+        $canView = $isOwner || $isAssignee || ($viewer['is_related_approver'] ?? false) || $viewer['is_super_admin'];
         $canEditDraft = ($isOwner || $isAssignee) && $this->status === 'draft';
         $canDeleteDraft = $isOwner && $this->status === 'draft';
         $canDuplicate = $isOwner;
@@ -259,6 +298,21 @@ class DocumentFormSubmission extends Model
                 'action' => $duplicateUrl,
                 'method' => 'POST',
                 'icon' => 'duplicate',
+            ];
+        }
+        // Post-action evaluation — owner of an approved submission rates the work.
+        // Hide for evaluation submissions themselves (avoid evaluate-the-evaluation)
+        // and only when the form has evaluation_enabled=true (admin opt-in per form).
+        if ($status === 'approved' && $isOwner && $this->parent_submission_id === null
+            && (bool) ($this->form?->evaluation_enabled ?? false)
+            && app(\App\Services\EvaluationFormResolver::class)->hasFormFor($this)) {
+            $existingEval = $this->evaluations()->first();
+            $menu[] = [
+                'label' => $existingEval ? __('common.view_evaluation') : __('common.action_evaluate'),
+                'href' => $existingEval
+                    ? route('forms.submission.show', $existingEval)
+                    : route('forms.submission.evaluate', $this),
+                'icon' => 'view',
             ];
         }
         if ($canDeleteDraft) {

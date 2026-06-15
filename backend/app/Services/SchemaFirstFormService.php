@@ -131,17 +131,18 @@ class SchemaFirstFormService
         foreach ($def as $field) {
             $r = $field->is_required ? ['required'] : ['nullable'];
 
-            $r[] = match ($field->field_type) {
-                'number', 'currency' => 'numeric',
-                'date' => 'date',
-                'datetime' => 'date',
-                'time' => 'string',
-                'email' => 'email',
-                'checkbox', 'multi_select' => 'array',
-                'image' => 'file|image|max:5120',
-                'file' => 'file',
-                default => 'string',
-            };
+            // Rules array — pipe-joined strings are NOT split inside arrays.
+            $r = array_merge($r, match ($field->field_type) {
+                'number', 'currency' => ['numeric'],
+                'date' => ['date'],
+                'datetime' => ['date'],
+                'time' => ['string'],
+                'email' => ['email'],
+                'checkbox', 'multi_select' => ['array'],
+                'image' => ['file', 'image', 'max:5120'],
+                'file' => ['file'],
+                default => ['string'],
+            });
 
             $rules[$field->field_key] = $r;
         }
@@ -181,7 +182,7 @@ class SchemaFirstFormService
      */
     private function parseEnumOptions(string $type): ?array
     {
-        if (! preg_match("/^enum\\((.+)\\)$/i", $type, $m)) {
+        if (! preg_match('/^enum\\((.+)\\)$/i', $type, $m)) {
             return null;
         }
         $raw = $m[1];

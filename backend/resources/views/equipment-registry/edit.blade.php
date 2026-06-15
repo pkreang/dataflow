@@ -95,25 +95,27 @@
                     </select>
                 </div>
 
-                <div>
-                    <label class="form-label">{{ __('common.companies') }}</label>
-                    <select name="company_id" x-model="companyId" class="form-input">
-                        <option value="">{{ __('common.please_select') }}</option>
-                        @foreach ($companies as $co)
-                            <option value="{{ $co->id }}" {{ old('company_id', $equipment->company_id) == $co->id ? 'selected' : '' }}>{{ $co->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                @if ($branchesManagementEnabled ?? true)
+                    <div>
+                        <label class="form-label">{{ __('common.companies') }}</label>
+                        <select name="company_id" x-model="companyId" class="form-input">
+                            <option value="">{{ __('common.please_select') }}</option>
+                            @foreach ($companies as $co)
+                                <option value="{{ $co->id }}" {{ old('company_id', $equipment->company_id) == $co->id ? 'selected' : '' }}>{{ $co->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <div>
-                    <label class="form-label">Branch</label>
-                    <select name="branch_id" class="form-input">
-                        <option value="">{{ __('common.please_select') }}</option>
-                        <template x-for="branch in branches" :key="branch.id">
-                            <option :value="branch.id" x-text="branch.name" :selected="branch.id == '{{ old('branch_id', $equipment->branch_id) }}'"></option>
-                        </template>
-                    </select>
-                </div>
+                    <div>
+                        <label class="form-label">{{ __('common.branch') }}</label>
+                        <select name="branch_id" class="form-input">
+                            <option value="">{{ __('common.please_select') }}</option>
+                            <template x-for="branch in branches" :key="branch.id">
+                                <option :value="branch.id" x-text="branch.name" :selected="branch.id == '{{ old('branch_id', $equipment->branch_id) }}'"></option>
+                            </template>
+                        </select>
+                    </div>
+                @endif
 
                 <div>
                     <label class="form-label">

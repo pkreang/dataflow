@@ -1,0 +1,1303 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Console/Commands/BackfillDedicatedTableCommand.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Console/Commands/ClearDocumentModuleCommand.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$full_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$position\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Left side of && is always false\.$#'
+			identifier: booleanAnd.leftAlwaysFalse
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Match arm comparison between ''table'' and ''table'' is always true\.$#'
+			identifier: match.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Offset ''date_field'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Offset ''date_preset'' does not exist on array\{\}\|string\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Offset ''date_preset'' on array\{\}\|string in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/Api/DashboardWidgetDataController.php
+
+		-
+			message: '#^Relation ''category'' is not found in App\\Models\\Equipment model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Api/EquipmentRegistryController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\Equipment model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Api/EquipmentRegistryController.php
+
+		-
+			message: '#^Relation ''location'' is not found in App\\Models\\Equipment model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Api/EquipmentRegistryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/InboundController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:fields\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Api/InboundController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Api/InboundController.php
+
+		-
+			message: '#^Access to an undefined property Spatie\\Permission\\Models\\Permission\:\:\$module\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/PermissionController.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Api/PermissionController.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Api/RoleController.php
+
+		-
+			message: '#^Property Spatie\\Permission\\Contracts\\Role\:\:\$users_count is not writable\.$#'
+			identifier: assign.propertyReadOnly
+			count: 1
+			path: app/Http/Controllers/Api/RoleController.php
+
+		-
+			message: '#^Property Spatie\\Permission\\Models\\Role\:\:\$users_count is not writable\.$#'
+			identifier: assign.propertyReadOnly
+			count: 3
+			path: app/Http/Controllers/Api/RoleController.php
+
+		-
+			message: '#^Relation ''branch'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Api/UserController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Api/UserController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Relation ''formSubmission'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Relation ''requester'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>approved_by" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>min_approvals" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/ApprovalController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$photo_path\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Cmms/PmWorkOrderController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$runtime_hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/Cmms/PmWorkOrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Department\:\:\$workflowBindings\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DepartmentController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DepartmentController.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/Web/DepartmentController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormController.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormController.php
+
+		-
+			message: '#^Relation ''workflowPolicies'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormController.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 14
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$instance\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$formSubmission\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/ApprovalInstance.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\{field\?\: string, operator\?\: string, value\?\: mixed\} will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Left side of && is always true\.$#'
+			identifier: booleanAnd.leftAlwaysTrue
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Relation ''form'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Relation ''instance'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Relation ''latestActivity'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormSubmissionController.php
+
+		-
+			message: '#^Relation ''ranges'' is not found in App\\Models\\DocumentFormWorkflowPolicy model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/DocumentFormWorkflowPolicyController.php
+
+		-
+			message: '#^Relation ''equipment'' is not found in App\\Models\\EquipmentLocation model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EquipmentLocationController.php
+
+		-
+			message: '#^Relation ''branches'' is not found in App\\Models\\Company model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/EquipmentRegistryController.php
+
+		-
+			message: '#^Relation ''category'' is not found in App\\Models\\Equipment model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EquipmentRegistryController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\Equipment model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EquipmentRegistryController.php
+
+		-
+			message: '#^Relation ''location'' is not found in App\\Models\\Equipment model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EquipmentRegistryController.php
+
+		-
+			message: '#^Offset ''overall_rating'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Relation ''form'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Relation ''instance'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Relation ''originalSubmission'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Web/EvaluationReportController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:fields\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/IncomingWebhookController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$extra\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/LookupListController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/LookupListController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/LookupListController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label_th\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/LookupListController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sort_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/LookupListController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/LookupListController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/LookupListController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$requester\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$branch\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$company\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Relation ''branch'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>fields" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/MaintenanceController.php
+
+		-
+			message: '#^Relation ''form'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''formSubmission'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''instance'' is not found in App\\Models\\DocumentFormSubmission model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''requester'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/MobileController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ReportDashboard\:\:\$widgets\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/MyReportController.php
+
+		-
+			message: '#^Access to an undefined property Spatie\\Permission\\Models\\Permission\:\:\$module\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PermissionController.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Web/PermissionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$full_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$reference_no\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\ProfileController\:\:currentUser\(\) should return App\\Models\\User\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>reference_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/ProfileController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$requester\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$branch\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$company\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\PurchaseOrderController\:\:create\(\) should return Illuminate\\View\\View but returns Illuminate\\Http\\RedirectResponse\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Offset ''purchase_request_id'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Relation ''branch'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>fields" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Variable \$pr in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.variable
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseOrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$requester\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$branch\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$company\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Relation ''branch'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>fields" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/PurchaseRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$requester\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$branch\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$company\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Relation ''branch'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>fields" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/RepairRequestController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ReportDashboard\:\:\$widgets\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportDashboardController.php
+
+		-
+			message: '#^Access to an undefined property Spatie\\Permission\\Models\\Permission\:\:\$module\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RoleController.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Web/RoleController.php
+
+		-
+			message: '#^Property Spatie\\Permission\\Models\\Role\:\:\$users_count is not writable\.$#'
+			identifier: assign.propertyReadOnly
+			count: 1
+			path: app/Http/Controllers/Web/RoleController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RunningNumberController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$requester\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$branch\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$company\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$current_stock\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$min_stock\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Relation ''branch'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Relation ''company'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>fields" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>unit_cost" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/SparePartsController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$full_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Access to an undefined property Spatie\\Permission\\Models\\Permission\:\:\$action\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Access to an undefined property Spatie\\Permission\\Models\\Permission\:\:\$module\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>payload" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>reference_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalWorkflow\:\:\$stages\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkflowController.php
+
+		-
+			message: '#^Cannot call method greaterThan\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Middleware/AuthenticateWeb.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Listeners/Approval/SendApprovalPendingNotification.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$requester\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Listeners/Approval/SendWorkflowOutcomeNotification.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/DocumentFormSubmission.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-string and '''' will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Models/DocumentFormSubmission.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Models/DocumentFormSubmission.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>evaluation_enabled" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/DocumentFormSubmission.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>status" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/DocumentFormSubmission.php
+
+		-
+			message: '#^Method App\\Models\\DocumentType\:\:resolveByCode\(\) should return App\\Models\\DocumentType\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/DocumentType.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between ''permission'' and ''permission'' will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: app/Models/ReportDashboard.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Models/SystemChangeLog.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>is_super_admin" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalInstance\:\:\$workflow\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApprovalWorkflow\:\:\$stages\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentFormWorkflowPolicy\:\:\$ranges\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$full_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Relation ''ranges'' is not found in App\\Models\\DocumentFormWorkflowPolicy model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Relation ''stages'' is not found in App\\Models\\ApprovalWorkflow model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Relation ''steps'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Relation ''workflow'' is not found in App\\Models\\ApprovalInstance model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>full_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/ApprovalFlowService.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Auth/DirectoryGroupRoleMapper.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Auth/DirectoryUserProvisioner.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$estimated_minutes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$expected_value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_critical\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$loto_required\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$requires_photo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$requires_signature\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$spare_part_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$step_no\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$task_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Cannot call method copy\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Cannot call method lte\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between ''runtime'' and ''runtime'' will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Services/Cmms/PmWorkOrderGenerator.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$form\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/EvaluationFormResolver.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/FormSchemaService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Kpi/KpiCycleReporter.php
+
+		-
+			message: '#^Cannot access property \$month on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Services/RunningNumberService.php
+
+		-
+			message: '#^Cannot access property \$year on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Services/RunningNumberService.php
+
+		-
+			message: '#^Method App\\Services\\SchemaFirstFormService\:\:getFormDefinition\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, object\{field_key\: string, label\: string, field_type\: string, is_required\: bool, col_span\: int, placeholder\: string\|null, options\: array\<int, string\>\|non\-falsy\-string\|null, visibility_rules\: string\|null, validation_rules\: string\|null, visible_to_departments\: array\{\}, effective_editable_by\: array\{''requester''\}\}&stdClass\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/SchemaFirstFormService.php
+
+		-
+			message: '#^Offset ''a'' on array\{t\: string, a\: string, p\: string, z\: string, i\: int\} in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/ThailandAddressSearchService.php
+
+		-
+			message: '#^Offset ''i'' on array\{t\: string, a\: string, p\: string, z\: string, i\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/ThailandAddressSearchService.php
+
+		-
+			message: '#^Offset ''p'' on array\{t\: string, a\: string, p\: string, z\: string, i\: int\} in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/ThailandAddressSearchService.php
+
+		-
+			message: '#^Offset ''t'' on array\{t\: string, a\: string, p\: string, z\: string, i\: int\} in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/ThailandAddressSearchService.php
+
+		-
+			message: '#^Offset ''z'' on array\{t\: string, a\: string, p\: string, z\: string, i\: int\} in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/ThailandAddressSearchService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Support/DataSourceRegistry.php
+
+		-
+			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Support/DataSourceRegistry.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\DocumentFormSubmission\:\:\$submittedActivity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Support/QrTemplateResolver.php
+
+		-
+			message: '#^Call to function is_array\(\) with '''' will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Support/QrTemplateResolver.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Support/QrTemplateResolver.php
+
+		-
+			message: '#^Call to function method_exists\(\) with App\\Models\\DocumentFormSubmission and ''submittedActivity'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Support/QrTemplateResolver.php
+
+		-
+			message: '#^Offset non\-empty\-string on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Support/QrTemplateResolver.php

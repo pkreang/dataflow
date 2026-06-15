@@ -31,6 +31,52 @@
         </div>
     @endif
 
+    @if (session('success'))
+        <div class="alert-success mb-4"><p class="text-sm">{{ session('success') }}</p></div>
+    @endif
+    @if (session('error'))
+        <div class="alert-error mb-4"><p class="text-sm">{{ session('error') }}</p></div>
+    @endif
+
+    {{-- Temp password banner — only ever flashed once, kept in session.with() so it's gone on refresh --}}
+    @if (session('temp_password'))
+        <div class="card p-4 mb-6 border-2 border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20"
+             x-data="{ copied: false }">
+            <p class="text-xs font-semibold text-emerald-800 dark:text-emerald-200 mb-2">{{ __('users.password_reset_warning') }}</p>
+            <div class="flex items-center gap-2">
+                <code class="flex-1 px-3 py-2 rounded bg-white dark:bg-slate-900 font-mono text-base text-slate-900 dark:text-slate-100 border border-emerald-300 dark:border-emerald-800">{{ session('temp_password') }}</code>
+                <button type="button"
+                        @click="navigator.clipboard.writeText('{{ session('temp_password') }}'); copied = true; setTimeout(() => copied = false, 1500)"
+                        class="btn-secondary text-xs whitespace-nowrap">
+                    <span x-show="!copied">{{ __('users.password_copy') }}</span>
+                    <span x-show="copied" x-cloak>{{ __('users.password_copied') }}</span>
+                </button>
+            </div>
+        </div>
+    @endif
+
+    {{-- Password management section — visible to super-admin only (route-level enforced) --}}
+    @if (session('user.is_super_admin'))
+        <div class="card p-5 mb-6">
+            <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2">{{ __('users.password_section_title') }}</h3>
+            @if (request('just_created'))
+                <p class="text-sm text-amber-700 dark:text-amber-300 mb-3">{{ __('users.password_just_created_hint') }}</p>
+            @endif
+            <div class="flex flex-wrap items-center gap-2">
+                <form method="POST" action="{{ route('users.password.reset', $user) }}"
+                      onsubmit="return confirm('{{ __('users.password_reset_confirm') }}')">
+                    @csrf
+                    <button type="submit" class="btn-secondary text-sm">{{ __('users.password_reset_button') }}</button>
+                </form>
+                <form method="POST" action="{{ route('users.password.send-link', $user) }}"
+                      onsubmit="return confirm('{{ __('users.password_link_confirm') }}')">
+                    @csrf
+                    <button type="submit" class="btn-secondary text-sm">{{ __('users.password_link_button') }}</button>
+                </form>
+            </div>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('users.update', $user) }}" id="user-edit-form" x-data="{ roleType: '{{ $roleType }}' }" novalidate>
         @csrf
         @method('PUT')
@@ -77,7 +123,7 @@
                     @else
                         <input type="email" id="email" value="{{ $user->email }}" readonly
                                class="form-input bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 cursor-not-allowed">
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.email_directory_managed_hint') }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.email_readonly_hint') }}</p>
                     @endif
                 </div>
                 <div>
@@ -108,6 +154,41 @@
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <div>
+                    <label for="manager_id" class="form-label">{{ __('users.manager') }}</label>
+                    <select name="manager_id" id="manager_id"
+                            class="form-input @error('manager_id') form-input-error @enderror">
+                        <option value="">—</option>
+                        @foreach ($allUsers as $u)
+                            <option value="{{ $u->id }}" @selected(old('manager_id', $user->manager_id) == $u->id)>
+                                {{ $u->first_name }} {{ $u->last_name }} ({{ $u->email }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.manager_hint') }}</p>
+                    @error('manager_id')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="org_unit_id" class="form-label">{{ __('users.org_unit') }}</label>
+                    <select name="org_unit_id" id="org_unit_id"
+                            class="form-input @error('org_unit_id') form-input-error @enderror">
+                        <option value="">—</option>
+                        @foreach ($orgUnits as $unit)
+                            <option value="{{ $unit->id }}" @selected(old('org_unit_id', $user->org_unit_id) == $unit->id)>
+                                {{ $unit->name }} ({{ $unit->auto_code }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.org_unit_hint') }}</p>
+                    @error('org_unit_id')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <div>
                     <label for="phone" class="form-label">{{ __('users.phone') }}</label>
                     <input type="tel" name="phone" id="phone" value="{{ old('phone', $user->phone) }}" maxlength="50"

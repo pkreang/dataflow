@@ -54,22 +54,6 @@
                 </label>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 ml-7">{{ __('common.branch_scoping_master_help') }}</p>
 
-                <div class="mt-6 ml-7 space-y-3 border-t border-slate-200 dark:border-slate-600 pt-4">
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="hidden" name="toggle[branch_scoping.equipment]" value="0">
-                        <input type="checkbox" name="toggle[branch_scoping.equipment]" value="1"
-                               {{ ($settings['branch_scoping.equipment'] ?? '1') === '1' ? 'checked' : '' }}
-                               class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
-                        <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('common.branch_scoping_equipment') }}</span>
-                    </label>
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="hidden" name="toggle[branch_scoping.spare_parts]" value="0">
-                        <input type="checkbox" name="toggle[branch_scoping.spare_parts]" value="1"
-                               {{ ($settings['branch_scoping.spare_parts'] ?? '1') === '1' ? 'checked' : '' }}
-                               class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
-                        <span class="text-sm text-slate-700 dark:text-slate-300">{{ __('common.branch_scoping_spare_parts') }}</span>
-                    </label>
-                </div>
             </div>
 
             <div class="flex justify-end">

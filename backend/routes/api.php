@@ -4,11 +4,21 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DashboardWidgetDataController;
 use App\Http\Controllers\Api\DepartmentController;
-use App\Http\Controllers\Api\HomeDashboardKpiController;
+use App\Http\Controllers\Api\DevicePushTokenController;
+use App\Http\Controllers\Api\MobileApprovalController;
+use App\Http\Controllers\Api\MobileFormController;
+use App\Http\Controllers\Api\MobileStatsController;
+use App\Http\Controllers\Api\MobileSubmissionController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\InboundController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Inbound webhooks — public endpoint (auth via X-Webhook-Token header, throttle per IP)
+Route::post('/inbound/{slug}', [InboundController::class, 'receive'])
+    ->name('api.inbound.receive')
+    ->middleware('throttle:60,1');
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);
@@ -58,6 +68,26 @@ Route::prefix('v1')->group(function () {
             Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
         });
 
+        // Mobile API — forms, submissions, approvals, stats
+        Route::prefix('mobile')->group(function () {
+            Route::get('/stats',                        [MobileStatsController::class, 'index']);
+            Route::get('/forms',                        [MobileFormController::class, 'index']);
+            Route::get('/forms/{formKey}',              [MobileFormController::class, 'show'])->where('formKey', '[a-z0-9_]+');
+            Route::post('/forms/{formKey}',             [MobileFormController::class, 'submit'])->where('formKey', '[a-z0-9_]+');
+            Route::post('/forms/{formKey}/draft',       [MobileFormController::class, 'saveDraft'])->where('formKey', '[a-z0-9_]+');
+            Route::get('/submissions',                  [MobileSubmissionController::class, 'index']);
+            Route::get('/submissions/{id}',             [MobileSubmissionController::class, 'show'])->whereNumber('id');
+            Route::put('/submissions/{id}/draft',       [MobileSubmissionController::class, 'updateDraft'])->whereNumber('id');
+            Route::delete('/submissions/{id}',          [MobileSubmissionController::class, 'destroy'])->whereNumber('id');
+            Route::get('/approvals',                    [MobileApprovalController::class, 'index']);
+            Route::get('/approvals/{id}',               [MobileApprovalController::class, 'show'])->whereNumber('id');
+            Route::post('/approvals/{id}/act',          [MobileApprovalController::class, 'act'])->whereNumber('id');
+        });
+
+        // Device push token registration (FCM)
+        Route::post('/devices/push-token',    [DevicePushTokenController::class, 'store']);
+        Route::delete('/devices/push-token',  [DevicePushTokenController::class, 'destroy']);
+
         // Dashboard widget data
         Route::get('/dashboards/{dashboard}/widgets/{widget}/data',
             [DashboardWidgetDataController::class, 'show']
@@ -68,10 +98,5 @@ Route::prefix('v1')->group(function () {
         Route::get('/dashboards/{dashboard}/export',
             [DashboardWidgetDataController::class, 'exportDashboard']
         );
-
-        // Home dashboard KPI
-        Route::get('/dashboard/kpi/{card}', [HomeDashboardKpiController::class, 'show']);
-        Route::post('/dashboard/kpi-config', [HomeDashboardKpiController::class, 'saveConfig'])
-            ->middleware('permission:manage_own_dashboard');
     });
 });

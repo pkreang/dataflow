@@ -21,7 +21,7 @@
         </div>
         @can('manage profile')
             <div class="flex items-center gap-2">
-                <a href="{{ route('companies.create') }}" class="btn-primary">
+                <a href="{{ route('companies.create') }}" class="btn-primary inline-flex items-center">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     {{ __('company.add_company') }}
                 </a>
@@ -51,6 +51,7 @@
 
     <x-data-table
         :columns="[
+            ['key' => 'code', 'label' => __('company.company_code')],
             ['key' => 'company', 'label' => __('company.company')],
             ['key' => 'email', 'label' => __('company.email')],
             ['key' => 'phone', 'label' => __('company.phone')],
@@ -65,6 +66,7 @@
     >
         @foreach ($companies as $company)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
+                <td class="px-4 py-2 align-top text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $company->code }}</td>
                 <td class="px-4 py-2 align-top whitespace-nowrap">
                     <div class="flex items-start gap-2.5">
                         @if ($company->logo)
@@ -82,9 +84,8 @@
                                 <svg class="w-4 h-4 text-white opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                             </div>
                         @endif
-                        <div class="min-w-0 pt-0.5 leading-tight">
+                        <div class="min-w-0 pt-1 leading-tight">
                             <p class="text-sm font-medium text-slate-900 dark:text-slate-100 truncate leading-snug">{{ $company->name }}</p>
-                            <p class="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 leading-snug">{{ $company->code }}</p>
                         </div>
                     </div>
                 </td>
@@ -106,6 +107,7 @@
                         @php
                             $rowActions = [
                                 ['label' => __('common.edit'), 'href' => route('companies.edit', $company), 'icon' => 'edit'],
+                                ['label' => $company->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('companies.update', $company), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                             ];
                             if (($company->branches_count ?? 0) === 0) {
                                 $rowActions[] = [

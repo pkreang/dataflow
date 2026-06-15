@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Position;
 
 class DocumentFormWorkflowPolicy extends Model
 {
@@ -12,7 +13,10 @@ class DocumentFormWorkflowPolicy extends Model
     protected $fillable = [
         'form_id',
         'department_id',
+        'position_id',
         'use_amount_condition',
+        'amount_field_key',
+        'field_conditions',
         'workflow_id',
     ];
 
@@ -20,6 +24,7 @@ class DocumentFormWorkflowPolicy extends Model
     {
         return [
             'use_amount_condition' => 'boolean',
+            'field_conditions'     => 'array',
         ];
     }
 
@@ -31,6 +36,11 @@ class DocumentFormWorkflowPolicy extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function position()
+    {
+        return $this->belongsTo(Position::class);
     }
 
     public function workflow()

@@ -10,9 +10,9 @@
 @endsection
 
 @php
+    $relatedApproverSet = array_flip($relatedInstanceIds ?? []);
     $viewer = [
-        'id' => (int) (session('user.id') ?? 0),
-        'can_approve' => in_array('approval.approve', session('user_permissions', []), true),
+        'id'             => (int) (session('user.id') ?? 0),
         'is_super_admin' => (bool) session('user.is_super_admin', false),
     ];
 
@@ -58,9 +58,12 @@
         'cancelled' => 'badge-gray',
     ];
 
+    $isEvalList = $form->document_type === 'evaluation';
+
     $tableColumns = array_merge(
         [['key' => 'seq', 'label' => '#', 'class' => 'text-right w-12']],
         [['key' => 'reference_no', 'label' => __('common.reference_no')]],
+        $isEvalList ? [['key' => 'parent', 'label' => __('common.evaluation_source_doc')]] : [],
         collect($searchable)->map(fn ($f) => ['key' => 'f_'.$f->field_key, 'label' => $f->localized_label])->all(),
         [
             ['key' => 'status', 'label' => __('common.status')],
@@ -85,9 +88,11 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ $form->description }}</p>
             @endif
         </div>
-        <a href="{{ route('forms.create', $form->form_key) }}" class="btn-primary">
-            {{ __('common.create') }}
-        </a>
+        @unless($isEvalList)
+            <a href="{{ route('forms.create', $form->form_key) }}" class="btn-primary">
+                {{ __('common.create') }}
+            </a>
+        @endunless
     </div>
 
     @if (session('success'))
@@ -131,16 +136,22 @@
         </div>
 
         <x-data-table :columns="$tableColumns" :rows="$submissions" :disable-pagination="true"
-                      :empty-message="__('common.no_submissions_yet')">
+                      :empty-message="$isEvalList ? __('common.evaluation_list_empty') : __('common.no_submissions_yet')">
             @foreach($submissions as $submission)
                 @php
-                    $plan = $submission->actionPlan($viewer);
+                    $rowIsRelatedApprover = $submission->approval_instance_id !== null
+                        && isset($relatedApproverSet[(int) $submission->approval_instance_id]);
+                    $rowViewer = array_merge($viewer, ['is_related_approver' => $rowIsRelatedApprover]);
+                    $plan = $submission->actionPlan($rowViewer);
                     $status = $submission->effective_status;
                     // Row link goes to the submission's view page regardless of primary button.
                     $viewMenuItem = collect($plan['menu'])->firstWhere('label', __('common.view'));
                     $rowHref = $viewMenuItem['href'] ?? ($plan['primary']['href'] ?? null);
                     $statusBadge = $statusBadgeMap[$status] ?? 'badge-gray';
                     $la = $submission->latestActivity;
+                    // Row surfaced because the viewer approves it (not owns/edits it).
+                    $isMineRow = (int) $submission->user_id === $viewer['id']
+                        || $submission->isAssignedEditor($viewer['id']);
                 @endphp
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150">
                     @if($hasDrafts)
@@ -166,6 +177,19 @@
                             </span>
                         @endif
                     </td>
+                    @if($isEvalList)
+                        <td class="table-sub">
+                            @if($submission->originalSubmission)
+                                <a href="{{ route('forms.submission.show', $submission->originalSubmission) }}"
+                                   class="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
+                                    {{ $submission->originalSubmission->reference_no ?: '#'.$submission->originalSubmission->id }}
+                                </a>
+                                <p class="text-xs text-slate-400 mt-0.5">{{ $submission->originalSubmission->form?->name }}</p>
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                    @endif
                     @foreach($searchable as $field)
                         <td class="table-sub">{{ $renderCell($submission, $field) }}</td>
                     @endforeach

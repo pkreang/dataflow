@@ -1,4 +1,4 @@
-@props(['menus', 'isPinnedSection' => false])
+@props(['menus', 'isPinnedSection' => false, 'menuBadges' => []])
 
 @foreach($menus as $menu)
     @if($menu->route === null && $menu->children->isNotEmpty())
@@ -42,12 +42,20 @@
                     @php $childActive = $activeChild && $child->id === $activeChild->id; @endphp
                     <div class="relative group">
                         <a href="{{ $child->route }}" @click="sidebarOpen = false"
-                           class="flex items-center gap-3 px-[var(--menu-item-pad-x)] py-[var(--menu-sub-pad-y)] {{ $isPinnedSection ? '' : 'pr-8' }} rounded-lg text-sm font-medium transition-colors {{ $childActive ? 'bg-white/15 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+                           class="flex items-center gap-3 px-[var(--menu-item-pad-x)] py-[var(--menu-sub-pad-y)] rounded-lg text-sm font-medium transition-colors {{ $childActive ? 'bg-white/15 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}"
+                           @if(! $isPinnedSection) :class="sidebarCollapsed ? '' : 'pr-8'" @endif>
                             <x-nav-icon :name="$child->icon" class="w-4 h-4" />
                             <span x-show="!sidebarCollapsed" x-cloak>{{ $child->translated_label }}</span>
+                            @php $badge = (int) ($menuBadges[$child->route] ?? 0); @endphp
+                            @if($badge > 0)
+                                <span x-show="!sidebarCollapsed" x-cloak
+                                      class="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{{ $badge > 99 ? '99+' : $badge }}</span>
+                            @endif
                         </a>
                         @if(! $isPinnedSection && $child->id > 0 && $child->route)
-                            <x-sidebar-pin-button :menu-id="$child->id" size="sm" />
+                            <span x-show="!sidebarCollapsed" x-cloak>
+                                <x-sidebar-pin-button :menu-id="$child->id" size="sm" />
+                            </span>
                         @endif
                     </div>
                 @endforeach
@@ -59,13 +67,20 @@
         @php $menuActive = $menu->isActive(); @endphp
         <div class="relative group">
             <a href="{{ $menu->route }}" @click="sidebarOpen = false"
-               class="flex items-center rounded-lg px-[var(--menu-item-pad-x)] py-[var(--menu-item-pad-y)] {{ $isPinnedSection ? '' : 'pr-8' }} text-sm font-medium {{ $menuActive ? 'bg-white/15 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}"
-               :class="sidebarCollapsed ? 'justify-center' : 'gap-3'">
+               class="flex items-center rounded-lg px-[var(--menu-item-pad-x)] py-[var(--menu-item-pad-y)] text-sm font-medium {{ $menuActive ? 'bg-white/15 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}"
+               :class="sidebarCollapsed ? 'justify-center' : @js($isPinnedSection ? 'gap-3' : 'gap-3 pr-8')">
                 <x-nav-icon :name="$menu->icon" class="w-5 h-5 shrink-0 text-blue-200" />
                 <span x-show="!sidebarCollapsed" x-cloak>{{ $menu->translated_label }}</span>
+                @php $badge = (int) ($menuBadges[$menu->route] ?? 0); @endphp
+                @if($badge > 0)
+                    <span x-show="!sidebarCollapsed" x-cloak
+                          class="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{{ $badge > 99 ? '99+' : $badge }}</span>
+                @endif
             </a>
             @if(! $isPinnedSection && $menu->id > 0 && $menu->route)
-                <x-sidebar-pin-button :menu-id="$menu->id" />
+                <span x-show="!sidebarCollapsed" x-cloak>
+                    <x-sidebar-pin-button :menu-id="$menu->id" />
+                </span>
             @endif
         </div>
     @endif

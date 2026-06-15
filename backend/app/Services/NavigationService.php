@@ -76,6 +76,28 @@ class NavigationService
             ->values();
     }
 
+    /**
+     * Flat list of active menus that carry BOTH a route and a permission —
+     * consumed by EnforceMenuPermission to gate routes. Sorted longest-route
+     * first so the caller can take the most specific match. Cached; the cache
+     * is cleared alongside the menu tree on any NavigationMenu save/delete.
+     *
+     * @return list<array{route: string, permission: string}>
+     */
+    public function routePermissionMap(): array
+    {
+        return Cache::remember('navigation_route_permissions', 3600, function () {
+            return NavigationMenu::query()
+                ->where('is_active', true)
+                ->whereNotNull('route')->where('route', '!=', '')
+                ->whereNotNull('permission')->where('permission', '!=', '')
+                ->orderByRaw('LENGTH(route) DESC')
+                ->get(['route', 'permission'])
+                ->map(fn ($m) => ['route' => (string) $m->route, 'permission' => (string) $m->permission])
+                ->all();
+        });
+    }
+
     private function isAccessible(NavigationMenu $menu, array $permissions, bool $isSuperAdmin, ?int $userDepartmentId = null): bool
     {
         if ($this->menuRouteRequiresInstanceSuperAdmin($menu->route)) {

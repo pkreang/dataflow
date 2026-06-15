@@ -6,14 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\DocumentFormSubmission;
 use App\Models\LoginHistory;
-use App\Models\SubmissionActivityLog;
 use App\Models\NotificationPreference;
 use App\Models\Position;
+use App\Models\ReportDashboard;
 use App\Models\Setting;
+use App\Models\SubmissionActivityLog;
 use App\Models\User;
 use App\Rules\PasswordNotReused;
 use App\Rules\PasswordPolicy;
-use App\Services\Auth\LoginHistoryRecorder;
+use App\Services\Auth\LineLoginService;
 use App\Services\Auth\PasswordCapabilityService;
 use App\Services\Auth\PasswordLifecycleService;
 use Illuminate\Http\RedirectResponse;
@@ -68,6 +69,12 @@ class ProfileController extends Controller
 
         $loginHistory = $this->loadLoginHistorySummary($user);
 
+        $availableHomeDashboards = ReportDashboard::query()
+            ->where('is_active', true)
+            ->accessibleTo($user)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return view('profile.edit', [
             'user' => $user,
             'positions' => $positions,
@@ -82,7 +89,41 @@ class ProfileController extends Controller
             'quickStats' => $this->quickStatsFor($user),
             'lastPriorLogin' => $loginHistory['last'],
             'recentFailedLogins' => $loginHistory['recent_failures'],
+            'availableHomeDashboards' => $availableHomeDashboards,
         ]);
+    }
+
+    /**
+     * Set the user's preferred home dashboard. Validates that the dashboard
+     * exists *and* is visible to the user, so a non-admin can't pin a
+     * permission-gated dashboard they couldn't actually open. Passing a null
+     * value clears the override and falls back to the global default.
+     */
+    public function updateHomeDashboard(Request $request): RedirectResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        $validated = $request->validate([
+            'home_dashboard_id' => 'nullable|integer|exists:report_dashboards,id',
+        ]);
+
+        $dashboardId = $validated['home_dashboard_id'] ?? null;
+
+        if ($dashboardId) {
+            $dashboard = ReportDashboard::find($dashboardId);
+            if (! $dashboard || ! $dashboard->canBeAccessedBy($user)) {
+                return back()->withErrors([
+                    'home_dashboard_id' => __('common.dashboard_not_accessible'),
+                ]);
+            }
+        }
+
+        $user->update(['home_dashboard_id' => $dashboardId]);
+
+        return back()->with('success', __('common.saved'));
     }
 
     public function activeSessions(): View|RedirectResponse
@@ -349,35 +390,8 @@ class ProfileController extends Controller
      */
     private function countPendingApprovalsFor(User $user): int
     {
-        $roles = $user->roles()->pluck('name')->all();
-        $positionId = $user->position_id;
-        $userIdStr = (string) $user->id;
-
         return ApprovalInstance::query()
-            ->where('status', 'pending')
-            ->where(function ($q) use ($user) {
-                $q->where('requester_user_id', '!=', $user->id)
-                    ->orWhereHas('workflow', fn ($w) => $w->where('allow_requester_as_approver', true));
-            })
-            ->whereHas('steps', function ($q) use ($userIdStr, $roles, $positionId) {
-                $q->where('action', 'pending')
-                    ->whereRaw('approval_instance_steps.step_no = approval_instances.current_step_no')
-                    ->where(function ($sq) use ($userIdStr, $roles, $positionId) {
-                        $sq->where(function ($uq) use ($userIdStr) {
-                            $uq->where('approver_type', 'user')->where('approver_ref', $userIdStr);
-                        });
-                        if (! empty($roles)) {
-                            $sq->orWhere(function ($rq) use ($roles) {
-                                $rq->where('approver_type', 'role')->whereIn('approver_ref', $roles);
-                            });
-                        }
-                        if ($positionId) {
-                            $sq->orWhere(function ($pq) use ($positionId) {
-                                $pq->where('approver_type', 'position')->where('approver_ref', (string) $positionId);
-                            });
-                        }
-                    });
-            })
+            ->pendingForApprover($user->id, $user->roles()->pluck('name')->all(), $user->position_id)
             ->count();
     }
 
@@ -478,7 +492,6 @@ class ProfileController extends Controller
         $input = \Illuminate\Support\Arr::except($request->all(), $lockedKeys);
 
         $rules = [
-            'line_notify_token' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
             'locale' => ['nullable', 'string', Rule::in(['th', 'en'])],
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -499,7 +512,6 @@ class ProfileController extends Controller
         $validator->validate();
 
         $payload = [
-            'line_notify_token' => $input['line_notify_token'] ?? null ?: null,
             'phone' => $input['phone'] ?? null ?: null,
         ];
         if (! $isSso) {
@@ -622,8 +634,70 @@ class ProfileController extends Controller
             return back()->withErrors(['current_password' => __('common.current_password_incorrect')]);
         }
 
+        $wasForced = (bool) $user->password_must_change;
+
         PasswordLifecycleService::applySelfServicePasswordChange($user, $request->password);
 
+        if ($wasForced) {
+            $request->session()->forget(['user', 'api_token', 'user_permissions']);
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->with('status', __('auth.password_changed_please_relogin'));
+        }
+
+        $request->session()->regenerate();
+
         return back()->with('success', __('common.password_changed'));
+    }
+
+    public function lineLinkRedirect(LineLoginService $service): RedirectResponse
+    {
+        if (! $this->currentUser()) {
+            return redirect()->route('login');
+        }
+
+        $channelId = (string) Setting::get('line_login.channel_id');
+        if (! $channelId) {
+            return redirect()->route('profile.edit')
+                ->with('error', __('notifications.line_link_not_configured'));
+        }
+
+        return redirect()->away($service->authorizationUrl());
+    }
+
+    public function lineLinkCallback(Request $request, LineLoginService $service): RedirectResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        $result = $service->handleCallback($request);
+        if (! $result['success']) {
+            return redirect()->route('profile.edit')
+                ->with('error', $result['message']);
+        }
+
+        $user->update(['line_user_id' => $result['line_user_id']]);
+
+        return redirect()->route('profile.edit')
+            ->with('success', __('notifications.line_link_success', [
+                'name' => $result['display_name'],
+            ]));
+    }
+
+    public function lineUnlink(): RedirectResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        $user->update(['line_user_id' => null]);
+
+        return redirect()->route('profile.edit')
+            ->with('success', __('notifications.line_unlink_success'));
     }
 }

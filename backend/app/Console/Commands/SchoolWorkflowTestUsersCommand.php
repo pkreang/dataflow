@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
  * Purge every user except is_super_admin, then ensure school template + demo workflow actors.
  *
  * Test accounts (password demo1234): one submitter per SCH_* dept + two approvers.
- *   employee@demo.com, admin.staff@demo.com, finance@demo.com, facility@demo.com — viewer
+ *   employee@demo.com, admin.staff@demo.com, finance@demo.com, facility@demo.com — employee
  *   manager@demo.com — approver (ขั้น 1), gm@demo.com — approver (ขั้น 2)
  *
  *   php artisan school:workflow-test-users

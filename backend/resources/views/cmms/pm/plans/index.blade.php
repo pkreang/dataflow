@@ -14,7 +14,10 @@
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.pm_plans') }}</h2>
         @can('pm.plan')
-            <a href="{{ route('cmms.pm.plans.create') }}" class="btn-primary">{{ __('common.add_pm_plan') }}</a>
+            <a href="{{ route('cmms.pm.plans.create') }}" class="btn-primary inline-flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                {{ __('common.add_pm_plan') }}
+            </a>
         @endcan
     </div>
 
@@ -94,6 +97,7 @@
                 <td class="px-4 py-2 whitespace-nowrap text-right">
                     <x-row-actions :items="[
                         ['label' => __('common.edit'), 'href' => route('cmms.pm.plans.edit', $plan), 'icon' => 'edit'],
+                        ['label' => $plan->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('cmms.pm.plans.update', $plan), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ['label' => __('common.delete'), 'method' => 'DELETE', 'action' => route('cmms.pm.plans.destroy', $plan), 'icon' => 'delete', 'confirm' => __('common.are_you_sure'), 'class' => 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'],
                     ]" />
                 </td>

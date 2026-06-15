@@ -15,8 +15,11 @@ class ApprovalWorkflowStage extends Model
         'name',
         'approver_type',
         'approver_ref',
+        'approver_rules',
         'min_approvals',
         'require_signature',
+        'allow_requester_override',
+        'escalation_after_days',
         'is_active',
     ];
 
@@ -26,7 +29,10 @@ class ApprovalWorkflowStage extends Model
             'step_no' => 'integer',
             'min_approvals' => 'integer',
             'require_signature' => 'boolean',
+            'allow_requester_override' => 'boolean',
+            'escalation_after_days' => 'integer',
             'is_active' => 'boolean',
+            'approver_rules' => 'array',
         ];
     }
 

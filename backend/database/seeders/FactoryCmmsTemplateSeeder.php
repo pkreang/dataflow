@@ -59,9 +59,9 @@ class FactoryCmmsTemplateSeeder extends Seeder
             'repair_request',
             'เทมเพลตโรงงาน: แจ้งซ่อม — ปรับฟิลด์และ workflow ได้ในเมนูตั้งค่า',
             [
-                ['field_key' => 'title', 'label' => 'หัวข้อ', 'field_type' => 'text', 'is_required' => true, 'sort_order' => 1],
+                ['field_key' => 'title', 'label' => 'หัวข้อ', 'field_type' => 'text', 'is_required' => true, 'is_searchable' => true, 'sort_order' => 1],
                 ['field_key' => 'detail', 'label' => 'รายละเอียดปัญหา', 'field_type' => 'textarea', 'is_required' => false, 'sort_order' => 2],
-                ['field_key' => 'location', 'label' => 'สถานที่ / เครื่องจักร', 'field_type' => 'text', 'is_required' => false, 'sort_order' => 3],
+                ['field_key' => 'location', 'label' => 'สถานที่ / เครื่องจักร', 'field_type' => 'text', 'is_required' => false, 'is_searchable' => true, 'sort_order' => 3],
             ]
         );
 
@@ -71,9 +71,9 @@ class FactoryCmmsTemplateSeeder extends Seeder
             'pm_am_plan',
             'เทมเพลตโรงงาน: แผน PM/AM — ฟิลด์ equipment_id ใช้ร่วมกับหน้าสร้างแผน (เลือกจากรายการอุปกรณ์)',
             [
-                ['field_key' => 'title', 'label' => 'หัวข้อแผน', 'field_type' => 'text', 'is_required' => true, 'sort_order' => 1],
+                ['field_key' => 'title', 'label' => 'หัวข้อแผน', 'field_type' => 'text', 'is_required' => true, 'is_searchable' => true, 'sort_order' => 1],
                 ['field_key' => 'detail', 'label' => 'รายละเอียด', 'field_type' => 'textarea', 'is_required' => false, 'sort_order' => 2],
-                ['field_key' => 'equipment_id', 'label' => 'อุปกรณ์', 'field_type' => 'text', 'is_required' => false, 'sort_order' => 3],
+                ['field_key' => 'equipment_id', 'label' => 'อุปกรณ์', 'field_type' => 'text', 'is_required' => false, 'is_searchable' => true, 'sort_order' => 3],
             ]
         );
 
@@ -155,10 +155,14 @@ class FactoryCmmsTemplateSeeder extends Seeder
     }
 
     /**
-     * @param  array<int, array{field_key: string, label: string, field_type: string, is_required?: bool, sort_order: int, placeholder?: string|null, options?: array|null}>  $fields
+     * @param  array<int, array{field_key: string, label: string, field_type: string, is_required?: bool, is_searchable?: bool, sort_order: int, placeholder?: string|null, options?: array|null}>  $fields
      */
     private function syncForm(string $formKey, string $name, string $documentType, string $description, array $fields): DocumentForm
     {
+        // Service-type forms (repair, maintenance, PM) are good candidates for
+        // post-action evaluation — enable by default. Non-service types stay off.
+        $shouldEnableEval = in_array($documentType, ['repair_request', 'maintenance_request', 'pm_am_plan'], true);
+
         $form = DocumentForm::query()->updateOrCreate(
             ['form_key' => $formKey],
             [
@@ -166,6 +170,7 @@ class FactoryCmmsTemplateSeeder extends Seeder
                 'document_type' => $documentType,
                 'description' => $description,
                 'is_active' => true,
+                'evaluation_enabled' => $shouldEnableEval,
                 'layout_columns' => 1,
             ]
         );
@@ -180,6 +185,7 @@ class FactoryCmmsTemplateSeeder extends Seeder
                     'label' => $f['label'],
                     'field_type' => $f['field_type'],
                     'is_required' => (bool) ($f['is_required'] ?? false),
+                    'is_searchable' => (bool) ($f['is_searchable'] ?? false),
                     'sort_order' => $f['sort_order'],
                     'col_span' => 0,
                     'placeholder' => $f['placeholder'] ?? null,

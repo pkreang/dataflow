@@ -10,15 +10,15 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto">
+<div>
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.lookups') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ __('common.lookups_desc') }}</p>
         </div>
-        <a href="{{ route('settings.lookups.create') }}" class="btn-primary">
+        <a href="{{ route('settings.lookups.create') }}" class="btn-primary inline-flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            {{ __('common.add') }}
+            {{ __('common.add_lookup_list') }}
         </a>
     </div>
 
@@ -41,6 +41,7 @@
         :empty-message="__('common.lookups_empty')"
         :empty-cta-href="route('settings.lookups.create')"
         :empty-cta-label="__('common.add')"
+        :disable-pagination="true"
     >
         @foreach ($lists as $list)
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors duration-150">
@@ -68,6 +69,7 @@
                     @php
                         $actions = [
                             ['label' => __('common.edit'), 'href' => route('settings.lookups.edit', $list), 'icon' => 'edit'],
+                            ['label' => $list->is_active ? __('common.disable') : __('common.enable'), 'method' => 'PUT', 'action' => route('settings.lookups.update', $list), 'icon' => 'toggle', 'hidden' => ['toggle_active' => '1']],
                         ];
                         if (! $list->is_system) {
                             $actions[] = [
@@ -85,5 +87,7 @@
             </tr>
         @endforeach
     </x-data-table>
+
+    <x-per-page-footer :paginator="$lists" :perPage="$perPage" id="lookups-pagination" />
 </div>
 @endsection

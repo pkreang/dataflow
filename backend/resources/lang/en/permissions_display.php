@@ -46,7 +46,6 @@ return [
         'spare_parts.view' => 'View spare parts',
         'spare_parts.requisition' => 'Spare parts requisition',
         'manage dashboards' => 'Manage dashboards',
-        'manage_own_dashboard' => 'Manage own dashboard',
         'view_purchase_requests' => 'View purchase requests',
         'view_purchase_orders' => 'View purchase orders',
         'purchase_order.create' => 'Create purchase orders',

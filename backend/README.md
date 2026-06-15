@@ -63,8 +63,8 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 | `PermissionSeeder` / `RolePermissionSeeder` | สิทธิ์ + บทบาท + `admin@example.com` |
 | `SettingSeeder` / `NavigationMenuSeeder` | การตั้งค่า + เมนู |
 | `DocumentTypeSeeder` | ประเภทเอกสารจัดซื้อ (เบิกอะไหล่, PR, PO) |
-| `PositionDemoSeeder` | ตำแหน่งโรงเรียนเท่านั้น (SCH\_TEACHER, SCH\_ACAD\_HEAD, …); ลบแถวตำแหน่ง CMMS เก่า (MAINT_SUP, …) เมื่อไม่มีผู้ใช้และไม่ถูก workflow อ้างอิง |
-| `FactoryPositionSeeder` | (ไม่รันจาก `db:seed` หลัก) ตำแหน่ง CMMS สำหรับ `FactoryCmmsTemplateSeeder` / `PurchaseWorkflowSeeder` / `ApprovalWorkflowDemoSeeder` |
+| `PositionDemoSeeder` | (ไม่รันจาก `db:seed` หลัก — ย้ายไปอยู่ใน `IndustryTemplateSeeder` เท่านั้น) ตำแหน่งโรงเรียน (SCH\_TEACHER, SCH\_ACAD\_HEAD, SCH\_VICE\_PRINCIPAL, SCH\_ADMIN\_OFFICER, SCH\_FIN\_OFFICER) — โดน seed เมื่อ run `composer setup` หรือ `composer switch:school` เพราะ flow เหล่านั้นเรียก `IndustryTemplateSeeder` |
+| `FactoryPositionSeeder` | (ไม่รันจาก `db:seed` หลัก) ตำแหน่ง CMMS สำหรับ `FactoryCmmsTemplateSeeder` / `PurchaseWorkflowSeeder` / `ApprovalWorkflowDemoSeeder` / `NteqPolymerDemoSeeder` |
 | `IndustryTemplateSeeder` | **เทมเพลตสองกลุ่มลูกค้า:** โรงงาน (`FactoryCmmsTemplateSeeder`: แจ้งซ่อม + PM/AM, ฟอร์ม, workflow, policy) และโรงเรียน (`SchoolEFormTemplateSeeder`: แผนก SCH\_\*, ประเภท eForm ลา/ขอซื้อ/กิจกรรม, ฟอร์ม, workflow, policy) |
 | `DashboardSeeder` | แดชบอร์ดตัวอย่าง |
 | `PurchaseWorkflowSeeder` | workflow ใบขอซื้อ/สั่งซื้อ (ต้องมีฟอร์ม `purchase_request_default` / `purchase_order_default` ใน DB — สร้างจาก UI หรือ seeder แยก) |
@@ -79,10 +79,10 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 | Email | แผนก | บทบาท | หมายเหตุ |
 |-------|------|--------|-----------|
-| `employee@demo.com` | ฝ่ายวิชาการ | viewer | ผู้ยื่น |
-| `admin.staff@demo.com` | ฝ่ายธุรการ | viewer | ผู้ยื่น |
-| `finance@demo.com` | ฝ่ายการเงิน | viewer | ผู้ยื่น |
-| `facility@demo.com` | ฝ่ายอาคารและสถานที่ | viewer | ผู้ยื่น |
+| `employee@demo.com` | ฝ่ายวิชาการ | employee | ผู้ยื่น |
+| `admin.staff@demo.com` | ฝ่ายธุรการ | employee | ผู้ยื่น |
+| `finance@demo.com` | ฝ่ายการเงิน | employee | ผู้ยื่น |
+| `facility@demo.com` | ฝ่ายอาคารและสถานที่ | employee | ผู้ยื่น |
 | `manager@demo.com` | ฝ่ายวิชาการ | approver | ขั้นที่ 1 (ตำแหน่งหัวหน้าฝ่ายวิชาการ) |
 | `gm@demo.com` | — | approver | ขั้นที่ 2 (รองผู้อำนวยการ) |
 
@@ -95,7 +95,7 @@ Optional: `php artisan db:seed --class=RepairApprovalDemoSeeder` เพิ่ม
 
 | Email | Password | Role | Use |
 |-------|----------|------|-----|
-| `requester@example.com` | `password` | viewer | Submit repair requests; track **My submitted requests** |
+| `requester@example.com` | `password` | employee | Submit repair requests; track **My submitted requests** |
 | `approver@example.com` | `password` | approver | **My Approvals** — approve/reject pending repair requests |
 | `admin@example.com` | `password` | super-admin | Full access including Settings |
 
@@ -104,7 +104,7 @@ Optional: `php artisan db:seed --class=RepairApprovalDemoSeeder` เพิ่ม
 - หรือรัน seed ใหม่: `php artisan db:seed --class=RolePermissionSeeder` (ตอนนี้ใช้ `updateOrCreate` สำหรับ admin แล้ว)
 
 - **My Approvals** lives under **Repair Request** in the sidebar (not under Reports).
-- Placeholder menu items (maintenance, spare parts, equipment browse, report stubs) require `manage_settings` and are hidden from viewer/approver.
+- Placeholder menu items (maintenance, spare parts, equipment browse, report stubs) require `manage_settings` and are hidden from employee/approver.
 
 After changing navigation or **Settings submenu order** in `NavigationMenuSeeder`, run: `php artisan db:seed --class=NavigationMenuSeeder`
 
@@ -119,7 +119,7 @@ Super-admins configure methods under **Settings → Authentication & SSO**. Togg
 
 **Entra:** Register redirect URI `https://<your-app-host>/auth/entra/callback` (must match `APP_URL`). Delegated scopes include `openid`, `profile`, `email`, `User.Read`, **`GroupMember.Read.All`** (for group → role mapping via Microsoft Graph). Grant admin consent in Entra if required.
 
-**LDAP:** Requires PHP `ext-ldap`. JIT users get role from `auth_default_role` (default `viewer`) unless **directory group mapping** matches (see below). At least one active company is required.
+**LDAP:** Requires PHP `ext-ldap`. JIT users get role from `auth_default_role` (default `employee`) unless **directory group mapping** matches (see below). At least one active company is required.
 
 **Group → role mapping:** Super-admins can set JSON **`auth_directory_group_role_map`** on **Authentication & SSO** (array of `{ "pattern": "substring", "role": "spatie_role_name" }`). Patterns match against LDAP `memberOf` DNs and Entra group **id** / **displayName** (case-insensitive substring). When any rule matches on sign-in, the user’s Spatie roles are **replaced** with the matched roles; otherwise the default JIT role applies for new users and existing roles are unchanged when there is no match.
 
