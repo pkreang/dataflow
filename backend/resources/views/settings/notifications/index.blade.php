@@ -209,6 +209,16 @@
                                class="form-input w-full max-w-xs"
                                placeholder="{{ __('notifications.line_channel_id_placeholder') }}">
                     </div>
+
+                    <div>
+                        <label for="line_messaging_channel_secret" class="form-label">{{ __('notifications.line_channel_secret') }}</label>
+                        <input type="text" id="line_messaging_channel_secret"
+                               name="line_messaging_channel_secret"
+                               value="{{ $settings['line_messaging.channel_secret'] ?? '' }}"
+                               class="form-input w-full font-mono text-xs max-w-sm"
+                               placeholder="{{ __('notifications.line_channel_secret_placeholder') }}">
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('notifications.line_channel_secret_hint') }}</p>
+                    </div>
                 </div>
 
                 <div class="space-y-3 mt-4">

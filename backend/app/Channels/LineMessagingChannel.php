@@ -23,11 +23,17 @@ class LineMessagingChannel
             return;
         }
 
-        $text = method_exists($notification, 'toLineMessage')
-            ? $notification->toLineMessage($notifiable)
-            : $this->fallbackMessage($notification, $notifiable);
+        // Rich messages (Flex/Template with buttons) take priority over plain text.
+        if (method_exists($notification, 'toLineMessages')) {
+            $messages = $notification->toLineMessages($notifiable);
+        } else {
+            $text = method_exists($notification, 'toLineMessage')
+                ? $notification->toLineMessage($notifiable)
+                : $this->fallbackMessage($notification, $notifiable);
+            $messages = $text ? [['type' => 'text', 'text' => $text]] : null;
+        }
 
-        if (! $text) {
+        if (! $messages) {
             return;
         }
 
@@ -37,7 +43,7 @@ class LineMessagingChannel
                 ->asJson()
                 ->post(self::ENDPOINT, [
                     'to' => $userId,
-                    'messages' => [['type' => 'text', 'text' => $text]],
+                    'messages' => $messages,
                 ]);
 
             if ($response->failed()) {

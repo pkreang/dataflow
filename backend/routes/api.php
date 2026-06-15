@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DashboardWidgetDataController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DevicePushTokenController;
+use App\Http\Controllers\Api\LineWebhookController;
 use App\Http\Controllers\Api\MobileApprovalController;
 use App\Http\Controllers\Api\MobileFormController;
 use App\Http\Controllers\Api\MobileStatsController;
@@ -19,6 +20,11 @@ use Illuminate\Support\Facades\Route;
 Route::post('/inbound/{slug}', [InboundController::class, 'receive'])
     ->name('api.inbound.receive')
     ->middleware('throttle:60,1');
+
+// LINE Messaging API webhook — public endpoint (auth via X-Line-Signature HMAC)
+Route::post('/line/webhook', [LineWebhookController::class, 'handle'])
+    ->name('api.line.webhook')
+    ->middleware('throttle:100,1');
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);

@@ -43,6 +43,7 @@ class NotificationSettingController extends Controller
     private const LINE_MESSAGING_FORM_KEYS = [
         'line_messaging.channel_access_token',
         'line_messaging.channel_id',
+        'line_messaging.channel_secret',
         'line_login.channel_id',
         'line_login.channel_secret',
     ];
@@ -76,6 +77,7 @@ class NotificationSettingController extends Controller
             'mail_from_name' => 'nullable|string|max:255',
             'line_messaging_channel_access_token' => 'nullable|string|max:500',
             'line_messaging_channel_id' => 'nullable|string|max:64',
+            'line_messaging_channel_secret' => 'nullable|string|max:128',
             'line_login_channel_id' => 'nullable|string|max:64',
             'line_login_channel_secret' => 'nullable|string|max:128',
         ]);
@@ -87,6 +89,10 @@ class NotificationSettingController extends Controller
         Setting::updateOrCreate(
             ['key' => 'line_messaging.channel_id'],
             ['value' => trim((string) $request->input('line_messaging_channel_id', ''))]
+        );
+        Setting::updateOrCreate(
+            ['key' => 'line_messaging.channel_secret'],
+            ['value' => trim((string) $request->input('line_messaging_channel_secret', ''))]
         );
         Setting::updateOrCreate(
             ['key' => 'line_login.channel_id'],

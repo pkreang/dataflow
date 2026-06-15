@@ -56,12 +56,86 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
             ->action(__('notifications.view_document'), url($this->documentUrl()));
     }
 
+    public function toLineMessages(object $notifiable): array
+    {
+        $ref   = $this->instance->reference_no ?? "#{$this->instance->id}";
+        $type  = $this->documentTypeLabel();
+        $stage = $this->step->stage_name ?? '';
+        $data  = "a=approve&i={$this->instance->id}&s={$this->step->step_no}";
+        $rdata = "a=reject&i={$this->instance->id}&s={$this->step->step_no}";
+
+        return [[
+            'type'     => 'flex',
+            'altText'  => "รออนุมัติ {$ref}",
+            'contents' => [
+                'type' => 'bubble',
+                'size' => 'mega',
+                'header' => [
+                    'type'            => 'box',
+                    'layout'          => 'vertical',
+                    'backgroundColor' => '#F59E0B',
+                    'paddingAll'      => 'lg',
+                    'contents'        => [[
+                        'type'   => 'text',
+                        'text'   => 'รออนุมัติเอกสาร',
+                        'color'  => '#FFFFFF',
+                        'weight' => 'bold',
+                        'size'   => 'md',
+                    ]],
+                ],
+                'body' => [
+                    'type'     => 'box',
+                    'layout'   => 'vertical',
+                    'spacing'  => 'sm',
+                    'paddingAll' => 'lg',
+                    'contents' => [
+                        ['type'=>'text','text'=>$ref,'weight'=>'bold','size'=>'xl','wrap'=>true],
+                        ['type'=>'text','text'=>$type,'color'=>'#6B7280','size'=>'sm'],
+                        ['type'=>'text','text'=>"ขั้นตอน: {$stage}",'size'=>'sm','color'=>'#374151'],
+                    ],
+                ],
+                'footer' => [
+                    'type'     => 'box',
+                    'layout'   => 'horizontal',
+                    'spacing'  => 'sm',
+                    'paddingAll' => 'lg',
+                    'contents' => [
+                        [
+                            'type'   => 'button',
+                            'style'  => 'primary',
+                            'color'  => '#10B981',
+                            'height' => 'sm',
+                            'action' => [
+                                'type'        => 'postback',
+                                'label'       => 'อนุมัติ',
+                                'data'        => $data,
+                                'displayText' => 'อนุมัติแล้ว',
+                            ],
+                        ],
+                        [
+                            'type'   => 'button',
+                            'style'  => 'primary',
+                            'color'  => '#EF4444',
+                            'height' => 'sm',
+                            'action' => [
+                                'type'        => 'postback',
+                                'label'       => 'ไม่อนุมัติ',
+                                'data'        => $rdata,
+                                'displayText' => 'ไม่อนุมัติ',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]];
+    }
+
     public function toLineMessage(object $notifiable): string
     {
         $ref = $this->instance->reference_no ?? "#{$this->instance->id}";
 
         return "\n"
-            . "📋 " . __('notifications.approval_pending_title') . "\n"
+            . "รออนุมัติ: " . __('notifications.approval_pending_title') . "\n"
             . __('notifications.approval_pending_body', [
                 'document_type' => $this->documentTypeLabel(),
                 'reference' => $ref,
