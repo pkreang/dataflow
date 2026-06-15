@@ -32,7 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     await AuthService().logout();
-    appRouter.go('/login');
+    appRouter.refresh();
   }
 
   @override
