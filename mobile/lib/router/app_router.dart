@@ -22,8 +22,8 @@ class AuthNotifier extends ChangeNotifier {
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
   refreshListenable: AuthNotifier.instance,
-  redirect: (context, state) async {
-    final token = await TokenStorage.getToken();
+  redirect: (context, state) {
+    final token = TokenStorage.cachedToken;
     final isLoginRoute = state.matchedLocation == '/login';
     if (token == null && !isLoginRoute) return '/login';
     if (token != null && isLoginRoute) return '/home';
