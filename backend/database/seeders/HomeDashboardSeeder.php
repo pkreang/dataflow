@@ -39,12 +39,13 @@ class HomeDashboardSeeder extends Seeder
                 [
                     'title' => 'งานรออนุมัติของฉัน',
                     'widget_type' => 'metric',
-                    'data_source' => 'school_eforms_pending',
+                    'data_source' => 'document_form_submissions',
                     'config' => [
                         'aggregation' => 'count',
                         'field' => 'id',
                         'filters' => [
-                            'requester_user_id' => '{current_user}',
+                            'user_id' => '{current_user}',
+                            'status' => 'submitted',
                         ],
                     ],
                 ],
@@ -91,10 +92,11 @@ class HomeDashboardSeeder extends Seeder
                 [
                     'title' => 'รออนุมัติทั้งระบบ',
                     'widget_type' => 'metric',
-                    'data_source' => 'school_eforms_pending',
+                    'data_source' => 'document_form_submissions',
                     'config' => [
                         'aggregation' => 'count',
                         'field' => 'id',
+                        'filters' => ['status' => 'submitted'],
                     ],
                 ],
                 [
