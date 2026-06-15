@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/auth/token_storage.dart';
 import '../../router/app_router.dart';
@@ -68,12 +67,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: const Text('ออกจากระบบ', style: TextStyle(color: Color(0xFFEF4444))),
                     onTap: () => showDialog(
                       context: context,
-                      builder: (_) => AlertDialog(
+                      builder: (dialogContext) => AlertDialog(
                         title: const Text('ออกจากระบบ'),
                         content: const Text('ต้องการออกจากระบบใช่ไหม?'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
-                          ElevatedButton(onPressed: () { Navigator.pop(context); _logout(); }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)), child: const Text('ออกจากระบบ')),
+                          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('ยกเลิก')),
+                          ElevatedButton(onPressed: () { Navigator.pop(dialogContext); _logout(); }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)), child: const Text('ออกจากระบบ')),
                         ],
                       ),
                     ),
