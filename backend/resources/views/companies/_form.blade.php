@@ -40,9 +40,22 @@
         <label for="business_type" class="form-label">
             {{ __('company.business_type') }}
         </label>
-        <input type="text" name="business_type" id="business_type" value="{{ old('business_type', $company?->business_type) }}" maxlength="100"
-               placeholder="{{ __('company.business_type_placeholder') }}"
-               class="form-input @error('business_type') form-input-error @enderror">
+        @php
+            $businessTypeItems = \App\Support\LookupRegistry::getItems('business_type');
+            $businessTypeValue = old('business_type', $company?->business_type);
+            $businessTypeKnown = $businessTypeItems->pluck('value')->contains($businessTypeValue);
+        @endphp
+        <select name="business_type" id="business_type"
+                class="form-input @error('business_type') form-input-error @enderror">
+            <option value="">{{ __('common.please_select') }}</option>
+            @if (filled($businessTypeValue) && ! $businessTypeKnown)
+                {{-- ค่าเดิมที่ไม่อยู่ในรายการ lookup (เช่น free text เดิม) — คงไว้ไม่ให้หายตอนบันทึก --}}
+                <option value="{{ $businessTypeValue }}" selected>{{ $businessTypeValue }}</option>
+            @endif
+            @foreach ($businessTypeItems as $item)
+                <option value="{{ $item['value'] }}" @selected($businessTypeValue === $item['value'])>{{ $item['display'] }}</option>
+            @endforeach
+        </select>
         @error('business_type')
             <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
         @enderror
