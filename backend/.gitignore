@@ -2,6 +2,7 @@
 .DS_Store
 .env
 .env.backup
+.env.bak
 .env.production
 /database/*.sqlite
 /database/*.sqlite-journal
@@ -23,6 +24,7 @@
 /storage/*.key
 /storage/pail
 /vendor
+/deploy/dist
 Homestead.json
 Homestead.yaml
 Thumbs.db

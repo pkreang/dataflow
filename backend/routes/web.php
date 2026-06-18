@@ -46,9 +46,31 @@ use App\Http\Controllers\Web\UserSubstitutionController;
 use App\Http\Controllers\Web\WebhookController;
 use App\Http\Controllers\Web\WorkflowController;
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
+
+/*
+ * Deploy escape-hatch สำหรับ host ที่เข้าได้แค่ FTP/File Manager (ไม่มี shell/artisan).
+ * ปิดสนิทเมื่อไม่ได้ตั้ง DEPLOY_TOKEN ใน .env (config('app.deploy_token') = null → 404 เสมอ).
+ * ใช้ครั้งเดียวหลัง deploy: เปิด /__deploy/<token>/link เพื่อสร้าง public/storage symlink
+ * (และ /clear ล้าง cache). ดู doc/deploy-cpanel.md.
+ */
+Route::get('/__deploy/{token}/{cmd}', function (string $token, string $cmd) {
+    $expected = config('app.deploy_token');
+    abort_unless(filled($expected) && is_string($expected) && hash_equals($expected, $token), 404);
+
+    $command = [
+        'link' => 'storage:link',
+        'clear' => 'optimize:clear',
+        'migrate' => 'migrate',
+    ][$cmd] ?? abort(404);
+
+    Artisan::call($command, $command === 'migrate' ? ['--force' => true] : []);
+
+    return response('<pre>'.e(Artisan::output()).'</pre>');
+})->name('deploy.hatch');
 
 Route::get('/lang/{locale}', function (string $locale) {
     if (in_array($locale, ['th', 'en'], true)) {

@@ -17,6 +17,9 @@ return [
 
     'version' => env('APP_VERSION', '1.0.0'),
 
+    // Token สำหรับ deploy escape-hatch route (ดู routes/web.php). null = ปิดสนิท.
+    'deploy_token' => env('DEPLOY_TOKEN'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
