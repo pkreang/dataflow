@@ -13,6 +13,7 @@ class ApprovalInstance extends Model
     protected $fillable = [
         'workflow_id',
         'department_id',
+        'org_unit_id',
         'requester_user_id',
         'document_type',
         'reference_no',
@@ -47,6 +48,11 @@ class ApprovalInstance extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function orgUnit()
+    {
+        return $this->belongsTo(OrgUnit::class, 'org_unit_id');
     }
 
     /**

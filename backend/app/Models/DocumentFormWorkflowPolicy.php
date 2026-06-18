@@ -13,6 +13,7 @@ class DocumentFormWorkflowPolicy extends Model
     protected $fillable = [
         'form_id',
         'department_id',
+        'org_unit_id',
         'position_id',
         'use_amount_condition',
         'amount_field_key',
@@ -36,6 +37,11 @@ class DocumentFormWorkflowPolicy extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function orgUnit()
+    {
+        return $this->belongsTo(OrgUnit::class, 'org_unit_id');
     }
 
     public function position()

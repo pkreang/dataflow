@@ -46,6 +46,11 @@ class DocumentForm extends Model
         return $this->belongsToMany(Department::class, 'document_form_departments', 'form_id', 'department_id');
     }
 
+    public function orgUnits(): BelongsToMany
+    {
+        return $this->belongsToMany(OrgUnit::class, 'document_form_org_units', 'form_id', 'org_unit_id');
+    }
+
     /**
      * Filter forms visible to a user's department.
      * Forms with no department restrictions are visible to everyone.

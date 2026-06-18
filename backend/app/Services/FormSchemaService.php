@@ -12,7 +12,7 @@ class FormSchemaService
 {
     /** Standard columns present in every fdata_* table (never touched by syncTable). */
     public const RESERVED_COLUMNS = [
-        'id', 'user_id', 'department_id', 'status',
+        'id', 'user_id', 'department_id', 'org_unit_id', 'status',
         'reference_no', 'approval_instance_id',
         'created_at', 'updated_at',
     ];
@@ -41,6 +41,7 @@ class FormSchemaService
             $bp->id();
             $bp->unsignedBigInteger('user_id')->nullable()->index();
             $bp->unsignedBigInteger('department_id')->nullable()->index();
+            $bp->unsignedBigInteger('org_unit_id')->nullable()->index();
             $bp->enum('status', ['draft', 'submitted'])->default('draft')->index();
             $bp->string('reference_no')->nullable();
             $bp->unsignedBigInteger('approval_instance_id')->nullable()->index();

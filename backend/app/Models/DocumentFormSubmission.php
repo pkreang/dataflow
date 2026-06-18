@@ -15,6 +15,7 @@ class DocumentFormSubmission extends Model
         'user_id',
         'created_by_user_id',
         'department_id',
+        'org_unit_id',
         'payload',
         'status',
         'approval_instance_id',
@@ -107,6 +108,11 @@ class DocumentFormSubmission extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function orgUnit()
+    {
+        return $this->belongsTo(OrgUnit::class, 'org_unit_id');
     }
 
     public function instance()
