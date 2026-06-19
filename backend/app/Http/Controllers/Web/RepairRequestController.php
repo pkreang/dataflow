@@ -122,7 +122,6 @@ class RepairRequestController extends Controller
     {
         $validated = $request->validate([
             'reference_no' => 'nullable|string|max:100',
-            'department_id' => 'nullable|integer|exists:departments,id',
             'form_key' => 'nullable|string|max:100',
             'form_payload' => 'nullable|array',
             'amount' => 'nullable|numeric|min:0',
@@ -138,13 +137,12 @@ class RepairRequestController extends Controller
         try {
             $instance = $approvalFlowService->start(
                 'repair_request',
-                $validated['department_id'] ?? null,
+                null,
                 (int) (session('user.id') ?? 1),
                 $validated['reference_no'] ?? null,
                 $payload,
                 $validated['form_key'] ?? null,
                 isset($validated['amount']) ? (float) $validated['amount'] : null,
-                orgUnitId: \App\Models\OrgUnit::idForDepartment($validated['department_id'] ?? null)
             );
         } catch (RuntimeException $e) {
             return back()

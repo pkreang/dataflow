@@ -72,7 +72,6 @@ class PurchaseRequestController extends Controller
     public function store(Request $request, ApprovalFlowService $approvalFlowService): RedirectResponse
     {
         $validated = $request->validate([
-            'department_id' => 'nullable|integer|exists:departments,id',
             'form_key' => 'nullable|string|max:100',
             'form_payload' => 'nullable|array',
             'amount' => 'nullable|numeric|min:0',
@@ -91,13 +90,12 @@ class PurchaseRequestController extends Controller
         try {
             $instance = $approvalFlowService->start(
                 'purchase_request',
-                $validated['department_id'] ?? null,
+                null,
                 (int) (session('user.id') ?? 0),
                 null,
                 $payload,
                 $validated['form_key'] ?? null,
                 $totalAmount > 0 ? (float) $totalAmount : null,
-                orgUnitId: \App\Models\OrgUnit::idForDepartment($validated['department_id'] ?? null)
             );
         } catch (RuntimeException $e) {
             return back()->withErrors(['workflow' => $this->workflowErrorMessage($e)])->withInput();

@@ -120,7 +120,6 @@ class SparePartsController extends Controller
     {
         $validated = $request->validate([
             'reference_no' => 'nullable|string|max:100',
-            'department_id' => 'nullable|integer|exists:departments,id',
             'form_key' => 'nullable|string|max:100',
             'form_payload' => 'nullable|array',
             'amount' => 'nullable|numeric|min:0',
@@ -162,13 +161,12 @@ class SparePartsController extends Controller
         try {
             $instance = $approvalFlowService->start(
                 'spare_parts_requisition',
-                $validated['department_id'] ?? null,
+                null,
                 (int) (session('user.id') ?? 1),
                 $validated['reference_no'] ?? null,
                 $payload,
                 $validated['form_key'] ?? null,
                 $totalAmount > 0 ? (float) $totalAmount : null,
-                orgUnitId: \App\Models\OrgUnit::idForDepartment($validated['department_id'] ?? null)
             );
         } catch (RuntimeException $e) {
             return back()

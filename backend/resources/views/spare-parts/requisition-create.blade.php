@@ -35,15 +35,6 @@
                     <label class="form-label">{{ __('common.reference_no') }}</label>
                     <input name="reference_no" value="{{ old('reference_no') }}" class="form-input mt-1">
                 </div>
-                <div>
-                    <label class="form-label">{{ __('common.department') }}</label>
-                    <select name="department_id" class="form-input mt-1">
-                        <option value="">{{ __('common.department_not_selected') }}</option>
-                        @foreach($departments as $department)
-                            <option value="{{ $department->id }}" @selected(old('department_id') == $department->id)>{{ $department->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
                 @if($form)
                     @php
                         $layoutCols = (int) ($form->layout_columns ?? 1);

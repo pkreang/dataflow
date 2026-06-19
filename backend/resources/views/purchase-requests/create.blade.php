@@ -29,15 +29,6 @@
                 @if($form)
                     <input type="hidden" name="form_key" value="{{ $form->form_key }}">
                 @endif
-                <div>
-                    <label class="form-label">{{ __('common.department') }}</label>
-                    <select name="department_id" class="form-input mt-1">
-                        <option value="">{{ __('common.department_not_selected') }}</option>
-                        @foreach($departments as $dept)
-                            <option value="{{ $dept->id }}" @selected(old('department_id') == $dept->id)>{{ $dept->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
                 @if($form)
                     @foreach($form->fields as $field)
                         @php $name = "form_payload[{$field->field_key}]"; $value = old("form_payload.{$field->field_key}"); @endphp
