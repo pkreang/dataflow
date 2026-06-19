@@ -40,7 +40,16 @@
 **เลื่อนไป Phase 3:** config policy/binding dual-write (DocumentFormWorkflowPolicyController/SettingController/DepartmentController binding) — bridge ยังว่าง เขียนได้แค่ null ไม่มีประโยชน์; จะ populate ตอน UI เปลี่ยนเป็น org_unit selector + re-seed.
 
 ### Phase 2 — ย้าย reader ทีละ subsystem (commit ละตัว)
-2a workflow resolution → org_unit (คง dept fallback) · 2b form visibility → org_unit + document_form_org_units · 2c field visibility → visible_to_org_units · 2d reports filter org_unit · 2e print/display orgUnit relation.
+
+**2a workflow resolution ✅ (commit 513bfb9 + demo seeder)** — `ApprovalFlowService` อ่าน org_unit ก่อน dept (fallback):
+- `resolveWorkflowId` +param `orgUnitId`; policy priority **position > org_unit > department > global** (org match + orderBy)
+- `resolveOrgUnitBindingWorkflowId()`: org_unit binding ชนะ dept binding ใน `start()`/`previewWorkflow()`
+- `previewWorkflow` +param `orgUnitId` (resolve จาก requester parity กับ start); `resolveOverridePicker` thread org_unit (create=session/user, editDraft=submission)
+- non-breaking: org config ว่าง → fallback dept. tests: `OrgUnitWorkflowResolutionTest` (binding/policy/org-beats-dept/dept-fallback).
+- **demo data authored** (`OrgStructureDemoSeeder`, `db:seed --class=OrgStructureDemoSeeder`): demo มีแค่ Company/Dept/User → สร้าง org tree mirror (root + 8 ฝ่าย), bridge `departments.org_unit_id`, assign `users.org_unit_id`, ตั้ง head, ผูก org-routed workflow (repair_request). พิสูจน์ resolve org path บน data จริง (0 dept binding → ผ่าน org). transitional — Phase 3 vertical seeders แทนที่.
+- **bonus:** bridge populated → Phase 1 CMMS dual-write (`OrgUnit::idForDepartment`) เลิกคืน null.
+
+**2b–2e (ยังไม่ทำ):** 2b form visibility → org_unit + document_form_org_units · 2c field visibility → visible_to_org_units · 2d reports filter org_unit · 2e print/display orgUnit relation.
 
 ### Phase 3 — seeders + UI → org_units
 เขียน vertical seeders ใหม่ (org tree + visibility/binding ผ่าน org_units) · UI selector/admin pages/nav · tests behavior ใหม่ + fixture search-replace.
