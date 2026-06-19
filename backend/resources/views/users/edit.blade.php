@@ -126,19 +126,6 @@
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('users.email_readonly_hint') }}</p>
                     @endif
                 </div>
-                <div>
-                    <label for="department_id" class="form-label">{{ __('common.department') }}</label>
-                    <select name="department_id" id="department_id"
-                            class="form-input @error('department_id') form-input-error @enderror">
-                        <option value="">{{ __('common.choose_department') }}</option>
-                        @foreach ($departments as $dept)
-                            <option value="{{ $dept->id }}" @selected(old('department_id', $user->department_id) == $dept->id)>{{ $dept->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('department_id')
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                    @enderror
-                </div>
 
                 <div>
                     <label for="org_unit_id" class="form-label">{{ __('common.org_unit') }}</label>

@@ -191,7 +191,6 @@ class UserController extends Controller implements HasMiddleware
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'department_id' => 'nullable|exists:departments,id',
             'org_unit_id' => 'nullable|exists:org_units,id',
             'position_id' => 'required|exists:positions,id',
             'phone' => 'nullable|string|max:50',
@@ -216,7 +215,6 @@ class UserController extends Controller implements HasMiddleware
             'password' => CompliantPasswordGenerator::generate(),
             'password_changed_at' => now(),
             'password_must_change' => Setting::getBool('password_force_change_first_login'),
-            'department_id' => $request->department_id,
             'org_unit_id' => $request->filled('org_unit_id') ? (int) $request->org_unit_id : null,
             'position_id' => $position['id'],
             'phone' => $request->phone,
@@ -316,7 +314,6 @@ class UserController extends Controller implements HasMiddleware
         $rules = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'department_id' => 'nullable|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
             'manager_id' => ['nullable', 'exists:users,id', function ($attr, $value, $fail) use ($user) {
                 if ($value && (int) $value === (int) $user->id) {
@@ -335,7 +332,6 @@ class UserController extends Controller implements HasMiddleware
         $payload = [
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
-            'department_id' => $request->department_id,
             'position_id' => $request->position_id,
             'manager_id' => $request->filled('manager_id') ? (int) $request->manager_id : null,
             'org_unit_id' => $request->filled('org_unit_id') ? (int) $request->org_unit_id : null,

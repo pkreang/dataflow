@@ -44,7 +44,6 @@ class UsersCrudTest extends TestCase
         $this->assertNotNull($user);
         // Redirect lands on the new user's edit page so admin can pick how to set password.
         $response->assertRedirect(route('users.edit', ['user' => $user->id, 'just_created' => 1]));
-        $this->assertSame($dept->id, $user->department_id);
         $this->assertTrue($user->hasRole($role->name));
     }
 
