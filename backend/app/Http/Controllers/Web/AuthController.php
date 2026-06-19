@@ -242,6 +242,7 @@ class AuthController extends Controller
             'avatar' => $user->avatar,
             'auth_provider' => $user->auth_provider,
             'department_id' => $user->department_id,
+            'org_unit_id' => $user->org_unit_id,
             'is_super_admin' => $user->is_super_admin,
             'roles' => $user->getRoleNames()->toArray(),
             'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
@@ -271,6 +272,7 @@ class AuthController extends Controller
                 'roles' => $roles,
                 'is_super_admin' => $isSuperAdmin,
                 'department_id' => $userData['department']['id'] ?? $userData['department_id'] ?? null,
+                'org_unit_id' => $userData['org_unit_id'] ?? null,
             ],
             'user_permissions' => $userData['permissions'] ?? [],
         ]);

@@ -329,12 +329,17 @@ class DocumentFormSubmissionController extends Controller
         $userDeptId = $createdById
             ? User::find($ownerId)?->department_id
             : (session('user.department_id') ?? User::find($userId)?->department_id);
+        // Phase 1 dual-write: org_unit จากเจ้าของใบเดียวกับ department → คอลัมน์ตรงกัน
+        $userOrgUnitId = $createdById
+            ? User::find($ownerId)?->org_unit_id
+            : (session('user.org_unit_id') ?? User::find($userId)?->org_unit_id);
 
         $submission = DocumentFormSubmission::create([
             'form_id' => $documentForm->id,
             'user_id' => $ownerId,
             'created_by_user_id' => $createdById,
             'department_id' => $userDeptId,
+            'org_unit_id' => $userOrgUnitId,
             'payload' => $payload,
             'status' => 'draft',
             'assigned_editor_user_ids' => $createdById ? [$createdById] : null,
@@ -344,6 +349,7 @@ class DocumentFormSubmissionController extends Controller
         $fdataRowId = $this->writeFdataRow($documentForm, $payload, [
             'user_id' => $ownerId,
             'department_id' => $userDeptId,
+            'org_unit_id' => $userOrgUnitId,
             'status' => 'draft',
         ]);
 
@@ -529,6 +535,7 @@ class DocumentFormSubmissionController extends Controller
             $newId = $this->schemaService->insertRow($form, $trashed->payload ?? [], [
                 'user_id' => $trashed->user_id,
                 'department_id' => $trashed->department_id,
+                'org_unit_id' => $trashed->org_unit_id,
                 'status' => $trashed->status,
                 'reference_no' => $trashed->reference_no,
                 'approval_instance_id' => $trashed->approval_instance_id,
@@ -693,6 +700,7 @@ class DocumentFormSubmissionController extends Controller
                 amount: $amount,
                 pickedApprovers: $pickedApprovers,
                 positionId: $positionId,
+                orgUnitId: $submission->org_unit_id,
             );
         } catch (RuntimeException $e) {
             $message = $e->getMessage() === 'requester_pick_invalid_approver'
@@ -965,11 +973,13 @@ class DocumentFormSubmissionController extends Controller
         $submission->load('form');
         $form = $submission->form;
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
 
         $copy = DocumentFormSubmission::create([
             'form_id' => $form->id,
             'user_id' => $userId,
             'department_id' => $userDeptId,
+            'org_unit_id' => $userOrgUnitId,
             'payload' => $submission->payload ?? [],
             'status' => 'draft',
             'reference_no' => null,
@@ -981,6 +991,7 @@ class DocumentFormSubmissionController extends Controller
             $rowId = $this->schemaService->insertRow($form, $submission->payload ?? [], [
                 'user_id' => $userId,
                 'department_id' => $userDeptId,
+                'org_unit_id' => $userOrgUnitId,
                 'status' => 'draft',
             ]);
             if ($rowId) {

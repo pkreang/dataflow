@@ -27,8 +27,17 @@
 - models: เพิ่ม `org_unit_id` fillable + `orgUnit()` relation (คู่กับ department())
 - ✅ ไม่มีใครอ่าน org_unit_id → เทสต์เขียวยกชุด
 
-### Phase 1 — Dual-write
-ทุกจุด create record ที่ใส่ department_id → เขียน org_unit_id ด้วย. ยังอ่าน department_id. เทสต์เขียว.
+### Phase 1 — Dual-write ✅ (commit ถัดจาก cdb349b)
+ทุกจุด create per-submission/per-instance ที่ใส่ department_id → เขียน org_unit_id คู่กัน. ยังอ่าน department_id. 730 เทสต์เขียว (+4 `DualWriteOrgUnitTest`).
+
+**กฎ agreement:** org_unit_id ต้องมาจาก entity เดียวกับ department_id ของแถวนั้น (ไม่งั้น Phase 2 reader จะ route/visibility ผิดเงียบๆ).
+- per-user sites (submission create/duplicate/evaluation, mobile submit/saveDraft, restore-copy): dept+org_unit จาก user/owner เดียวกัน → ตรงโดยปริยาย.
+- `ApprovalFlowService::start()`: เพิ่ม param `?int $orgUnitId = null` (ท้าย signature — positional callers ไม่กระทบ). ถ้า `departmentId === null` → ดึงทั้ง dept+org_unit จาก requester. เขียน `org_unit_id = $orgUnitId ?? OrgUnit::idForDepartment($instanceDepartmentId)`.
+- 4 CMMS callers (SpareParts/Repair/PurchaseRequest/Maintenance) ส่ง `$validated['department_id']` ของ**เอกสาร** (อาจไม่ใช่ของผู้ยื่น) → ส่ง `orgUnitId: OrgUnit::idForDepartment(...)` คู่กัน. PurchaseOrder ส่ง null → default จาก requester.
+- bridge helper `OrgUnit::idForDepartment(?int): ?int` อ่าน `departments.org_unit_id` — **คืน null จนกว่า bridge จะถูก populate (Phase 3 re-seed)**. 4 CMMS rows จึงได้ org_unit=null ชั่วคราว (consistent-by-construction).
+- session: เพิ่ม `org_unit_id` ใน web/api AuthController + test trait.
+
+**เลื่อนไป Phase 3:** config policy/binding dual-write (DocumentFormWorkflowPolicyController/SettingController/DepartmentController binding) — bridge ยังว่าง เขียนได้แค่ null ไม่มีประโยชน์; จะ populate ตอน UI เปลี่ยนเป็น org_unit selector + re-seed.
 
 ### Phase 2 — ย้าย reader ทีละ subsystem (commit ละตัว)
 2a workflow resolution → org_unit (คง dept fallback) · 2b form visibility → org_unit + document_form_org_units · 2c field visibility → visible_to_org_units · 2d reports filter org_unit · 2e print/display orgUnit relation.

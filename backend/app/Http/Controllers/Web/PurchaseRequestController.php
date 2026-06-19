@@ -95,7 +95,8 @@ class PurchaseRequestController extends Controller
                 null,
                 $payload,
                 $validated['form_key'] ?? null,
-                $totalAmount > 0 ? (float) $totalAmount : null
+                $totalAmount > 0 ? (float) $totalAmount : null,
+                orgUnitId: \App\Models\OrgUnit::idForDepartment($validated['department_id'] ?? null)
             );
         } catch (RuntimeException $e) {
             return back()->withErrors(['workflow' => $this->workflowErrorMessage($e)])->withInput();

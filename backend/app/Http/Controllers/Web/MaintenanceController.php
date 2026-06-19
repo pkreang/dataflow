@@ -99,7 +99,8 @@ class MaintenanceController extends Controller
                 $validated['reference_no'] ?? null,
                 $payload,
                 $validated['form_key'] ?? null,
-                isset($validated['amount']) ? (float) $validated['amount'] : null
+                isset($validated['amount']) ? (float) $validated['amount'] : null,
+                orgUnitId: \App\Models\OrgUnit::idForDepartment($validated['department_id'] ?? null)
             );
         } catch (RuntimeException $e) {
             return back()

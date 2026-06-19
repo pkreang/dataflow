@@ -44,6 +44,7 @@ trait InteractsWithSettingsAuth
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
                 'department_id' => $user->department_id,
+                'org_unit_id' => $user->org_unit_id,
                 'can_change_password' => true,
                 'roles' => $user->getRoleNames()->toArray(),
             ],

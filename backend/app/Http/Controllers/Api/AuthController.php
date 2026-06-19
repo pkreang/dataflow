@@ -141,6 +141,7 @@ class AuthController extends Controller
             'avatar' => $user->avatar,
             'department' => $user->department?->name,
             'department_id' => $user->department_id,
+            'org_unit_id' => $user->org_unit_id,
             'position' => $user->position?->name,
             'position_id' => $user->position_id,
             'is_active' => $user->is_active,

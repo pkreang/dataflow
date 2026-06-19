@@ -61,6 +61,20 @@ class OrgUnit extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    /**
+     * Bridge a legacy department_id to its mapped org_unit_id (Phase 1 dual-write).
+     * Reads the departments.org_unit_id bridge column added in Phase 0. Returns null
+     * until the bridge is populated (Phase 3 re-seed) — callers treat null as "unmapped".
+     */
+    public static function idForDepartment(?int $departmentId): ?int
+    {
+        if ($departmentId === null) {
+            return null;
+        }
+
+        return Department::whereKey($departmentId)->value('org_unit_id');
+    }
+
     /** Walk up the parent chain, returns collection from root to direct parent (not including self). */
     public function ancestors(): Collection
     {

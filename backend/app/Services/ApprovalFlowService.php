@@ -38,10 +38,16 @@ class ApprovalFlowService
         ?string $formKey = null,
         ?float $amount = null,
         array $pickedApprovers = [],
-        int $positionId = 0
+        int $positionId = 0,
+        ?int $orgUnitId = null
     ): ApprovalInstance {
+        // Phase 1 dual-write: เมื่อ caller ไม่ส่ง department/org_unit มา ให้ดึงของ requester
+        // (ทั้งคู่จากคนเดียวกัน → คอลัมน์ตรงกันโดยปริยาย). ถ้า caller ส่ง departmentId
+        // ของเอกสาร (CMMS) มา จะส่ง orgUnitId ที่ bridge มาแล้วคู่กัน เพื่อไม่ให้ขัดกัน.
         if ($departmentId === null) {
-            $departmentId = User::find($requesterUserId)?->department_id;
+            $requester = User::find($requesterUserId);
+            $departmentId = $requester?->department_id;
+            $orgUnitId ??= $requester?->org_unit_id;
         }
 
         $routingMode = $this->routingMode($documentType);
@@ -68,8 +74,11 @@ class ApprovalFlowService
         }
 
         $instanceDepartmentId = $departmentId ?? $binding?->department_id;
+        // org_unit_id ที่เขียนต้องสอดคล้องกับ department_id ของแถวนี้ — derive จาก
+        // org_unit ที่ caller ส่งมา หรือ bridge จาก department_id สุดท้าย (null จนกว่า bridge จะถูก populate)
+        $instanceOrgUnitId = $orgUnitId ?? OrgUnit::idForDepartment($instanceDepartmentId);
 
-        return DB::transaction(function () use ($workflow, $instanceDepartmentId, $requesterUserId, $documentType, $referenceNo, $payload, $pickedApprovers) {
+        return DB::transaction(function () use ($workflow, $instanceDepartmentId, $instanceOrgUnitId, $requesterUserId, $documentType, $referenceNo, $payload, $pickedApprovers) {
             // Auto-generate running number if not provided
             if (empty($referenceNo)) {
                 $referenceNo = app(RunningNumberService::class)->generate($documentType);
@@ -78,6 +87,7 @@ class ApprovalFlowService
             $instance = ApprovalInstance::create([
                 'workflow_id' => $workflow->id,
                 'department_id' => $instanceDepartmentId,
+                'org_unit_id' => $instanceOrgUnitId,
                 'requester_user_id' => $requesterUserId,
                 'document_type' => $documentType,
                 'reference_no' => $referenceNo,

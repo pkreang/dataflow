@@ -132,6 +132,7 @@ class MobileFormController extends Controller
         $user = $request->user();
         $userId = $user->id;
         $userDeptId = $user->department_id;
+        $userOrgUnitId = $user->org_unit_id;
 
         $payload = FormulaFields::recompute($form, (array) $request->input('fields', []));
 
@@ -173,6 +174,7 @@ class MobileFormController extends Controller
                 payload: $payload,
                 formKey: $form->form_key,
                 amount: $amount,
+                orgUnitId: $userOrgUnitId,
             );
         } catch (\RuntimeException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -182,6 +184,7 @@ class MobileFormController extends Controller
             'form_id' => $form->id,
             'user_id' => $userId,
             'department_id' => $userDeptId,
+            'org_unit_id' => $userOrgUnitId,
             'payload' => $payload,
             'status' => 'submitted',
             'approval_instance_id' => $instance->id,
@@ -215,6 +218,7 @@ class MobileFormController extends Controller
             'form_id' => $form->id,
             'user_id' => $user->id,
             'department_id' => $user->department_id,
+            'org_unit_id' => $user->org_unit_id,
             'payload' => $payload,
             'status' => 'draft',
         ]);

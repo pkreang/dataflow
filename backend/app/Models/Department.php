@@ -13,6 +13,7 @@ class Department extends Model
 
     protected $fillable = [
         'auto_code',
+        'org_unit_id',
         'name',
         'code',
         'description',
@@ -29,6 +30,11 @@ class Department extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function orgUnit()
+    {
+        return $this->belongsTo(OrgUnit::class, 'org_unit_id');
     }
 
     public function workflowBindings()
