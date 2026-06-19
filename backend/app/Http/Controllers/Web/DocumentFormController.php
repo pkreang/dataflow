@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
+use App\Models\OrgUnit;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
 use App\Models\RunningNumberConfig;
@@ -87,25 +88,29 @@ class DocumentFormController extends Controller
         $lookupSources = LookupRegistry::sources();
         $workflowStepsByDocType = $this->workflowStepsByDocType();
         $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $orgUnits = OrgUnit::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
         $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
         $preset = ['document_type' => $request->query('document_type')];
         $allowedDepartmentIds = [];
+        $allowedOrgUnitIds = [];
 
-        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs', 'preset', 'allowedDepartmentIds'));
+        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'orgUnits', 'companyUsers', 'runningNumberConfigs', 'preset', 'allowedDepartmentIds', 'allowedOrgUnitIds'));
     }
 
     public function edit(DocumentForm $documentForm): View
     {
-        $documentForm->load(['fields', 'departments']);
+        $documentForm->load(['fields', 'departments', 'orgUnits']);
         $lookupSources = LookupRegistry::sources();
         $workflowStepsByDocType = $this->workflowStepsByDocType();
         $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $orgUnits = OrgUnit::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
         $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
         $allowedDepartmentIds = $documentForm->departments->pluck('id')->all();
+        $allowedOrgUnitIds = $documentForm->orgUnits->pluck('id')->all();
 
-        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'companyUsers', 'runningNumberConfigs', 'allowedDepartmentIds'));
+        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'orgUnits', 'companyUsers', 'runningNumberConfigs', 'allowedDepartmentIds', 'allowedOrgUnitIds'));
     }
 
     /**
@@ -243,6 +248,8 @@ class DocumentFormController extends Controller
             'layout_columns' => ['nullable', 'integer', Rule::in([1, 2, 3, 4])],
             'allowed_departments'   => ['nullable', 'array'],
             'allowed_departments.*' => ['integer', 'exists:departments,id'],
+            'allowed_org_units'     => ['nullable', 'array'],
+            'allowed_org_units.*'   => ['integer', 'exists:org_units,id'],
             'table_name' => [
                 'required', 'string', 'max:64',
                 'regex:/^[a-z][a-z0-9_]*$/',
@@ -275,6 +282,7 @@ class DocumentFormController extends Controller
             'fields.*.validation_rules' => ['nullable', 'string', 'max:65535'],
             'fields.*.editable_by' => ['nullable', 'string', 'max:2000'],
             'fields.*.visible_to_departments' => ['nullable', 'string', 'max:2000'],
+            'fields.*.visible_to_org_units' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $validator->after(function (\Illuminate\Validation\Validator $v) use ($request, $sourceKeys, $existing): void {
@@ -465,10 +473,12 @@ class DocumentFormController extends Controller
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
                     'visible_to_departments' => $this->parseDepartmentIds($field),
+                    'visible_to_org_units' => $this->parseOrgUnitIds($field),
                 ]);
             }
 
             $form->departments()->sync($validated['allowed_departments'] ?? []);
+            $form->orgUnits()->sync($validated['allowed_org_units'] ?? []);
         });
 
         // DDL outside DB::transaction — MySQL implicit-commits on CREATE TABLE,
@@ -535,10 +545,12 @@ class DocumentFormController extends Controller
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
                     'visible_to_departments' => $this->parseDepartmentIds($field),
+                    'visible_to_org_units' => $this->parseOrgUnitIds($field),
                 ]);
             }
 
             $documentForm->departments()->sync($validated['allowed_departments'] ?? []);
+            $documentForm->orgUnits()->sync($validated['allowed_org_units'] ?? []);
 
             // First-time table creation for forms that had no dedicated table yet
             if (! $documentForm->hasDedicatedTable() && ! empty($validated['table_name'])) {
@@ -1069,6 +1081,25 @@ class DocumentFormController extends Controller
         }
 
         $valid = Department::whereIn('id', $ids)->pluck('id')->all();
+        $valid = array_values(array_intersect($ids, $valid));
+
+        return $valid ?: null;
+    }
+
+    private function parseOrgUnitIds(array $field): ?array
+    {
+        $decoded = $this->decodeJsonList($field['visible_to_org_units'] ?? null);
+        if ($decoded === null) {
+            return null;
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $decoded)));
+        $ids = array_values(array_filter($ids, fn ($id) => $id > 0));
+        if (! $ids) {
+            return null;
+        }
+
+        $valid = OrgUnit::whereIn('id', $ids)->pluck('id')->all();
         $valid = array_values(array_intersect($ids, $valid));
 
         return $valid ?: null;

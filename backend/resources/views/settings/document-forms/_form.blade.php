@@ -254,6 +254,24 @@
         </div>
         @endif
 
+        @if(($orgUnits ?? collect())->count())
+        <div>
+            <label class="form-label">{{ __('common.org_unit') }}</label>
+            <div class="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+                @foreach($orgUnits as $org)
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox"
+                            name="allowed_org_units[]"
+                            value="{{ $org->id }}"
+                            @checked(in_array($org->id, old('allowed_org_units', $allowedOrgUnitIds ?? [])))
+                            class="rounded border-slate-300 text-blue-600 dark:border-slate-600">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">{{ $org->name }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         </div>{{-- /settings tab --}}
 
         {{-- Fields tab: 3-col DnD builder --}}
