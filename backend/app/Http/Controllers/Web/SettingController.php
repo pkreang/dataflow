@@ -179,6 +179,7 @@ class SettingController extends Controller
         $workflowsByType = ApprovalWorkflow::query()->where('is_active', true)
             ->orderBy('name')->get()->groupBy('document_type');
         $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
+        $orgUnits = \App\Models\OrgUnit::query()->where('is_active', true)->orderBy('name')->get();
         $positions = Position::query()->where('is_active', true)->orderBy('name')->get();
 
         $documentTypeLabels = DocumentType::allActive()
@@ -198,20 +199,23 @@ class SettingController extends Controller
             ];
             foreach ($policies->get($form->id, collect()) as $policy) {
                 $advanced = $this->policyIsAdvanced($policy);
-                if ($policy->department_id === null && $policy->position_id === null) {
+                if ($policy->department_id === null && $policy->org_unit_id === null && $policy->position_id === null) {
                     $state['default'] = [
                         'workflowId' => $advanced ? '' : (string) ($policy->workflow_id ?? ''),
                         'advanced' => $advanced,
                         'policyId' => $policy->id,
                     ];
                 } else {
-                    $scope = $policy->department_id !== null && $policy->position_id !== null
-                        ? 'both'
-                        : ($policy->position_id !== null ? 'position' : 'department');
+                    $scope = match (true) {
+                        $policy->position_id !== null => 'position',
+                        $policy->org_unit_id !== null => 'org_unit',
+                        default => 'department',
+                    };
                     $state['exceptions'][] = [
                         'id' => $policy->id,
                         'scope' => $scope,
                         'targetDeptId' => $policy->department_id ? (string) $policy->department_id : '',
+                        'targetOrgUnitId' => $policy->org_unit_id ? (string) $policy->org_unit_id : '',
                         'targetPosId' => $policy->position_id ? (string) $policy->position_id : '',
                         'workflowId' => (string) ($policy->workflow_id ?? ''),
                         'advanced' => $advanced,
@@ -227,6 +231,7 @@ class SettingController extends Controller
             'formGroups',
             'workflowsByType',
             'departments',
+            'orgUnits',
             'positions',
             'documentTypeLabels',
             'initialState'
@@ -241,8 +246,9 @@ class SettingController extends Controller
             'defaults.*' => 'nullable|string',
             'exceptions' => 'nullable|array',
             'exceptions.*.form_id' => 'required|integer|exists:document_forms,id',
-            'exceptions.*.scope' => 'required|in:department,position',
+            'exceptions.*.scope' => 'required|in:department,position,org_unit',
             'exceptions.*.department_id' => 'required_if:exceptions.*.scope,department|nullable|integer|exists:departments,id',
+            'exceptions.*.org_unit_id' => 'required_if:exceptions.*.scope,org_unit|nullable|integer|exists:org_units,id',
             'exceptions.*.position_id' => 'required_if:exceptions.*.scope,position|nullable|integer|exists:positions,id',
             'exceptions.*.workflow_id' => 'required|integer|exists:approval_workflows,id',
             'deleted_policy_ids' => 'nullable|array',
@@ -262,6 +268,7 @@ class SettingController extends Controller
                 $existing = DocumentFormWorkflowPolicy::query()->with('ranges')
                     ->where('form_id', $form->id)
                     ->whereNull('department_id')
+                    ->whereNull('org_unit_id')
                     ->whereNull('position_id')
                     ->first();
 
@@ -283,7 +290,7 @@ class SettingController extends Controller
                 }
 
                 DocumentFormWorkflowPolicy::updateOrCreate(
-                    ['form_id' => $form->id, 'department_id' => null, 'position_id' => null],
+                    ['form_id' => $form->id, 'department_id' => null, 'org_unit_id' => null, 'position_id' => null],
                     ['workflow_id' => (int) $workflowId, 'use_amount_condition' => false]
                 );
             }
@@ -296,11 +303,13 @@ class SettingController extends Controller
                 }
 
                 $deptId = $entry['scope'] === 'department' ? (int) $entry['department_id'] : null;
+                $orgUnitId = $entry['scope'] === 'org_unit' ? (int) $entry['org_unit_id'] : null;
                 $posId = $entry['scope'] === 'position' ? (int) $entry['position_id'] : null;
 
                 $existing = DocumentFormWorkflowPolicy::query()->with('ranges')
                     ->where('form_id', $form->id)
                     ->where('department_id', $deptId)
+                    ->where('org_unit_id', $orgUnitId)
                     ->where('position_id', $posId)
                     ->first();
 
@@ -316,7 +325,7 @@ class SettingController extends Controller
                 }
 
                 DocumentFormWorkflowPolicy::updateOrCreate(
-                    ['form_id' => $form->id, 'department_id' => $deptId, 'position_id' => $posId],
+                    ['form_id' => $form->id, 'department_id' => $deptId, 'org_unit_id' => $orgUnitId, 'position_id' => $posId],
                     ['workflow_id' => $workflow->id, 'use_amount_condition' => false]
                 );
             }

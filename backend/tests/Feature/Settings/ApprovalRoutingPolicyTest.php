@@ -162,6 +162,28 @@ class ApprovalRoutingPolicyTest extends TestCase
         ]);
     }
 
+    public function test_add_org_unit_exception(): void
+    {
+        $admin = $this->makeSuperAdmin();
+        $form = $this->makeForm();
+        $workflow = $this->makeWorkflow();
+        $org = \App\Models\OrgUnit::create(['name' => 'Eng', 'type' => 'department', 'is_active' => true]);
+
+        $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
+            'exceptions' => [
+                ['form_id' => $form->id, 'scope' => 'org_unit', 'org_unit_id' => $org->id, 'workflow_id' => $workflow->id],
+            ],
+        ])->assertRedirect(route('settings.approval-routing'));
+
+        $this->assertDatabaseHas('document_form_workflow_policies', [
+            'form_id' => $form->id,
+            'department_id' => null,
+            'org_unit_id' => $org->id,
+            'position_id' => null,
+            'workflow_id' => $workflow->id,
+        ]);
+    }
+
     public function test_add_position_exception(): void
     {
         $admin = $this->makeSuperAdmin();

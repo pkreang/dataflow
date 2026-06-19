@@ -44,6 +44,7 @@
             original: @js($initialState),
             state: JSON.parse(JSON.stringify(@js($initialState))),
             deptOptions: @js($departments->map(fn ($d) => ['id' => (string) $d->id, 'name' => $d->name])->values()),
+            orgOptions: @js($orgUnits->map(fn ($o) => ['id' => (string) $o->id, 'name' => $o->name])->values()),
             posOptions: @js($positions->map(fn ($p) => ['id' => (string) $p->id, 'name' => $p->name])->values()),
             deletedIds: [],
             isDirty() {
@@ -64,8 +65,9 @@
                 const seen = new Set();
                 for (const ex of this.state[fid].exceptions) {
                     if (ex.advanced || ex.scope === 'both') continue;
-                    const key = ex.scope + ':' + (ex.scope === 'department' ? ex.targetDeptId : ex.targetPosId);
-                    if ((ex.targetDeptId || ex.targetPosId) && seen.has(key)) return true;
+                    const tgt = ex.scope === 'department' ? ex.targetDeptId : (ex.scope === 'org_unit' ? ex.targetOrgUnitId : ex.targetPosId);
+                    const key = ex.scope + ':' + tgt;
+                    if (tgt && seen.has(key)) return true;
                     seen.add(key);
                 }
                 return false;
@@ -73,7 +75,7 @@
             get anyDuplicate() { return Object.keys(this.state).some(fid => this.hasDuplicate(fid)); },
             addException(fid) {
                 this.state[fid].exceptions.push({
-                    id: null, scope: 'department', targetDeptId: '', targetPosId: '', workflowId: '', advanced: false,
+                    id: null, scope: 'department', targetDeptId: '', targetOrgUnitId: '', targetPosId: '', workflowId: '', advanced: false,
                 });
             },
             removeException(fid, idx) {
@@ -100,11 +102,12 @@
                     }
                     this.state[fid].exceptions.forEach(ex => {
                         if (ex.advanced || ex.scope === 'both') return;
-                        const target = ex.scope === 'department' ? ex.targetDeptId : ex.targetPosId;
+                        const target = ex.scope === 'department' ? ex.targetDeptId : (ex.scope === 'org_unit' ? ex.targetOrgUnitId : ex.targetPosId);
                         if (!target || !ex.workflowId) return;
                         mk('exceptions[' + i + '][form_id]', fid);
                         mk('exceptions[' + i + '][scope]', ex.scope);
                         if (ex.scope === 'department') mk('exceptions[' + i + '][department_id]', ex.targetDeptId);
+                        if (ex.scope === 'org_unit') mk('exceptions[' + i + '][org_unit_id]', ex.targetOrgUnitId);
                         if (ex.scope === 'position') mk('exceptions[' + i + '][position_id]', ex.targetPosId);
                         mk('exceptions[' + i + '][workflow_id]', ex.workflowId);
                         i++;
@@ -213,6 +216,7 @@
                                                             <div class="flex flex-wrap items-center gap-2">
                                                                 <select x-model="ex.scope" class="form-input w-32">
                                                                     <option value="department">{{ __('common.approval_routing_scope_department') }}</option>
+                                                                    <option value="org_unit">{{ __('common.org_unit') }}</option>
                                                                     <option value="position">{{ __('common.approval_routing_scope_position') }}</option>
                                                                 </select>
 
@@ -220,6 +224,12 @@
                                                                     <option value="">{{ __('common.approval_routing_select_target') }}</option>
                                                                     <template x-for="d in deptOptions" :key="d.id">
                                                                         <option :value="d.id" x-text="d.name" :selected="d.id === ex.targetDeptId"></option>
+                                                                    </template>
+                                                                </select>
+                                                                <select x-show="ex.scope === 'org_unit'" x-cloak x-model="ex.targetOrgUnitId" class="form-input flex-1 min-w-40">
+                                                                    <option value="">{{ __('common.approval_routing_select_target') }}</option>
+                                                                    <template x-for="o in orgOptions" :key="o.id">
+                                                                        <option :value="o.id" x-text="o.name" :selected="o.id === ex.targetOrgUnitId"></option>
                                                                     </template>
                                                                 </select>
                                                                 <select x-show="ex.scope === 'position'" x-cloak x-model="ex.targetPosId" class="form-input flex-1 min-w-40">
