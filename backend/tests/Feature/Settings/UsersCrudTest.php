@@ -3,6 +3,7 @@
 namespace Tests\Feature\Settings;
 
 use App\Models\Department;
+use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -45,6 +46,27 @@ class UsersCrudTest extends TestCase
         $response->assertRedirect(route('users.edit', ['user' => $user->id, 'just_created' => 1]));
         $this->assertSame($dept->id, $user->department_id);
         $this->assertTrue($user->hasRole($role->name));
+    }
+
+    public function test_super_admin_can_assign_org_unit_on_create(): void
+    {
+        $admin = $this->makeSuperAdmin();
+        $dept = Department::create(['name' => 'D', 'code' => 'D', 'is_active' => true]);
+        $position = Position::create(['name' => 'P', 'code' => 'P', 'is_active' => true]);
+        $org = OrgUnit::create(['name' => 'Engineering', 'type' => 'department', 'is_active' => true]);
+        $role = Role::firstWhere('name', 'admin') ?? Role::create(['name' => 'admin', 'guard_name' => 'web']);
+
+        $this->actingAsWebSession($admin)->post(route('users.store'), [
+            'first_name' => 'Org', 'last_name' => 'Member',
+            'email' => 'org-member@example.test',
+            'department_id' => $dept->id,
+            'org_unit_id' => $org->id,
+            'position_id' => $position->id,
+            'role_type' => 'default', 'role_id' => $role->id,
+        ])->assertRedirect();
+
+        $user = User::firstWhere('email', 'org-member@example.test');
+        $this->assertSame($org->id, (int) $user->org_unit_id);
     }
 
     public function test_validation_rejects_missing_fields(): void

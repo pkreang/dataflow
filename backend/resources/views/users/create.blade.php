@@ -91,6 +91,20 @@
                     @enderror
                 </div>
 
+                <div>
+                    <label for="org_unit_id" class="form-label">{{ __('common.org_unit') }}</label>
+                    <select name="org_unit_id" id="org_unit_id"
+                            class="form-input @error('org_unit_id') form-input-error @enderror">
+                        <option value="">—</option>
+                        @foreach ($orgUnits as $org)
+                            <option value="{{ $org->id }}" @selected(old('org_unit_id') == $org->id)>{{ $org->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('org_unit_id')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- Row 3: Position / Phone --}}
                 <div>
                     <label for="position_id" class="form-label">

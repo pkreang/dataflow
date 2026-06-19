@@ -49,7 +49,15 @@
 - **demo data authored** (`OrgStructureDemoSeeder`, `db:seed --class=OrgStructureDemoSeeder`): demo มีแค่ Company/Dept/User → สร้าง org tree mirror (root + 8 ฝ่าย), bridge `departments.org_unit_id`, assign `users.org_unit_id`, ตั้ง head, ผูก org-routed workflow (repair_request). พิสูจน์ resolve org path บน data จริง (0 dept binding → ผ่าน org). transitional — Phase 3 vertical seeders แทนที่.
 - **bonus:** bridge populated → Phase 1 CMMS dual-write (`OrgUnit::idForDepartment`) เลิกคืน null.
 
-**2b–2e (ยังไม่ทำ):** 2b form visibility → org_unit + document_form_org_units · 2c field visibility → visible_to_org_units · 2d reports filter org_unit · 2e print/display orgUnit relation.
+**2b form visibility ✅ (4fb355b)** — `DocumentForm::scopeVisibleToUser(orgUnitId, departmentId)` org-first; thread org ผ่าน 12 callers + NavigationService chain. `FormVisibilityOrgUnitTest`.
+
+**2c field visibility ✅ (5a2635a)** — migration `visible_to_org_units` JSON; `fieldVisibleToUser(org, dept)` + `dynamic-field.blade` org-first; thread org ผ่าน 8 includes + 4 CMMS controllers. `FieldVisibilityOrgUnitTest`.
+
+**2d reports ✅ (2569d4f)** — `DataSourceRegistry` +org_unit_id dimension (guard fdata เก่า); `DashboardWidgetDataController` +org_unit_id filter + label lookup. `ReportOrgUnitFilterTest`.
+
+**2e print/display ✅ (d160829)** — print/pdf + 4 CMMS show แสดง org-first; eager-load orgUnit คู่ department; th lang หน่วยงาน; `ApprovalInstance::orgUnit():BelongsTo` (larastan).
+
+**Phase 2 จบ — reader ทุก subsystem อ่าน org_unit ก่อน department (fallback). 744 tests, analyse 97.**
 
 ### Phase 3 — seeders + UI → org_units
 เขียน vertical seeders ใหม่ (org tree + visibility/binding ผ่าน org_units) · UI selector/admin pages/nav · tests behavior ใหม่ + fixture search-replace.

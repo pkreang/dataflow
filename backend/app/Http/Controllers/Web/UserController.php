@@ -172,6 +172,7 @@ class UserController extends Controller implements HasMiddleware
         $permGrid = $this->buildPermissionMatrix();
         $positions = Position::query()->where('is_active', true)->orderBy('name')->get();
         $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
+        $orgUnits = OrgUnit::where('is_active', true)->orderBy('name')->get();
 
         return view('users.create', [
             'roles' => $roles,
@@ -180,6 +181,7 @@ class UserController extends Controller implements HasMiddleware
             'permissionActionLabels' => $permGrid['action_labels'],
             'positions' => $positions,
             'departments' => $departments,
+            'orgUnits' => $orgUnits,
         ]);
     }
 
@@ -190,6 +192,7 @@ class UserController extends Controller implements HasMiddleware
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'department_id' => 'required|exists:departments,id',
+            'org_unit_id' => 'nullable|exists:org_units,id',
             'position_id' => 'required|exists:positions,id',
             'phone' => 'nullable|string|max:50',
             'remark' => 'nullable|string|max:1000',
@@ -214,6 +217,7 @@ class UserController extends Controller implements HasMiddleware
             'password_changed_at' => now(),
             'password_must_change' => Setting::getBool('password_force_change_first_login'),
             'department_id' => $request->department_id,
+            'org_unit_id' => $request->filled('org_unit_id') ? (int) $request->org_unit_id : null,
             'position_id' => $position['id'],
             'phone' => $request->phone,
             'remark' => $request->remark,
