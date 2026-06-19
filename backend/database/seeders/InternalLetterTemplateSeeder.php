@@ -111,7 +111,6 @@ class InternalLetterTemplateSeeder extends Seeder
                 'col_span' => 0,
                 'placeholder' => $f['placeholder'] ?? null,
                 'options' => $f['options'] ?? null,
-                'visible_to_departments' => null,
                 'editable_by' => null,
             ]);
         }

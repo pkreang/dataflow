@@ -5,9 +5,9 @@ namespace Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Department>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\OrgUnit>
  */
-class DepartmentFactory extends Factory
+class OrgUnitFactory extends Factory
 {
     /**
      * @return array<string, mixed>
@@ -16,8 +16,8 @@ class DepartmentFactory extends Factory
     {
         return [
             'name' => fake()->unique()->words(2, true),
-            'code' => strtoupper(fake()->unique()->bothify('DEP###')),
-            'description' => fake()->optional()->sentence(),
+            'type' => 'department',
+            'parent_id' => null,
             'is_active' => true,
         ];
     }

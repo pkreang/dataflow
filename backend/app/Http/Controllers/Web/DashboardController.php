@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\Department;
+use App\Models\OrgUnit;
 use App\Models\ReportDashboard;
 use App\Models\Setting;
 use App\Models\User;
@@ -39,7 +39,7 @@ class DashboardController extends Controller
 
         $dashboard->load('widgets');
         $apiToken = session('api_token');
-        $departments = Department::query()
+        $orgUnits = OrgUnit::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -47,7 +47,7 @@ class DashboardController extends Controller
         return view('dashboard', compact(
             'dashboard',
             'apiToken',
-            'departments',
+            'orgUnits',
             'availableDashboards',
             'user'
         ));

@@ -18,7 +18,7 @@
     <p class="text-xs mt-0.5" style="color: var(--mob-muted)">{{ $user->email ?? '' }}</p>
     @if($user?->jobPosition)
         <p class="text-xs mt-1" style="color: var(--mob-muted)">
-            {{ $user->jobPosition->name }}{{ $user->department ? ' · '.$user->department->name : '' }}
+            {{ $user->jobPosition->name }}{{ $user->orgUnit ? ' · '.$user->orgUnit->name : '' }}
         </p>
     @endif
 </div>

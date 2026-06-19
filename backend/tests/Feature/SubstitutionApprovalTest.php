@@ -57,7 +57,6 @@ class SubstitutionApprovalTest extends TestCase
 
         $instance = ApprovalInstance::create([
             'workflow_id' => $wf->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'repair_request',
             'reference_no' => 'SUB-'.uniqid(),
@@ -203,7 +202,6 @@ class SubstitutionApprovalTest extends TestCase
         ]);
         $instance = ApprovalInstance::create([
             'workflow_id' => $wf->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'repair_request',
             'reference_no' => 'POS-'.uniqid(),

@@ -63,7 +63,7 @@
                     @enderror
                 </div>
 
-                {{-- Row 2: Email / Department --}}
+                {{-- Row 2: Email / Org unit --}}
                 <div>
                     <label for="email" class="form-label">
                         {{ __('common.email') }} <span class="text-red-500">*</span>

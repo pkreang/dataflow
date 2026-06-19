@@ -1082,7 +1082,6 @@ class FormActionsTest extends TestCase
 
         $instance = \App\Models\ApprovalInstance::create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $owner->id,
             'document_type' => $form->document_type,
             'reference_no' => 'REF-'.uniqid(),
@@ -1116,7 +1115,6 @@ class FormActionsTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name) ?: $user->email,
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => $user->department_id,
                 'can_change_password' => true,
                 'roles' => $user->getRoleNames()->toArray(),
             ],

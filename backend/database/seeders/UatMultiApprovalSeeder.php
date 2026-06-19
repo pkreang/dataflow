@@ -4,12 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentFormWorkflowRange;
 use App\Models\DocumentType;
+use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\RunningNumberConfig;
 use App\Models\Setting;
@@ -57,10 +57,23 @@ class UatMultiApprovalSeeder extends Seeder
             'sort_order' => 11,
         ]);
 
-        // ---- 3. Existing departments (already in DB) -----------------------
-        $hrDept = Department::where('code', 'HR')->firstOrFail();   // #1
-        $acctDept = Department::where('code', 'ACC')->firstOrFail();  // #2
-        $itDept = Department::where('code', 'IT')->firstOrFail();   // #3
+        // ---- 3. Org units (HR / ACC / IT as departments under a root) ------
+        $rootOrg = OrgUnit::firstOrCreate(
+            ['name' => 'บริษัท ABC (UAT)', 'parent_id' => null],
+            ['type' => 'company', 'is_active' => true]
+        );
+        $hrOrg = OrgUnit::firstOrCreate(
+            ['name' => 'ฝ่ายบุคคล (HR)', 'parent_id' => $rootOrg->id],
+            ['type' => 'department', 'is_active' => true]
+        );
+        $acctOrg = OrgUnit::firstOrCreate(
+            ['name' => 'ฝ่ายบัญชี (ACC)', 'parent_id' => $rootOrg->id],
+            ['type' => 'department', 'is_active' => true]
+        );
+        $itOrg = OrgUnit::firstOrCreate(
+            ['name' => 'ฝ่ายไอที (IT)', 'parent_id' => $rootOrg->id],
+            ['type' => 'department', 'is_active' => true]
+        );
 
         // ---- 4. Positions --------------------------------------------------
         $hrSupPos = Position::updateOrCreate(['code' => 'HR_SUP'], ['name' => 'หัวหน้าฝ่ายบุคคล',  'is_active' => true]);
@@ -72,24 +85,24 @@ class UatMultiApprovalSeeder extends Seeder
         $password = Hash::make('Test@1234');
 
         // HR submitter
-        $hrStaff = $this->makeUser('hr.staff@abc.co.th', 'สมหมาย', 'ใจดี', $hrDept->id, null, $employeeRole, $password);
+        $hrStaff = $this->makeUser('hr.staff@abc.co.th', 'สมหมาย', 'ใจดี', $hrOrg->id, null, $employeeRole, $password);
 
         // HR supervisors (3 คน, position HR_SUP → quorum 2/3 step 1)
-        $hrSup1 = $this->makeUser('hr.sup1@abc.co.th', 'มานะ', 'รักงาน', $hrDept->id, $hrSupPos->id, $approverRole, $password);
-        $hrSup2 = $this->makeUser('hr.sup2@abc.co.th', 'มานิ', 'ขยัน', $hrDept->id, $hrSupPos->id, $approverRole, $password);
-        $hrSup3 = $this->makeUser('hr.sup3@abc.co.th', 'มาลี', 'สุขใจ', $hrDept->id, $hrSupPos->id, $approverRole, $password);
+        $hrSup1 = $this->makeUser('hr.sup1@abc.co.th', 'มานะ', 'รักงาน', $hrOrg->id, $hrSupPos->id, $approverRole, $password);
+        $hrSup2 = $this->makeUser('hr.sup2@abc.co.th', 'มานิ', 'ขยัน', $hrOrg->id, $hrSupPos->id, $approverRole, $password);
+        $hrSup3 = $this->makeUser('hr.sup3@abc.co.th', 'มาลี', 'สุขใจ', $hrOrg->id, $hrSupPos->id, $approverRole, $password);
 
         // Accounting submitter
-        $acctStaff = $this->makeUser('acct.staff@abc.co.th', 'บัญชา', 'ตรงไป', $acctDept->id, null, $employeeRole, $password);
+        $acctStaff = $this->makeUser('acct.staff@abc.co.th', 'บัญชา', 'ตรงไป', $acctOrg->id, null, $employeeRole, $password);
 
         // Accounting managers (3 คน, position ACCT_MGR → quorum 2/3 step 1)
-        $acctMgr1 = $this->makeUser('acct.mgr1@abc.co.th', 'ชาญ', 'บัญชีดี', $acctDept->id, $acctMgrPos->id, $approverRole, $password);
-        $acctMgr2 = $this->makeUser('acct.mgr2@abc.co.th', 'ชาลี', 'เก่งเลข', $acctDept->id, $acctMgrPos->id, $approverRole, $password);
-        $acctMgr3 = $this->makeUser('acct.mgr3@abc.co.th', 'ชัย', 'รักเลข', $acctDept->id, $acctMgrPos->id, $approverRole, $password);
+        $acctMgr1 = $this->makeUser('acct.mgr1@abc.co.th', 'ชาญ', 'บัญชีดี', $acctOrg->id, $acctMgrPos->id, $approverRole, $password);
+        $acctMgr2 = $this->makeUser('acct.mgr2@abc.co.th', 'ชาลี', 'เก่งเลข', $acctOrg->id, $acctMgrPos->id, $approverRole, $password);
+        $acctMgr3 = $this->makeUser('acct.mgr3@abc.co.th', 'ชัย', 'รักเลข', $acctOrg->id, $acctMgrPos->id, $approverRole, $password);
 
         // IT extra supervisors (เพิ่มเข้า position SUP สำหรับ quorum repair_request)
-        $itHead2 = $this->makeUser('it.head2@abc.co.th', 'สมเกียรติ', 'ดีงาม', $itDept->id, $supPos->id, $approverRole, $password);
-        $itHead3 = $this->makeUser('it.head3@abc.co.th', 'สมภพ', 'สุดยอด', $itDept->id, $supPos->id, $approverRole, $password);
+        $itHead2 = $this->makeUser('it.head2@abc.co.th', 'สมเกียรติ', 'ดีงาม', $itOrg->id, $supPos->id, $approverRole, $password);
+        $itHead3 = $this->makeUser('it.head3@abc.co.th', 'สมภพ', 'สุดยอด', $itOrg->id, $supPos->id, $approverRole, $password);
 
         // Grant approval.approve to all approver users
         foreach ([$hrSup1, $hrSup2, $hrSup3, $acctMgr1, $acctMgr2, $acctMgr3, $itHead2, $itHead3] as $u) {
@@ -215,8 +228,8 @@ class UatMultiApprovalSeeder extends Seeder
         foreach ($leaveFields as $f) {
             DocumentFormField::create(['form_id' => $leaveForm->id] + $f);
         }
-        // restrict to HR dept
-        $leaveForm->departments()->sync([$hrDept->id]);
+        // restrict to HR org unit
+        $leaveForm->orgUnits()->sync([$hrOrg->id]);
 
         // 7b. Purchase Request Form
         $purchaseForm = DocumentForm::updateOrCreate(
@@ -239,14 +252,14 @@ class UatMultiApprovalSeeder extends Seeder
         foreach ($purchaseFields as $f) {
             DocumentFormField::create(['form_id' => $purchaseForm->id] + $f);
         }
-        // restrict to Accounting dept
-        $purchaseForm->departments()->sync([$acctDept->id]);
+        // restrict to Accounting org unit
+        $purchaseForm->orgUnits()->sync([$acctOrg->id]);
 
         // ---- 8. DocumentFormWorkflowPolicy --------------------------------
 
-        // 8a. Leave policy (HR dept-specific, fixed workflow)
+        // 8a. Leave policy (HR org-unit-specific, fixed workflow)
         $leavePolicy = DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $leaveForm->id, 'department_id' => $hrDept->id],
+            ['form_id' => $leaveForm->id, 'org_unit_id' => $hrOrg->id],
             [
                 'use_amount_condition' => false,
                 'amount_field_key' => null,
@@ -254,9 +267,9 @@ class UatMultiApprovalSeeder extends Seeder
             ]
         );
 
-        // 8b. Purchase policy (ACCT dept-specific, amount-based)
+        // 8b. Purchase policy (ACCT org-unit-specific, amount-based)
         $purchasePolicy = DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $purchaseForm->id, 'department_id' => $acctDept->id],
+            ['form_id' => $purchaseForm->id, 'org_unit_id' => $acctOrg->id],
             [
                 'use_amount_condition' => true,
                 'amount_field_key' => 'total_amount',
@@ -327,7 +340,7 @@ class UatMultiApprovalSeeder extends Seeder
         string $email,
         string $firstName,
         string $lastName,
-        int $departmentId,
+        int $orgUnitId,
         ?int $positionId,
         Role $role,
         string $hashedPassword
@@ -338,7 +351,7 @@ class UatMultiApprovalSeeder extends Seeder
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'password' => $hashedPassword,
-                'department_id' => $departmentId,
+                'org_unit_id' => $orgUnitId,
                 'position_id' => $positionId,
                 'is_active' => true,
                 'is_super_admin' => false,

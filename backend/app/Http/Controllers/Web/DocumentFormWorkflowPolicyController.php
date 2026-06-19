@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalWorkflow;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
+use App\Models\OrgUnit;
 use App\Models\Position;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +21,7 @@ class DocumentFormWorkflowPolicyController extends Controller
         $policy = DocumentFormWorkflowPolicy::query()
             ->with('ranges')
             ->firstOrCreate(
-                ['form_id' => $documentForm->id, 'department_id' => null],
+                ['form_id' => $documentForm->id, 'org_unit_id' => null, 'position_id' => null],
                 ['use_amount_condition' => false]
             );
 
@@ -30,16 +30,16 @@ class DocumentFormWorkflowPolicyController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
-        $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
+        $orgUnits = OrgUnit::query()->where('is_active', true)->orderBy('name')->get();
         $positions = Position::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('settings.document-forms.policy', compact('documentForm', 'policy', 'workflows', 'departments', 'positions'));
+        return view('settings.document-forms.policy', compact('documentForm', 'policy', 'workflows', 'orgUnits', 'positions'));
     }
 
     public function update(Request $request, DocumentForm $documentForm): RedirectResponse
     {
         $validated = $request->validate([
-            'department_id' => 'nullable|integer|exists:departments,id',
+            'org_unit_id' => 'nullable|integer|exists:org_units,id',
             'position_id' => 'nullable|integer|exists:positions,id',
             'use_amount_condition' => 'nullable|boolean',
             'amount_field_key' => 'nullable|string|max:100',
@@ -67,7 +67,7 @@ class DocumentFormWorkflowPolicyController extends Controller
             $policy = DocumentFormWorkflowPolicy::updateOrCreate(
                 [
                     'form_id' => $documentForm->id,
-                    'department_id' => $validated['department_id'] ?? null,
+                    'org_unit_id' => $validated['org_unit_id'] ?? null,
                     'position_id' => $validated['position_id'] ?? null,
                 ],
                 [

@@ -202,7 +202,7 @@ class MemoTemplateSeeder extends Seeder
     private function seedPolicy(DocumentForm $form, ApprovalWorkflow $workflow): void
     {
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $form->id, 'department_id' => null],
+            ['form_id' => $form->id],
             [
                 'workflow_id'          => $workflow->id,
                 'use_amount_condition' => false,

@@ -6,7 +6,6 @@ use App\Events\SparePartStockLow;
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\SparePart;
 use App\Models\SparePartRequisitionItem;
@@ -77,7 +76,7 @@ class SparePartsController extends Controller
             ->where('document_type', 'spare_parts_requisition')
             ->where('requester_user_id', $userId)
             ->when($status, fn ($q) => $q->where('status', $status))
-            ->with(['department', 'orgUnit'])
+            ->with(['orgUnit'])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -88,14 +87,12 @@ class SparePartsController extends Controller
     public function requisitionCreate(Request $request): View
     {
         $userId = (int) (session('user.id') ?? 0);
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
-        $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
         $form = DocumentForm::query()
             ->with('fields')
             ->where('document_type', 'spare_parts_requisition')
             ->where('is_active', true)
-            ->visibleToUser($userOrgUnitId, $userDeptId)
+            ->visibleToUser($userOrgUnitId)
             ->orderBy('id')
             ->first();
         $sparePartsQuery = SparePart::query()->where('is_active', true);
@@ -113,7 +110,7 @@ class SparePartsController extends Controller
             $branch = $userModel->branch;
         }
 
-        return view('spare-parts.requisition-create', compact('departments', 'form', 'spareParts', 'parentType', 'parentId', 'company', 'branch', 'userDeptId', 'userOrgUnitId'));
+        return view('spare-parts.requisition-create', compact('form', 'spareParts', 'parentType', 'parentId', 'company', 'branch', 'userOrgUnitId'));
     }
 
     public function requisitionSubmit(Request $request, ApprovalFlowService $approvalFlowService): RedirectResponse
@@ -161,7 +158,6 @@ class SparePartsController extends Controller
         try {
             $instance = $approvalFlowService->start(
                 'spare_parts_requisition',
-                null,
                 (int) (session('user.id') ?? 1),
                 $validated['reference_no'] ?? null,
                 $payload,
@@ -196,7 +192,7 @@ class SparePartsController extends Controller
         abort_unless($instance->document_type === 'spare_parts_requisition', 404);
         $this->authorizeViewInstance($instance);
 
-        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'department', 'orgUnit']);
+        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'orgUnit']);
         $userId = (int) (session('user.id') ?? 0);
 
         $lineItems = SparePartRequisitionItem::query()
@@ -212,7 +208,6 @@ class SparePartsController extends Controller
             ->first();
         $formFields = $formForLabels?->fields ?? collect();
 
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorRole = $this->resolveEditorRole($instance, $userId);
 
@@ -236,7 +231,7 @@ class SparePartsController extends Controller
             $branch = $requester->branch;
         }
 
-        return view('spare-parts.requisition-show', compact('instance', 'lineItems', 'canAct', 'canIssue', 'formFields', 'formForLabels', 'userDeptId', 'userOrgUnitId', 'editorRole', 'company', 'branch'));
+        return view('spare-parts.requisition-show', compact('instance', 'lineItems', 'canAct', 'canIssue', 'formFields', 'formForLabels', 'userOrgUnitId', 'editorRole', 'company', 'branch'));
     }
 
     public function issueItems(Request $request, ApprovalInstance $instance): RedirectResponse
@@ -336,7 +331,6 @@ class SparePartsController extends Controller
         return match (true) {
             str_contains($msg, 'Amount is required for amount-based') => __('common.workflow_error_amount_required'),
             str_contains($msg, 'No matching amount range') => __('common.workflow_error_no_amount_range'),
-            str_contains($msg, 'Department is required for workflow binding') => __('common.workflow_error_department_required'),
             str_contains($msg, 'No workflow binding found') => __('common.workflow_error_no_binding'),
             str_contains($msg, 'Workflow is not configured') => __('common.workflow_error_not_configured'),
             default => __('common.workflow_error_generic'),

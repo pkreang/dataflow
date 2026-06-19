@@ -5,13 +5,13 @@ namespace Database\Seeders;
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
 use App\Models\Company;
-use App\Models\Department;
-use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentType;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
+use App\Models\OrgUnit;
+use App\Models\OrgUnitWorkflowBinding;
 use App\Models\Position;
 use App\Models\RunningNumberConfig;
 use App\Models\User;
@@ -22,9 +22,9 @@ use Spatie\Permission\Models\Role;
 /**
  * โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) — eForm + workflow demo
  *
- * Seeds: company, departments (4 กลุ่มบริหาร + 3 กลุ่มสาระตัวอย่าง), positions (5),
+ * Seeds: company, org units (4 กลุ่มบริหาร + 3 กลุ่มสาระตัวอย่าง), positions (5),
  * users (6), document types (2), workflows (2), forms (2: ใบลา + ใบขอจัดกิจกรรม),
- * with form department visibility to isolate from NTEQ data.
+ * with form org-unit visibility to isolate from NTEQ data.
  *
  * Idempotent (updateOrCreate). Safe to re-run.
  *
@@ -61,8 +61,13 @@ class BodindechaDemoSeeder extends Seeder
             );
         }
 
-        // ── 3. Departments (7) ──────────────────────────────
+        // ── 3. Org units (7 departments under school root) ──
         //    4 กลุ่มบริหาร + 3 กลุ่มสาระตัวอย่าง
+        $orgRoot = OrgUnit::firstOrCreate(
+            ['name' => 'โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี)', 'parent_id' => null],
+            ['type' => 'company', 'is_active' => true]
+        );
+
         $departments = [
             ['code' => 'BD_ACAD',   'name' => 'กลุ่มบริหารวิชาการ',       'description' => 'Academic Affairs — หลักสูตร วัดผล'],
             ['code' => 'BD_BUDGET', 'name' => 'กลุ่มบริหารงบประมาณ',      'description' => 'Budget — การเงิน พัสดุ'],
@@ -73,12 +78,15 @@ class BodindechaDemoSeeder extends Seeder
             ['code' => 'BD_SCI',    'name' => 'กลุ่มสาระวิทยาศาสตร์ฯ',    'description' => 'Science & Technology Department'],
         ];
 
-        $deptMap = [];
-        foreach ($departments as $d) {
-            $dept = Department::updateOrCreate(['code' => $d['code']], ['name' => $d['name'], 'description' => $d['description']]);
-            $deptMap[$d['code']] = $dept;
+        $orgMap = [];
+        foreach ($departments as $i => $d) {
+            $unit = OrgUnit::updateOrCreate(
+                ['name' => $d['name'], 'parent_id' => $orgRoot->id],
+                ['type' => 'department', 'is_active' => true, 'sort_order' => $i + 1]
+            );
+            $orgMap[$d['code']] = $unit;
         }
-        $this->command?->info('Departments: '.count($departments));
+        $this->command?->info('Org units: '.count($departments));
 
         // ── 4. Positions (5) ────────────────────────────────
         $positions = [
@@ -116,7 +124,7 @@ class BodindechaDemoSeeder extends Seeder
                     'first_name' => $u['first_name'],
                     'last_name' => $u['last_name'],
                     'password' => 'Bodin1234!',
-                    'department_id' => $deptMap[$u['dept']]->id,
+                    'org_unit_id' => $orgMap[$u['dept']]->id,
                     'position_id' => $posMap[$u['pos']]->id,
                     'company_id' => $school->id,
                     'is_active' => true,
@@ -149,12 +157,12 @@ class BodindechaDemoSeeder extends Seeder
         // ── 7. Workflow Bindings ─────────────────────────────
         $bdDepts = ['BD_THAI', 'BD_MATH', 'BD_SCI'];
         foreach ($bdDepts as $code) {
-            DepartmentWorkflowBinding::updateOrCreate(
-                ['department_id' => $deptMap[$code]->id, 'document_type' => 'bd_leave_request'],
+            OrgUnitWorkflowBinding::updateOrCreate(
+                ['org_unit_id' => $orgMap[$code]->id, 'document_type' => 'bd_leave_request'],
                 ['workflow_id' => $wfLeave->id]
             );
-            DepartmentWorkflowBinding::updateOrCreate(
-                ['department_id' => $deptMap[$code]->id, 'document_type' => 'bd_activity_approval'],
+            OrgUnitWorkflowBinding::updateOrCreate(
+                ['org_unit_id' => $orgMap[$code]->id, 'document_type' => 'bd_activity_approval'],
                 ['workflow_id' => $wfActivity->id]
             );
         }
@@ -212,7 +220,7 @@ class BodindechaDemoSeeder extends Seeder
         }
 
         // ── 8. Form: ใบลา ────────────────────────────────────
-        $bdDeptIds = collect($bdDepts)->map(fn ($c) => $deptMap[$c]->id)->all();
+        $bdOrgUnitIds = collect($bdDepts)->map(fn ($c) => $orgMap[$c]->id)->all();
 
         $leaveForm = $this->syncForm(
             'bd_leave',
@@ -237,11 +245,11 @@ class BodindechaDemoSeeder extends Seeder
                 ['field_key' => 'substitute',       'label' => 'ผู้ปฏิบัติหน้าที่แทน', 'field_type' => 'text',     'is_required' => false, 'sort_order' => 8],
                 ['field_key' => 'signature',        'label' => 'ลายมือชื่อ',          'field_type' => 'signature', 'is_required' => false, 'sort_order' => 9],
             ],
-            $bdDeptIds
+            $bdOrgUnitIds
         );
 
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $leaveForm->id, 'department_id' => null],
+            ['form_id' => $leaveForm->id],
             ['use_amount_condition' => false, 'workflow_id' => $wfLeave->id]
         );
 
@@ -284,11 +292,11 @@ class BodindechaDemoSeeder extends Seeder
                     'visibility_rules' => [['field' => 'budget_source', 'operator' => 'not_equals', 'value' => 'no_budget']]],
                 ['field_key' => 'requester_sign',    'label' => 'ลายมือชื่อผู้ขออนุมัติ',    'field_type' => 'signature', 'is_required' => false, 'sort_order' => 15],
             ],
-            $bdDeptIds
+            $bdOrgUnitIds
         );
 
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $actForm->id, 'department_id' => null],
+            ['form_id' => $actForm->id],
             ['use_amount_condition' => false, 'workflow_id' => $wfActivity->id]
         );
 
@@ -349,9 +357,9 @@ class BodindechaDemoSeeder extends Seeder
     }
 
     /**
-     * @param  int[]  $visibleDeptIds  Department IDs that can see this form (empty = all)
+     * @param  int[]  $visibleOrgUnitIds  Org unit IDs that can see this form (empty = all)
      */
-    private function syncForm(string $formKey, string $name, string $documentType, string $description, int $columns, string $tableName, array $fields, array $visibleDeptIds = []): DocumentForm
+    private function syncForm(string $formKey, string $name, string $documentType, string $description, int $columns, string $tableName, array $fields, array $visibleOrgUnitIds = []): DocumentForm
     {
         $form = DocumentForm::updateOrCreate(
             ['form_key' => $formKey],
@@ -387,9 +395,9 @@ class BodindechaDemoSeeder extends Seeder
             ]);
         }
 
-        // Set department visibility
-        if (! empty($visibleDeptIds)) {
-            $form->departments()->sync($visibleDeptIds);
+        // Set org unit visibility
+        if (! empty($visibleOrgUnitIds)) {
+            $form->orgUnits()->sync($visibleOrgUnitIds);
         }
 
         // Create dedicated table

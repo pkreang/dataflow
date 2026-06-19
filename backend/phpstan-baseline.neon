@@ -463,11 +463,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/Web/MaintenanceController.php
 
-		-
-			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Web/MaintenanceController.php
 
 		-
 			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
@@ -697,11 +692,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/Web/PurchaseRequestController.php
 
-		-
-			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Web/PurchaseRequestController.php
 
 		-
 			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
@@ -757,11 +747,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/Web/RepairRequestController.php
 
-		-
-			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Web/RepairRequestController.php
 
 		-
 			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
@@ -859,11 +844,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/Web/SparePartsController.php
 
-		-
-			message: '#^Relation ''department'' is not found in App\\Models\\ApprovalInstance model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Web/SparePartsController.php
 
 		-
 			message: '#^Relation ''fields'' is not found in App\\Models\\DocumentForm model\.$#'
@@ -1208,7 +1188,7 @@ parameters:
 			path: app/Services/RunningNumberService.php
 
 		-
-			message: '#^Method App\\Services\\SchemaFirstFormService\:\:getFormDefinition\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, object\{field_key\: string, label\: string, field_type\: string, is_required\: bool, col_span\: int, placeholder\: string\|null, options\: array\<int, string\>\|non\-falsy\-string\|null, visibility_rules\: string\|null, validation_rules\: string\|null, visible_to_departments\: array\{\}, effective_editable_by\: array\{''requester''\}\}&stdClass\>\.$#'
+			message: '#^Method App\\Services\\SchemaFirstFormService\:\:getFormDefinition\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, object\{field_key\: string, label\: string, field_type\: string, is_required\: bool, col_span\: int, placeholder\: string\|null, options\: array\<int, string\>\|non\-falsy\-string\|null, visibility_rules\: string\|null, validation_rules\: string\|null, effective_editable_by\: array\{''requester''\}\}&stdClass\>\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Services/SchemaFirstFormService.php

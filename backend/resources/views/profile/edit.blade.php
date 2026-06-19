@@ -258,8 +258,8 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="form-label">{{ __('common.department') }}</label>
-                        <input type="text" value="{{ $user->department?->name ?: '—' }}" readonly
+                        <label class="form-label">{{ __('common.org_unit') }}</label>
+                        <input type="text" value="{{ $user->orgUnit?->name ?: '—' }}" readonly
                                class="form-input {{ $lockedClass }}">
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('common.field_locked_admin_only') }}</p>
                     </div>

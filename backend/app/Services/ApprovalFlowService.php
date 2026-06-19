@@ -10,7 +10,6 @@ use App\Events\Approval\WorkflowStepAdvanced;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalInstanceStep;
 use App\Models\ApprovalWorkflow;
-use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\OrgUnit;
@@ -32,7 +31,6 @@ class ApprovalFlowService
 
     public function start(
         string $documentType,
-        ?int $departmentId,
         int $requesterUserId,
         ?string $referenceNo = null,
         array $payload = [],
@@ -42,30 +40,19 @@ class ApprovalFlowService
         int $positionId = 0,
         ?int $orgUnitId = null
     ): ApprovalInstance {
-        // Phase 1 dual-write: เมื่อ caller ไม่ส่ง department/org_unit มา ให้ดึงของ requester
-        // (ทั้งคู่จากคนเดียวกัน → คอลัมน์ตรงกันโดยปริยาย). ถ้า caller ส่ง departmentId
-        // ของเอกสาร (CMMS) มา จะส่ง orgUnitId ที่ bridge มาแล้วคู่กัน เพื่อไม่ให้ขัดกัน.
-        if ($departmentId === null) {
-            $requester = User::find($requesterUserId);
-            $departmentId = $requester?->department_id;
-            $orgUnitId ??= $requester?->org_unit_id;
+        // org_unit ของผู้ยื่นเป็นตัวกำหนด routing — ถ้า caller ไม่ส่งมา ดึงจาก requester
+        if ($orgUnitId === null) {
+            $orgUnitId = User::find($requesterUserId)?->org_unit_id;
         }
 
         $routingMode = $this->routingMode($documentType);
-        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, $positionId, $payload, $orgUnitId);
+        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $formKey, $amount, $routingMode, $positionId, $payload, $orgUnitId);
 
-        $binding = null;
         if ($resolvedWorkflowId === null) {
-            // Phase 2a: org_unit binding ชนะ dept binding (org-first, dept fallback)
             $resolvedWorkflowId = $this->resolveOrgUnitBindingWorkflowId($documentType, $orgUnitId);
 
             if ($resolvedWorkflowId === null) {
-                $binding = $this->resolveDepartmentBinding($documentType, $departmentId);
-
-                if (! $binding) {
-                    throw new RuntimeException($this->bindingMissingMessage($documentType, $departmentId));
-                }
-                $resolvedWorkflowId = (int) $binding->workflow_id;
+                throw new RuntimeException($this->bindingMissingMessage($documentType));
             }
         }
 
@@ -79,12 +66,7 @@ class ApprovalFlowService
             throw new RuntimeException("Workflow is not configured for {$documentType}");
         }
 
-        $instanceDepartmentId = $departmentId ?? $binding?->department_id;
-        // org_unit_id ที่เขียนต้องสอดคล้องกับ department_id ของแถวนี้ — derive จาก
-        // org_unit ที่ caller ส่งมา หรือ bridge จาก department_id สุดท้าย (null จนกว่า bridge จะถูก populate)
-        $instanceOrgUnitId = $orgUnitId ?? OrgUnit::idForDepartment($instanceDepartmentId);
-
-        return DB::transaction(function () use ($workflow, $instanceDepartmentId, $instanceOrgUnitId, $requesterUserId, $documentType, $referenceNo, $payload, $pickedApprovers) {
+        return DB::transaction(function () use ($workflow, $orgUnitId, $requesterUserId, $documentType, $referenceNo, $payload, $pickedApprovers) {
             // Auto-generate running number if not provided
             if (empty($referenceNo)) {
                 $referenceNo = app(RunningNumberService::class)->generate($documentType);
@@ -92,8 +74,7 @@ class ApprovalFlowService
 
             $instance = ApprovalInstance::create([
                 'workflow_id' => $workflow->id,
-                'department_id' => $instanceDepartmentId,
-                'org_unit_id' => $instanceOrgUnitId,
+                'org_unit_id' => $orgUnitId,
                 'requester_user_id' => $requesterUserId,
                 'document_type' => $documentType,
                 'reference_no' => $referenceNo,
@@ -203,32 +184,25 @@ class ApprovalFlowService
      */
     public function previewWorkflow(
         string $documentType,
-        ?int $departmentId,
         int $requesterUserId,
         ?string $formKey = null,
         ?float $amount = null,
         ?int $orgUnitId = null
     ): ?ApprovalWorkflow {
-        // resolve ทั้ง dept+org_unit จาก requester เมื่อ caller ไม่ส่งมา — ต้อง parity
-        // กับ start() เพื่อให้ picker preview workflow ตัวเดียวกับที่ submit จะสร้าง
-        if ($departmentId === null) {
-            $requester = User::find($requesterUserId);
-            $departmentId = $requester?->department_id;
-            $orgUnitId ??= $requester?->org_unit_id;
+        // resolve org_unit จาก requester เมื่อ caller ไม่ส่งมา — ต้อง parity กับ start()
+        // เพื่อให้ picker preview workflow ตัวเดียวกับที่ submit จะสร้าง
+        if ($orgUnitId === null) {
+            $orgUnitId = User::find($requesterUserId)?->org_unit_id;
         }
 
         $routingMode = $this->routingMode($documentType);
-        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, 0, [], $orgUnitId);
+        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $formKey, $amount, $routingMode, 0, [], $orgUnitId);
 
         if ($resolvedWorkflowId === null) {
             $resolvedWorkflowId = $this->resolveOrgUnitBindingWorkflowId($documentType, $orgUnitId);
         }
         if ($resolvedWorkflowId === null) {
-            $binding = $this->resolveDepartmentBinding($documentType, $departmentId);
-            if (! $binding) {
-                return null;
-            }
-            $resolvedWorkflowId = (int) $binding->workflow_id;
+            return null;
         }
 
         // Caller queries stages separately (ApprovalWorkflowStage) — no eager-load
@@ -246,7 +220,6 @@ class ApprovalFlowService
 
     private function resolveWorkflowId(
         string $documentType,
-        ?int $departmentId,
         ?string $formKey,
         ?float $amount,
         string $routingMode,
@@ -271,22 +244,16 @@ class ApprovalFlowService
             ->with('ranges')
             ->where('form_id', $form->id);
 
-        // Priority: position-specific > org_unit-specific > department-specific > global
+        // Priority: position-specific > org_unit-specific > global
         // Collect all policies that could match, then pick most specific.
-        // (Phase 2a: org_unit ชนะ department; department คง fallback ระหว่าง transition)
-        $policyQuery->where(function ($query) use ($departmentId, $orgUnitId, $positionId) {
+        $policyQuery->where(function ($query) use ($orgUnitId, $positionId) {
             // Global fallback always included (no scoping at all)
             $query->where(function ($q) {
-                $q->whereNull('department_id')->whereNull('org_unit_id')->whereNull('position_id');
+                $q->whereNull('org_unit_id')->whereNull('position_id');
             });
             if ($orgUnitId) {
                 $query->orWhere(function ($q) use ($orgUnitId) {
                     $q->where('org_unit_id', $orgUnitId)->whereNull('position_id');
-                });
-            }
-            if ($departmentId) {
-                $query->orWhere(function ($q) use ($departmentId) {
-                    $q->where('department_id', $departmentId)->whereNull('org_unit_id')->whereNull('position_id');
                 });
             }
             if ($positionId) {
@@ -294,8 +261,7 @@ class ApprovalFlowService
             }
         })
             ->orderByRaw('(position_id IS NOT NULL) DESC')
-            ->orderByRaw('(org_unit_id IS NOT NULL) DESC')
-            ->orderByRaw('(department_id IS NOT NULL) DESC');
+            ->orderByRaw('(org_unit_id IS NOT NULL) DESC');
 
         $policy = $policyQuery->first();
 
@@ -370,16 +336,7 @@ class ApprovalFlowService
         return $binding ? (int) $binding->workflow_id : null;
     }
 
-    private function resolveDepartmentBinding(string $documentType, ?int $departmentId): ?DepartmentWorkflowBinding
-    {
-        $q = DepartmentWorkflowBinding::query()->where('document_type', $documentType);
-
-        return $departmentId
-            ? $q->where('department_id', $departmentId)->first()
-            : $q->orderBy('id')->first();
-    }
-
-    private function bindingMissingMessage(string $documentType, ?int $departmentId): string
+    private function bindingMissingMessage(string $documentType): string
     {
         return "No workflow binding found for {$documentType}";
     }

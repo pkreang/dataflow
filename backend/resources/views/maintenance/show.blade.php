@@ -51,8 +51,8 @@
                     <dd class="text-slate-900 dark:text-slate-100 font-medium">{{ $instance->reference_no ?: '—' }}</dd>
                 </div>
                 <div class="flex justify-between gap-4">
-                    <dt class="text-slate-500 dark:text-slate-400">{{ __('common.department') }}</dt>
-                    <dd class="text-slate-900 dark:text-slate-100">{{ $instance->orgUnit?->name ?? $instance->department?->name ?? '—' }}</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">{{ __('common.org_unit') }}</dt>
+                    <dd class="text-slate-900 dark:text-slate-100">{{ $instance->orgUnit?->name ?? $instance->orgUnit?->name ?? '—' }}</dd>
                 </div>
                 <div class="flex justify-between gap-4">
                     <dt class="text-slate-500 dark:text-slate-400">{{ __('common.user') }}</dt>
@@ -89,7 +89,6 @@
                                 'field'      => $field,
                                 'name'       => $fName,
                                 'value'      => $fValue,
-                                'userDeptId' => $userDeptId,
                                 'editorRole' => $editorRole,
                             ])
                         </div>

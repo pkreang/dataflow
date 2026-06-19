@@ -4,12 +4,10 @@ namespace App\Providers;
 
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
 use App\Models\DocumentType;
 use App\Models\Position;
 use App\Models\Setting;
 use App\Models\User;
-use App\Observers\DepartmentObserver;
 use App\Observers\DocumentTypeObserver;
 use App\Observers\PermissionObserver;
 use App\Observers\PositionObserver;
@@ -62,7 +60,6 @@ class AppServiceProvider extends ServiceProvider
         Role::observe(RoleObserver::class);
         Permission::observe(PermissionObserver::class);
         User::observe(UserObserver::class);
-        Department::observe(DepartmentObserver::class);
         Position::observe(PositionObserver::class);
 
         Gate::before(function ($user, $ability) {
@@ -75,11 +72,10 @@ class AppServiceProvider extends ServiceProvider
             if (session('api_token')) {
                 $perms = session('user_permissions', []);
                 $isSuperAdmin = session('user.is_super_admin', false);
-                $userDeptId = session('user.department_id');
                 $userOrgUnitId = session('user.org_unit_id');
                 $userId = (int) (session('user.id') ?? 0);
                 $navService = app(NavigationService::class);
-                $menus = $navService->getMenus($perms, $isSuperAdmin, $userDeptId, $userOrgUnitId);
+                $menus = $navService->getMenus($perms, $isSuperAdmin, $userOrgUnitId);
                 $view->with('navigationMenus', $menus);
                 $view->with('pinnedMenus', $userId > 0 ? $navService->getPinnedMenus($userId, $menus) : collect());
 

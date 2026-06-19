@@ -39,9 +39,8 @@ class ReportController extends Controller
         $dashboard->load('widgets');
 
         $apiToken = session('api_token');
+        $orgUnits = \App\Models\OrgUnit::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
-        $departments = \App\Models\Department::orderBy('name')->where('is_active', true)->get(['id', 'name']);
-
-        return view('reports.dashboards.show', compact('dashboard', 'apiToken', 'departments'));
+        return view('reports.dashboards.show', compact('dashboard', 'apiToken', 'orgUnits'));
     }
 }

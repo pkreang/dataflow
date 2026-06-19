@@ -53,7 +53,7 @@
             <thead class="bg-slate-50 dark:bg-slate-800/60">
                 <tr>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.user') }}</th>
-                    <th class="table-header px-6 py-3 text-left">{{ __('common.departments') }}</th>
+                    <th class="table-header px-6 py-3 text-left">{{ __('common.org_units') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.positions') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.roles') }}</th>
                     <th class="table-header px-6 py-3 text-left">{{ __('common.last_active') }}</th>
@@ -96,7 +96,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
-                            {{ $user->department?->name ?? '—' }}
+                            {{ $user->orgUnit?->name ?? '—' }}
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
                             {{ $user->jobPosition?->name ?? '—' }}

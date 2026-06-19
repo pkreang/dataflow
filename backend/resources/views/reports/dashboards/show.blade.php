@@ -21,6 +21,6 @@
     @endif
 </div>
 
-@include('_partials.dashboard-widget-grid', ['dashboard' => $dashboard, 'departments' => $departments])
+@include('_partials.dashboard-widget-grid', ['dashboard' => $dashboard, 'orgUnits' => $orgUnits])
 
 @endsection

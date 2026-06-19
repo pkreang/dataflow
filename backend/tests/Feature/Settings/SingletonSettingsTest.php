@@ -107,7 +107,7 @@ class SingletonSettingsTest extends TestCase
 
         $this->assertDatabaseHas('document_form_workflow_policies', [
             'form_id' => $form->id,
-            'department_id' => null,
+            'org_unit_id' => null,
             'position_id' => null,
             'workflow_id' => $workflow->id,
         ]);
@@ -121,7 +121,7 @@ class SingletonSettingsTest extends TestCase
         $workflow = ApprovalWorkflow::create(['name' => 'Test WF2', 'document_type' => 'repair_request', 'is_active' => true]);
         \App\Models\DocumentFormWorkflowPolicy::create([
             'form_id' => $form->id,
-            'department_id' => null,
+            'org_unit_id' => null,
             'position_id' => null,
             'workflow_id' => $workflow->id,
             'use_amount_condition' => false,
@@ -133,7 +133,7 @@ class SingletonSettingsTest extends TestCase
 
         $this->assertDatabaseMissing('document_form_workflow_policies', [
             'form_id' => $form->id,
-            'department_id' => null,
+            'org_unit_id' => null,
             'position_id' => null,
         ]);
     }

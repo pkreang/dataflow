@@ -95,7 +95,7 @@ class ApprovalWorkflowDemoSeeder extends Seeder
         }
 
         $policy = DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $form->id, 'department_id' => null],
+            ['form_id' => $form->id],
             [
                 'use_amount_condition' => true,
                 'workflow_id' => $ranges[0]['workflow']->id, // fallback

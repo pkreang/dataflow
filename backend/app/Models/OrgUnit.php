@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasAutoCode;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,7 +11,7 @@ use Illuminate\Support\Collection;
 
 class OrgUnit extends Model
 {
-    use HasAutoCode;
+    use HasAutoCode, HasFactory;
 
     protected $fillable = [
         'auto_code',
@@ -59,20 +60,6 @@ class OrgUnit extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
-    }
-
-    /**
-     * Bridge a legacy department_id to its mapped org_unit_id (Phase 1 dual-write).
-     * Reads the departments.org_unit_id bridge column added in Phase 0. Returns null
-     * until the bridge is populated (Phase 3 re-seed) — callers treat null as "unmapped".
-     */
-    public static function idForDepartment(?int $departmentId): ?int
-    {
-        if ($departmentId === null) {
-            return null;
-        }
-
-        return Department::whereKey($departmentId)->value('org_unit_id');
     }
 
     /** Walk up the parent chain, returns collection from root to direct parent (not including self). */

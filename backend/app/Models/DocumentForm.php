@@ -41,33 +41,21 @@ class DocumentForm extends Model
         return $this->hasMany(DocumentFormField::class, 'form_id')->orderBy('sort_order');
     }
 
-    public function departments(): BelongsToMany
-    {
-        return $this->belongsToMany(Department::class, 'document_form_departments', 'form_id', 'department_id');
-    }
-
     public function orgUnits(): BelongsToMany
     {
         return $this->belongsToMany(OrgUnit::class, 'document_form_org_units', 'form_id', 'org_unit_id');
     }
 
     /**
-     * Filter forms visible to a user — Phase 2b: org_unit-first, department fallback.
-     * Form เห็นได้เมื่อ (ก) ไม่มี restriction ทั้ง org_unit และ department, หรือ
-     * (ข) org_unit ของ user อยู่ใน orgUnits ของ form, หรือ (ค) department ตรง (fallback).
-     * เซ็ต org config ว่าง → ลดรูปเป็นพฤติกรรม department เดิม (non-breaking).
+     * Filter forms visible to a user by org_unit. Form เห็นได้เมื่อ (ก) ไม่มี
+     * restriction org_unit, หรือ (ข) org_unit ของ user อยู่ใน orgUnits ของ form.
      */
-    public function scopeVisibleToUser(Builder $query, ?int $orgUnitId, ?int $departmentId = null): Builder
+    public function scopeVisibleToUser(Builder $query, ?int $orgUnitId): Builder
     {
-        return $query->where(function ($q) use ($orgUnitId, $departmentId) {
-            $q->where(function ($noRestrict) {
-                $noRestrict->whereDoesntHave('orgUnits')->whereDoesntHave('departments');
-            });
+        return $query->where(function ($q) use ($orgUnitId) {
+            $q->whereDoesntHave('orgUnits');
             if ($orgUnitId !== null) {
                 $q->orWhereHas('orgUnits', fn ($oq) => $oq->where('org_units.id', $orgUnitId));
-            }
-            if ($departmentId !== null) {
-                $q->orWhereHas('departments', fn ($dq) => $dq->where('departments.id', $departmentId));
             }
         });
     }

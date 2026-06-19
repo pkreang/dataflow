@@ -153,7 +153,6 @@ class SystemChangeLogTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name),
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => null,
                 'can_change_password' => true,
                 'roles' => [],
             ],

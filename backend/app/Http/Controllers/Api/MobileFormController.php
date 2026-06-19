@@ -22,7 +22,7 @@ class MobileFormController extends Controller
         $forms = DocumentForm::query()
             ->where('is_active', true)
             ->where('document_type', '!=', 'evaluation')
-            ->visibleToUser($user->org_unit_id, $user->department_id)
+            ->visibleToUser($user->org_unit_id)
             ->orderBy('name')
             ->get(['id', 'form_key', 'name', 'document_type', 'description', 'layout_columns']);
 
@@ -131,7 +131,6 @@ class MobileFormController extends Controller
 
         $user = $request->user();
         $userId = $user->id;
-        $userDeptId = $user->department_id;
         $userOrgUnitId = $user->org_unit_id;
 
         $payload = FormulaFields::recompute($form, (array) $request->input('fields', []));
@@ -168,7 +167,6 @@ class MobileFormController extends Controller
         try {
             $instance = $approvalFlowService->start(
                 documentType: $form->document_type,
-                departmentId: $userDeptId,
                 requesterUserId: $userId,
                 referenceNo: null,
                 payload: $payload,
@@ -183,7 +181,6 @@ class MobileFormController extends Controller
         $submission = DocumentFormSubmission::create([
             'form_id' => $form->id,
             'user_id' => $userId,
-            'department_id' => $userDeptId,
             'org_unit_id' => $userOrgUnitId,
             'payload' => $payload,
             'status' => 'submitted',
@@ -217,7 +214,6 @@ class MobileFormController extends Controller
         $submission = DocumentFormSubmission::create([
             'form_id' => $form->id,
             'user_id' => $user->id,
-            'department_id' => $user->department_id,
             'org_unit_id' => $user->org_unit_id,
             'payload' => $payload,
             'status' => 'draft',

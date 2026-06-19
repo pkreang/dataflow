@@ -116,7 +116,6 @@ class LineLinkFlowTest extends TestCase
                 'last_name' => $user->last_name,
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => $user->department_id,
                 'can_change_password' => true,
                 'roles' => [],
             ],

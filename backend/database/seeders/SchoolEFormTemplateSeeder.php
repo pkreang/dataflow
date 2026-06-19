@@ -4,21 +4,20 @@ namespace Database\Seeders;
 
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
+use App\Models\OrgUnit;
 use App\Models\Position;
 use Illuminate\Database\Seeder;
 
 /**
- * School playbook: sample departments (document types from DocumentTypeSeeder),
+ * School playbook: sample org units (document types from DocumentTypeSeeder),
  * three starter forms (leave, small procurement, activity), approval workflow by position,
  * organization-wide routing + global policy (no amount routing).
- * Purges legacy factory departments (MAINT, PROD, WH, …), removes non-school document forms,
- * then seeds SCH_* ฝ่าย only.
+ * Removes non-school document forms, then seeds school org units (ฝ่าย) only.
  * When SCH_ACAD_HEAD + SCH_VICE_PRINCIPAL positions exist (PositionDemoSeeder), workflows use two steps;
  * otherwise falls back to a single position or admin user — not Spatie roles.
  *
@@ -35,8 +34,6 @@ class SchoolEFormTemplateSeeder extends Seeder
 
     public function run(): void
     {
-        DepartmentSeeder::purgeLegacyFactoryDepartments();
-
         DocumentForm::query()
             ->whereNotIn('document_type', self::SCHOOL_DOCUMENT_TYPE_CODES)
             ->delete();
@@ -46,7 +43,7 @@ class SchoolEFormTemplateSeeder extends Seeder
             ->delete();
 
         $this->seedCompany();
-        $this->seedDepartments();
+        $this->seedOrgUnits();
         $this->seedDirectorPosition();
 
         // Ensure the shared `leave_type` lookup list exists (idempotent — same key
@@ -209,22 +206,27 @@ class SchoolEFormTemplateSeeder extends Seeder
         );
     }
 
-    private function seedDepartments(): void
+    private function seedOrgUnits(): void
     {
+        $root = OrgUnit::query()->firstOrCreate(
+            ['name' => 'โรงเรียนสาธิต (Demo)', 'parent_id' => null],
+            ['type' => 'company', 'is_active' => true]
+        );
+
         $rows = [
-            ['code' => 'SCH_ACAD', 'name' => 'ฝ่ายวิชาการ', 'description' => 'การเรียนการสอน — ผู้ยื่น eForm ส่วนใหญ่'],
-            ['code' => 'SCH_ADM', 'name' => 'ฝ่ายธุรการ', 'description' => 'ประสานงาน ธุรการ'],
-            ['code' => 'SCH_FIN', 'name' => 'ฝ่ายการเงิน', 'description' => 'งบประมาณ การเงิน'],
-            ['code' => 'SCH_FAC', 'name' => 'ฝ่ายอาคารและสถานที่', 'description' => 'อาคาร สนาม สาธารณูปโภค'],
+            ['name' => 'ฝ่ายวิชาการ', 'description' => 'การเรียนการสอน — ผู้ยื่น eForm ส่วนใหญ่'],
+            ['name' => 'ฝ่ายธุรการ', 'description' => 'ประสานงาน ธุรการ'],
+            ['name' => 'ฝ่ายการเงิน', 'description' => 'งบประมาณ การเงิน'],
+            ['name' => 'ฝ่ายอาคารและสถานที่', 'description' => 'อาคาร สนาม สาธารณูปโภค'],
         ];
 
-        foreach ($rows as $row) {
-            Department::query()->updateOrCreate(
-                ['code' => $row['code']],
+        foreach ($rows as $i => $row) {
+            OrgUnit::query()->updateOrCreate(
+                ['name' => $row['name'], 'parent_id' => $root->id],
                 [
-                    'name' => $row['name'],
-                    'description' => $row['description'],
+                    'type' => 'department',
                     'is_active' => true,
+                    'sort_order' => $i + 1,
                 ]
             );
         }
@@ -295,13 +297,13 @@ class SchoolEFormTemplateSeeder extends Seeder
         return $form;
     }
 
-    private function syncPolicy(DocumentForm $form, ?int $departmentId, ?int $positionId, ApprovalWorkflow $workflow): void
+    private function syncPolicy(DocumentForm $form, ?int $orgUnitId, ?int $positionId, ApprovalWorkflow $workflow): void
     {
         DocumentFormWorkflowPolicy::query()->updateOrCreate(
             [
-                'form_id'       => $form->id,
-                'department_id' => $departmentId,
-                'position_id'   => $positionId,
+                'form_id'     => $form->id,
+                'org_unit_id' => $orgUnitId,
+                'position_id' => $positionId,
             ],
             [
                 'use_amount_condition' => false,

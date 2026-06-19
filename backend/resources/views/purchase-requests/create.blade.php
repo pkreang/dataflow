@@ -37,7 +37,7 @@
                                 {{ $field->label }}
                                 @if($field->is_required) <span class="text-red-500">*</span> @endif
                             </label>
-                            @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value, 'userDeptId' => $userDeptId ?? null, 'userOrgUnitId' => $userOrgUnitId ?? null])
+                            @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value, 'userOrgUnitId' => $userOrgUnitId ?? null])
                         </div>
                     @endforeach
                 @endif

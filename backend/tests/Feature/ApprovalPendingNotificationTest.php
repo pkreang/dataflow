@@ -30,7 +30,7 @@ class ApprovalPendingNotificationTest extends TestCase
     {
         [$svc, $form, $requester, $approver] = $this->makeScenario();
 
-        $svc->start('apn_test', null, $requester->id, formKey: $form->form_key);
+        $svc->start('apn_test', $requester->id, formKey: $form->form_key);
 
         $this->assertSame(1, $this->pendingCountFor($approver));
     }
@@ -47,7 +47,7 @@ class ApprovalPendingNotificationTest extends TestCase
             'is_active' => true,
         ]);
 
-        $svc->start('apn_test', null, $requester->id, formKey: $form->form_key);
+        $svc->start('apn_test', $requester->id, formKey: $form->form_key);
 
         $this->assertSame(1, $this->pendingCountFor($substitute), 'substitute must be notified');
         $this->assertSame(1, $this->pendingCountFor($approver), 'primary approver must ALSO be notified');
@@ -57,7 +57,7 @@ class ApprovalPendingNotificationTest extends TestCase
     {
         [$svc, $form, $requester, $approver] = $this->makeScenario();
 
-        $instance = $svc->start('apn_test', null, $requester->id, formKey: $form->form_key);
+        $instance = $svc->start('apn_test', $requester->id, formKey: $form->form_key);
 
         // Same event fired again within the dedup window (e.g. listener retry)
         event(new WorkflowStarted($instance->load('steps')));
@@ -90,7 +90,6 @@ class ApprovalPendingNotificationTest extends TestCase
         ]);
         DocumentFormWorkflowPolicy::query()->create([
             'form_id' => $form->id,
-            'department_id' => null,
             'position_id' => null,
             'workflow_id' => $workflow->id,
             'use_amount_condition' => false,

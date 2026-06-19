@@ -74,7 +74,6 @@ class BackfillDedicatedTableCommand extends Command
 
                 $meta = [
                     'user_id' => $submission->user_id,
-                    'department_id' => $submission->department_id,
                     'status' => $submission->status,
                     'reference_no' => $submission->reference_no,
                     'approval_instance_id' => $submission->approval_instance_id,

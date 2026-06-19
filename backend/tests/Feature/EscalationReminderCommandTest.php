@@ -6,8 +6,8 @@ use App\Models\ApprovalInstance;
 use App\Models\ApprovalInstanceStep;
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
-use App\Models\DepartmentWorkflowBinding;
+use App\Models\OrgUnit;
+use App\Models\OrgUnitWorkflowBinding;
 use App\Models\Position;
 use App\Models\User;
 use App\Notifications\ApprovalEscalationReminder;
@@ -45,7 +45,6 @@ class EscalationReminderCommandTest extends TestCase
     {
         return ApprovalInstance::create([
             'workflow_id'       => $wf->id,
-            'department_id'     => null,
             'requester_user_id' => $requester->id,
             'document_type'     => $wf->document_type,
             'reference_no'      => 'ESC-' . uniqid(),
@@ -235,6 +234,8 @@ class EscalationReminderCommandTest extends TestCase
 
         $docType = 'escalation_prop_' . uniqid();
         $wf = $this->makeWorkflow($docType);
+        $org = OrgUnit::create(['name' => 'Esc Org', 'type' => 'department', 'is_active' => true]);
+        $requester->update(['org_unit_id' => $org->id]);
         ApprovalWorkflowStage::create([
             'workflow_id'           => $wf->id,
             'step_no'               => 1,
@@ -247,9 +248,8 @@ class EscalationReminderCommandTest extends TestCase
         ]);
 
         // Bind the workflow to the document type so start() can find it
-        $dept = Department::create(['name' => 'Test Dept', 'code' => 'DEPT-ESC', 'is_active' => true]);
-        DepartmentWorkflowBinding::create([
-            'department_id' => $dept->id,
+        OrgUnitWorkflowBinding::create([
+            'org_unit_id'   => $org->id,
             'document_type' => $docType,
             'workflow_id'   => $wf->id,
         ]);
@@ -257,7 +257,6 @@ class EscalationReminderCommandTest extends TestCase
         // start() via service propagates escalation_after_days to instance step
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $docType,
-            departmentId: null,
             requesterUserId: $requester->id,
             referenceNo: 'ESC-PROP-' . uniqid(),
         );

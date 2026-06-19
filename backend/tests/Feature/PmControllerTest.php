@@ -261,7 +261,6 @@ class PmControllerTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name),
                 'email' => $user->email,
                 'is_super_admin' => false,
-                'department_id' => null,
                 'can_change_password' => true,
                 'roles' => [],
             ],

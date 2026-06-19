@@ -81,7 +81,6 @@ class RepairRequestWebTest extends TestCase
                 'can_change_password' => true,
                 'roles' => $user->getRoleNames()->toArray(),
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => $user->department_id,
             ],
             'user_permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
         ]);

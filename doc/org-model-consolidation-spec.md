@@ -78,12 +78,16 @@
 - **4b-2 ✅ (3d86c92)** user form ตัด department selector + UserController store/update เลิก save department_id
 - **→ department หายจาก UI ทุกหน้าแล้ว. column/table/model + dual-write + fallback ยังอยู่ (internal). 737 tests, analyse 96.**
 
-**4c เหลือ (internal drop — mechanical sweep, ทุกชิ้น cascade เข้า fixtures):**
-- เอา dual-write department_id ออก (submission/instance/eval/mobile/inbound/auth-session/start()) + dept fallback ออกจาก readers (scopeVisibleToUser ลด param→12 callers, fieldVisibleToUser, resolveDepartmentBinding, NavigationService threading, DataSourceRegistry, DashboardWidget filter, print/pdf/CMMS-show display) + OrgUnit::idForDepartment ลบ
-- migration drop department_id (users/approval_instances/document_form_submissions/document_form_workflow_policies) + fdata_* (FormSchemaService) + drop tables departments/department_workflow_bindings/document_form_departments + bridge
-- ลบ Department + DepartmentWorkflowBinding models + imports 8 models; DepartmentSeeder; **OrgStructureDemoSeeder rewrite ให้สร้าง org tree ตรงๆ ไม่ mirror Department**; UserController import/index dept refs
-- ~40 test fixtures (group A `Department::create`→`OrgUnit`, group B 4 rewrite assertions, group C ~25 ลบ department_id) — ใช้ test failures เป็น checklist
-- verify: `grep -rn department_id app/ database/` = 0
+- **4c ✅** internal drop เสร็จสมบูรณ์ — departments หายทั้งหมด, org_units ขับเคลื่อนทุกอย่าง:
+  - เอา dual-write department_id ออกทุกจุด (submission/instance/eval/mobile/inbound/auth-session) + dept fallback ออกจาก readers (scopeVisibleToUser/fieldVisibleToUser ลด param เหลือ org_unit, NavigationService threading, DataSourceRegistry, DashboardWidget); `ApprovalFlowService::start()`/`previewWorkflow()`/`resolveWorkflowId()` ตัด `$departmentId` param; ลบ resolveDepartmentBinding + OrgUnit::idForDepartment
+  - migration `2026_06_19_000000_drop_department_schema.php` (driver-aware FK/unique): drop department_id (users/approval_instances/document_form_submissions/document_form_workflow_policies + fdata_* loop) + drop tables departments/department_workflow_bindings/document_form_departments (+ bridge column ไปกับ departments)
+  - ลบ Department + DepartmentWorkflowBinding models + DepartmentObserver + DepartmentFactory + DepartmentSeeder + OrgStructureDemoSeeder; สร้าง OrgUnitFactory + OrgUnit `use HasFactory`
+  - seeders structural (NteqPolymer/Bodindecha/SchoolEFormTemplate/Uat/UatMultiApproval/DemoPeople/Demo*) rewrite → สร้าง org tree ตรงๆ + OrgUnitWorkflowBinding + orgUnits() pivot; SIMPLE ~14 ตัวลบ policy `department_id => null`
+  - blades: dynamic-field/CMMS x4/users/profile/mobile/dashboard-filter/approval-routing/document-forms _form → org_unit; lang+validation reserved-key
+  - test fixtures: rewrite/merge เป็น org-only (ลบ method ที่ทดสอบ behavior ที่หายไป: dept fallback/dual-write-bridge/dept-binding/dept-exception)
+  - **verify: 727 tests pass · analyse 96 (เท่า baseline) · `composer switch:factory` + `switch:school` seed ได้จริงทั้งคู่ · `grep department_id app/ database/`(ไม่รวม migrations) = 0 · Department class refs = 0**
+
+**→ Phase 4 จบทั้งหมด. ระบบเหลือ org_units ตัวเดียว ไม่มี departments แล้ว.**
 
 **OLD 4a/4b/4c plan ด้านล่าง (อ้างอิง):**
 

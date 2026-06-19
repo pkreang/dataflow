@@ -126,7 +126,6 @@ class PurchaseOrderController extends Controller
         try {
             $instance = $approvalFlowService->start(
                 'purchase_order',
-                null,
                 (int) (session('user.id') ?? 0),
                 null,
                 $payload,
@@ -231,7 +230,6 @@ class PurchaseOrderController extends Controller
         return match (true) {
             str_contains($msg, 'Amount is required for amount-based') => __('common.workflow_error_amount_required'),
             str_contains($msg, 'No matching amount range') => __('common.workflow_error_no_amount_range'),
-            str_contains($msg, 'Department is required') => __('common.workflow_error_department_required'),
             str_contains($msg, 'No workflow binding found') => __('common.workflow_error_no_binding'),
             str_contains($msg, 'Workflow is not configured') => __('common.workflow_error_not_configured'),
             default => __('common.workflow_error_generic'),

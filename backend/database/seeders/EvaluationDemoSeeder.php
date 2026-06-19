@@ -59,7 +59,7 @@ class EvaluationDemoSeeder extends Seeder
             DocumentFormSubmission::create([
                 'form_id' => $evalForm->id,
                 'user_id' => $submission->user_id,
-                'department_id' => $submission->department_id,
+                'org_unit_id' => $submission->org_unit_id,
                 'parent_submission_id' => $submission->id,
                 'payload' => [
                     'overall_rating' => $sample['rating'],

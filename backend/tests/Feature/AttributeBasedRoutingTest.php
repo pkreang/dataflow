@@ -204,7 +204,6 @@ class AttributeBasedRoutingTest extends TestCase
 
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $docType,
-            departmentId: null,
             requesterUserId: $requester->id,
             payload: ['purchase_type' => 'IT'],
             formKey: $this->formKey,
@@ -228,7 +227,6 @@ class AttributeBasedRoutingTest extends TestCase
 
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $docType,
-            departmentId: null,
             requesterUserId: $requester->id,
             payload: ['purchase_type' => 'HR'],
             formKey: $this->formKey,
@@ -253,7 +251,6 @@ class AttributeBasedRoutingTest extends TestCase
 
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $docType,
-            departmentId: null,
             requesterUserId: $requester->id,
             payload: ['dept' => 'HR'],
             formKey: $this->formKey,
@@ -298,7 +295,6 @@ class AttributeBasedRoutingTest extends TestCase
 
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $docType,
-            departmentId: null,
             requesterUserId: $requester->id,
             payload: ['category' => 'urgent', 'total' => 50000],
             formKey: $form->form_key,
@@ -327,7 +323,6 @@ class AttributeBasedRoutingTest extends TestCase
 
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $docType,
-            departmentId: null,
             requesterUserId: $requester->id,
             payload: ['category' => 'normal'],
             formKey: $this->formKey,

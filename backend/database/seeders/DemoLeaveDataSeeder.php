@@ -4,9 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
+use App\Models\OrgUnit;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -27,12 +27,12 @@ class DemoLeaveDataSeeder extends Seeder
             return;
         }
 
-        $userIds       = User::pluck('id')->all();
-        $departmentIds = Department::pluck('id')->all();
-        $workflowId    = ApprovalWorkflow::orderBy('id')->value('id');
+        $userIds     = User::pluck('id')->all();
+        $orgUnitIds  = OrgUnit::where('type', 'department')->pluck('id')->all();
+        $workflowId  = ApprovalWorkflow::orderBy('id')->value('id');
 
-        if (empty($userIds) || empty($departmentIds)) {
-            $this->command?->warn('Users or departments missing.');
+        if (empty($userIds) || empty($orgUnitIds)) {
+            $this->command?->warn('Users or org units missing.');
             return;
         }
 
@@ -53,7 +53,7 @@ class DemoLeaveDataSeeder extends Seeder
                 $daysAgo   = random_int(0, 90);
                 $createdAt = Carbon::now()->subDays($daysAgo)->subHours(random_int(0, 23));
                 $userId    = $userIds[array_rand($userIds)];
-                $deptId    = $departmentIds[array_rand($departmentIds)];
+                $orgUnitId = $orgUnitIds[array_rand($orgUnitIds)];
                 $leaveType = $leaveTypes[array_rand($leaveTypes)];
                 $dateFrom  = Carbon::now()->addDays(random_int(1, 30))->format('Y-m-d');
                 $dateTo    = Carbon::parse($dateFrom)->addDays(random_int(0, 4))->format('Y-m-d');
@@ -64,7 +64,7 @@ class DemoLeaveDataSeeder extends Seeder
                 if ($batch['instanceStatus'] && $workflowId) {
                     $instance = ApprovalInstance::create([
                         'workflow_id'       => $workflowId,
-                        'department_id'     => $deptId,
+                        'org_unit_id'       => $orgUnitId,
                         'requester_user_id' => $userId,
                         'document_type'     => 'leave_request',
                         'reference_no'      => $refNo,
@@ -80,7 +80,7 @@ class DemoLeaveDataSeeder extends Seeder
                 DocumentFormSubmission::create([
                     'form_id'               => $form->id,
                     'user_id'               => $userId,
-                    'department_id'         => $deptId,
+                    'org_unit_id'           => $orgUnitId,
                     'status'                => $batch['status'],
                     'reference_no'          => $refNo,
                     'approval_instance_id'  => $instanceId,

@@ -282,18 +282,6 @@ class NavigationMenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'id' => 37,
-                'parent_id' => 2,
-                'label' => 'Department workflow bindings',
-                'label_en' => 'Dept ↔ workflow',
-                'label_th' => 'แผนก ↔ workflow',
-                'icon' => 'link',
-                'route' => '/settings/department-workflow-bindings',
-                'permission' => 'manage_settings',
-                'sort_order' => 14,
-                'is_active' => false,
-            ],
-            [
                 'id' => 9,
                 'parent_id' => 2,
                 'label' => 'Branding',

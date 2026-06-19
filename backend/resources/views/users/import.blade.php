@@ -85,7 +85,7 @@
                         <tr><td class="py-1.5 pr-4 font-mono">email</td><td>*</td></tr>
                         <tr><td class="py-1.5 pr-4 font-mono">first_name</td><td></td></tr>
                         <tr><td class="py-1.5 pr-4 font-mono">last_name</td><td></td></tr>
-                        <tr><td class="py-1.5 pr-4 font-mono">department</td><td></td></tr>
+                        <tr><td class="py-1.5 pr-4 font-mono">org_unit</td><td></td></tr>
                         <tr><td class="py-1.5 pr-4 font-mono">position</td><td></td></tr>
                         <tr><td class="py-1.5 pr-4 font-mono">org_unit</td><td></td></tr>
                         <tr><td class="py-1.5 pr-4 font-mono">phone</td><td></td></tr>

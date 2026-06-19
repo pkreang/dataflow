@@ -228,7 +228,6 @@ class LineWebhookControllerTest extends TestCase
 
         $instance = ApprovalInstance::create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'lw_test',
             'reference_no' => "LW-{$seq}",

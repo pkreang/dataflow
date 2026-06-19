@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\DepartmentWorkflowBinding;
+use App\Models\OrgUnitWorkflowBinding;
 use App\Models\Position;
 use App\Models\Setting;
 use App\Models\User;
@@ -263,7 +263,7 @@ class WorkflowController extends Controller
     public function destroy(ApprovalWorkflow $workflow): RedirectResponse
     {
         if (ApprovalInstance::where('workflow_id', $workflow->id)->exists()
-            || DepartmentWorkflowBinding::where('workflow_id', $workflow->id)->exists()) {
+            || OrgUnitWorkflowBinding::where('workflow_id', $workflow->id)->exists()) {
             return redirect()->route('settings.workflow.index')
                 ->with('error', __('common.cannot_delete_workflow'));
         }

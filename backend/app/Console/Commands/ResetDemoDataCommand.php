@@ -21,7 +21,7 @@ class ResetDemoDataCommand extends Command
     public function handle(): int
     {
         if (! $this->option('force')) {
-            if (! $this->confirm('This will DELETE all departments, equipment, spare parts, approval instances, and non-admin users. Continue?')) {
+            if (! $this->confirm('This will DELETE all org units, equipment, spare parts, approval instances, and non-admin users. Continue?')) {
                 $this->info('Aborted.');
 
                 return 0;
@@ -42,11 +42,11 @@ class ResetDemoDataCommand extends Command
             'equipment_categories',
             'approval_workflow_stages',
             'approval_workflows',
-            'department_workflow_bindings',
-            'document_form_departments',
+            'org_unit_workflow_bindings',
+            'document_form_org_units',
             'notification_preferences',
             'running_number_configs',
-            'departments',
+            'org_units',
             'positions',
             'branches',
             // RBAC — re-seeded below

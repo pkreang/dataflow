@@ -46,7 +46,6 @@ class ApprovalFlowRequesterGateTest extends TestCase
 
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $user->id,
             'document_type' => 'repair_request',
             'reference_no' => 'T-1',
@@ -103,7 +102,6 @@ class ApprovalFlowRequesterGateTest extends TestCase
 
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $user->id,
             'document_type' => 'repair_request',
             'reference_no' => 'T-2',

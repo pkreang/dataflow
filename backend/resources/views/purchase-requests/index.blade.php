@@ -34,7 +34,7 @@
     <x-data-table
         :columns="[
             ['key' => 'reference_no', 'label' => __('common.reference_no')],
-            ['key' => 'department', 'label' => __('common.department')],
+            ['key' => 'org_unit', 'label' => __('common.org_unit')],
             ['key' => 'status', 'label' => __('common.status')],
             ['key' => 'created_at', 'label' => __('common.created_at')],
         ]"
@@ -52,7 +52,7 @@
                         {{ $instance->reference_no ?? '#'.$instance->id }}
                     </a>
                 </td>
-                <td class="table-sub">{{ $instance->department?->name ?? '—' }}</td>
+                <td class="table-sub">{{ $instance->orgUnit?->name ?? '—' }}</td>
                 <td class="px-4 py-2">
                     @php $s = $instance->status; @endphp
                     @if($s === 'approved')

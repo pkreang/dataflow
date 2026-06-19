@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\Department;
 use App\Models\Equipment;
 use App\Models\EquipmentCategory;
 use App\Models\EquipmentLocation;
@@ -58,14 +57,6 @@ class LookupRegistry
                 'display' => 'name',
                 'label_en' => 'Branch',
                 'label_th' => 'สาขา',
-                'has_active' => true,
-            ],
-            'department' => [
-                'model' => Department::class,
-                'value' => 'id',
-                'display' => 'name',
-                'label_en' => 'Department',
-                'label_th' => 'แผนก',
                 'has_active' => true,
             ],
             'position' => [
@@ -293,7 +284,6 @@ class LookupRegistry
             'user' => [
                 'company' => 'company_id',
                 'branch' => 'branch_id',
-                'department' => 'department_id',
             ],
         ];
     }

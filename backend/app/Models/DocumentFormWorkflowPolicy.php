@@ -12,7 +12,6 @@ class DocumentFormWorkflowPolicy extends Model
 
     protected $fillable = [
         'form_id',
-        'department_id',
         'org_unit_id',
         'position_id',
         'use_amount_condition',
@@ -32,11 +31,6 @@ class DocumentFormWorkflowPolicy extends Model
     public function form()
     {
         return $this->belongsTo(DocumentForm::class, 'form_id');
-    }
-
-    public function department()
-    {
-        return $this->belongsTo(Department::class);
     }
 
     public function orgUnit()

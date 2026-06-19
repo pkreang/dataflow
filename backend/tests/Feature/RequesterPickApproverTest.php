@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
-use App\Models\DepartmentWorkflowBinding;
+use App\Models\OrgUnit;
+use App\Models\OrgUnitWorkflowBinding;
 use App\Models\User;
 use App\Services\ApprovalFlowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -44,7 +44,7 @@ class RequesterPickApproverTest extends TestCase
     }
 
     /** Build a workflow with one user-type stage that has allow_requester_override=true. */
-    private function makeOverrideWorkflow(int $defaultApproverId): ApprovalWorkflow
+    private function makeOverrideWorkflow(int $defaultApproverId, User $requester): ApprovalWorkflow
     {
         $workflow = ApprovalWorkflow::query()->create([
             'name' => 'Override wf',
@@ -63,9 +63,10 @@ class RequesterPickApproverTest extends TestCase
             'is_active' => true,
             'allow_requester_override' => true,
         ]);
-        $dept = Department::query()->create(['name' => 'Test Dept', 'code' => 'TST', 'is_active' => true]);
-        DepartmentWorkflowBinding::query()->create([
-            'department_id' => $dept->id,
+        $org = OrgUnit::query()->create(['name' => 'Test Org '.uniqid(), 'type' => 'department', 'is_active' => true]);
+        $requester->update(['org_unit_id' => $org->id]);
+        OrgUnitWorkflowBinding::query()->create([
+            'org_unit_id' => $org->id,
             'document_type' => 'repair_request',
             'workflow_id' => $workflow->id,
         ]);
@@ -85,12 +86,11 @@ class RequesterPickApproverTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $requester = $this->makeUser('requester@example.test');
-        $this->makeOverrideWorkflow($defaultApprover->id);
+        $this->makeOverrideWorkflow($defaultApprover->id, $requester);
 
         $service = app(ApprovalFlowService::class);
         $instance = $service->start(
             documentType: 'repair_request',
-            departmentId: null,
             requesterUserId: $requester->id,
             referenceNo: 'RP-1',
             payload: [],
@@ -117,7 +117,7 @@ class RequesterPickApproverTest extends TestCase
 
         $stranger = $this->makeUser('stranger@example.test'); // no approval.approve
         $requester = $this->makeUser('requester2@example.test');
-        $this->makeOverrideWorkflow($defaultApprover->id);
+        $this->makeOverrideWorkflow($defaultApprover->id, $requester);
 
         $service = app(ApprovalFlowService::class);
 
@@ -126,7 +126,6 @@ class RequesterPickApproverTest extends TestCase
 
         $service->start(
             documentType: 'repair_request',
-            departmentId: null,
             requesterUserId: $requester->id,
             referenceNo: 'RP-2',
             payload: [],
@@ -143,12 +142,11 @@ class RequesterPickApproverTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $requester = $this->makeUser('requester3@example.test');
-        $this->makeOverrideWorkflow($defaultApprover->id);
+        $this->makeOverrideWorkflow($defaultApprover->id, $requester);
 
         $service = app(ApprovalFlowService::class);
         $instance = $service->start(
             documentType: 'repair_request',
-            departmentId: null,
             requesterUserId: $requester->id,
             referenceNo: 'RP-3',
             payload: [],

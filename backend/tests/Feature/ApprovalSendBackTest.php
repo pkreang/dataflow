@@ -186,7 +186,6 @@ class ApprovalSendBackTest extends TestCase
 
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'sendback_test',
             'reference_no' => 'SB-'.self::$seq,
@@ -249,7 +248,6 @@ class ApprovalSendBackTest extends TestCase
 
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'sendback_test',
             'reference_no' => 'SB1-'.self::$seq,

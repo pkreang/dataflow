@@ -234,7 +234,6 @@ class OnBehalfSubmissionTest extends TestCase
         ]);
         DocumentFormWorkflowPolicy::query()->create([
             'form_id' => $form->id,
-            'department_id' => null,
             'position_id' => null,
             'workflow_id' => $workflow->id,
             'use_amount_condition' => false,

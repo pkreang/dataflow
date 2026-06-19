@@ -90,7 +90,6 @@ class DocumentFormSeeder extends Seeder
             DocumentFormWorkflowPolicy::query()->updateOrCreate(
                 [
                     'form_id' => $form->id,
-                    'department_id' => null,
                 ],
                 [
                     'use_amount_condition' => false,

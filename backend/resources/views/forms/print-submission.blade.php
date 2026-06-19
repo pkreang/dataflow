@@ -63,8 +63,8 @@
                         @if($submission->user)
                             <div>{{ __('common.requester') ?? 'ผู้ขอ' }}: {{ $submission->user->first_name }} {{ $submission->user->last_name }}</div>
                         @endif
-                        @if($submission->orgUnit || $submission->department)
-                            <div>{{ $submission->orgUnit ? __('common.org_unit') : __('common.department') }}: {{ $submission->orgUnit?->name ?? $submission->department?->name }}</div>
+                        @if($submission->orgUnit)
+                            <div>{{ __('common.org_unit') }}: {{ $submission->orgUnit?->name }}</div>
                         @endif
                     </div>
                 </div>

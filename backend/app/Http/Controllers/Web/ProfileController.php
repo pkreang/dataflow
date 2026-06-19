@@ -484,7 +484,7 @@ class ProfileController extends Controller
 
         // Locked fields are dropped from input before validation so clients that
         // bypass the UI (inspect → remove readonly → submit) still can't change them.
-        $lockedKeys = ['department_id', 'position_id'];
+        $lockedKeys = ['position_id'];
         if ($isSso) {
             // SSO users: names are managed by the identity provider.
             $lockedKeys = array_merge($lockedKeys, ['first_name', 'last_name']);

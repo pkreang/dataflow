@@ -10,20 +10,20 @@ use ReflectionMethod;
 use Tests\TestCase;
 
 /**
- * Org-model consolidation Phase 2c — field-level visibility org_unit-first, dept fallback.
- * fieldVisibleToUser(field, orgUnitId, deptId): เห็นเมื่อ (ไม่มี restriction) | org ตรง | dept ตรง.
+ * Org-model consolidation — field-level visibility scoped by org_unit.
+ * fieldVisibleToUser(field, orgUnitId): เห็นเมื่อ (ไม่มี restriction) | org ตรง.
  * ทดสอบ reader logic ตรงผ่าน reflection (private method). ดู spec.
  */
 class FieldVisibilityOrgUnitTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function visible(DocumentFormField $field, ?int $org, ?int $dept): bool
+    private function visible(DocumentFormField $field, ?int $org): bool
     {
         $m = new ReflectionMethod(DocumentFormSubmissionController::class, 'fieldVisibleToUser');
         $m->setAccessible(true);
 
-        return $m->invoke(app(DocumentFormSubmissionController::class), $field, $org, $dept);
+        return $m->invoke(app(DocumentFormSubmissionController::class), $field, $org);
     }
 
     private function field(array $attrs = []): DocumentFormField
@@ -38,31 +38,16 @@ class FieldVisibilityOrgUnitTest extends TestCase
 
     public function test_no_restriction_visible_to_all(): void
     {
-        $field = $this->field(['visible_to_org_units' => null, 'visible_to_departments' => null]);
-        $this->assertTrue($this->visible($field, 5, 7));
-        $this->assertTrue($this->visible($field, null, null));
+        $field = $this->field(['visible_to_org_units' => null]);
+        $this->assertTrue($this->visible($field, 5));
+        $this->assertTrue($this->visible($field, null));
     }
 
     public function test_org_unit_restriction_scopes(): void
     {
-        $field = $this->field(['visible_to_org_units' => [10], 'visible_to_departments' => null]);
-        $this->assertTrue($this->visible($field, 10, null));
-        $this->assertFalse($this->visible($field, 11, null));
-        $this->assertFalse($this->visible($field, null, 999));
-    }
-
-    public function test_department_fallback_preserved(): void
-    {
-        $field = $this->field(['visible_to_org_units' => null, 'visible_to_departments' => [3]]);
-        $this->assertTrue($this->visible($field, null, 3));
-        $this->assertFalse($this->visible($field, null, 4));
-    }
-
-    public function test_org_or_dept_match_grants_visibility(): void
-    {
-        $field = $this->field(['visible_to_org_units' => [10], 'visible_to_departments' => [3]]);
-        $this->assertTrue($this->visible($field, 10, 999));  // org match
-        $this->assertTrue($this->visible($field, 999, 3));   // dept match
-        $this->assertFalse($this->visible($field, 999, 999)); // neither
+        $field = $this->field(['visible_to_org_units' => [10]]);
+        $this->assertTrue($this->visible($field, 10));
+        $this->assertFalse($this->visible($field, 11));
+        $this->assertFalse($this->visible($field, null));
     }
 }

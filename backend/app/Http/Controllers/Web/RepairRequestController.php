@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\User;
 use App\Services\ApprovalFlowService;
@@ -35,19 +34,17 @@ class RepairRequestController extends Controller
             ->where('document_type', 'repair_request')
             ->where('requester_user_id', $userId)
             ->when($status, fn ($q) => $q->where('status', $status))
-            ->with(['department', 'orgUnit'])
+            ->with(['orgUnit'])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
 
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
-        $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
         $form = DocumentForm::query()
             ->with('fields')
             ->where('document_type', 'repair_request')
             ->where('is_active', true)
-            ->visibleToUser($userOrgUnitId, $userDeptId)
+            ->visibleToUser($userOrgUnitId)
             ->orderBy('id')
             ->first();
 
@@ -61,7 +58,7 @@ class RepairRequestController extends Controller
             $branch = $userModel->branch;
         }
 
-        return view('repair-requests.index', compact('myInstances', 'departments', 'form', 'status', 'showAdminHints', 'company', 'branch', 'userDeptId', 'userOrgUnitId', 'perPage'));
+        return view('repair-requests.index', compact('myInstances', 'form', 'status', 'showAdminHints', 'company', 'branch', 'userOrgUnitId', 'perPage'));
     }
 
     public function show(ApprovalInstance $instance): View
@@ -69,7 +66,7 @@ class RepairRequestController extends Controller
         abort_unless($instance->document_type === 'repair_request', 404);
         $this->authorizeViewInstance($instance);
 
-        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'department', 'orgUnit']);
+        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'orgUnit']);
         $userId = (int) (session('user.id') ?? 0);
 
         $formForLabels = DocumentForm::query()
@@ -80,7 +77,6 @@ class RepairRequestController extends Controller
             ->first();
         $formFields = $formForLabels?->fields ?? collect();
 
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorRole = $this->resolveEditorRole($instance, $userId);
 
@@ -100,7 +96,7 @@ class RepairRequestController extends Controller
             $branch = $requester->branch;
         }
 
-        return view('repair-requests.show', compact('instance', 'canAct', 'formFields', 'formForLabels', 'userDeptId', 'userOrgUnitId', 'editorRole', 'company', 'branch'));
+        return view('repair-requests.show', compact('instance', 'canAct', 'formFields', 'formForLabels', 'userOrgUnitId', 'editorRole', 'company', 'branch'));
     }
 
     public function myJobs(): View
@@ -137,7 +133,6 @@ class RepairRequestController extends Controller
         try {
             $instance = $approvalFlowService->start(
                 'repair_request',
-                null,
                 (int) (session('user.id') ?? 1),
                 $validated['reference_no'] ?? null,
                 $payload,
@@ -190,7 +185,6 @@ class RepairRequestController extends Controller
         return match (true) {
             str_contains($msg, 'Amount is required for amount-based') => __('common.workflow_error_amount_required'),
             str_contains($msg, 'No matching amount range') => __('common.workflow_error_no_amount_range'),
-            str_contains($msg, 'Department is required for workflow binding') => __('common.workflow_error_department_required'),
             str_contains($msg, 'No workflow binding found') => __('common.workflow_error_no_binding'),
             str_contains($msg, 'Workflow is not configured') => __('common.workflow_error_not_configured'),
             default => __('common.workflow_error_generic'),

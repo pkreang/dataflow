@@ -32,7 +32,6 @@ class InboundController extends Controller
         $submission = DocumentFormSubmission::create([
             'form_id' => $form->id,
             'user_id' => null,
-            'department_id' => null,
             'org_unit_id' => null,
             'payload' => $filtered,
             'status' => 'draft',

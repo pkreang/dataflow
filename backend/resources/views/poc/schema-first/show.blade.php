@@ -67,7 +67,6 @@
                         'field' => $field,
                         'name' => $name,
                         'value' => $value,
-                        'userDeptId' => null,
                         'userOrgUnitId' => null,
                         'editorRole' => 'requester',
                     ])

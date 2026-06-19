@@ -112,7 +112,7 @@ class DemoDashboardSeeder extends Seeder
                     'widget_type' => 'chart',
                     'data_source' => 'repair_requests',
                     'col_span'    => 2,
-                    'config'      => ['chart_type' => 'bar', 'aggregation' => 'count', 'group_by' => 'department_id'],
+                    'config'      => ['chart_type' => 'bar', 'aggregation' => 'count', 'group_by' => 'org_unit_id'],
                 ],
                 [
                     'title'       => 'รายการล่าสุด',
@@ -120,7 +120,7 @@ class DemoDashboardSeeder extends Seeder
                     'data_source' => 'repair_requests',
                     'col_span'    => 3,
                     'config'      => [
-                        'columns'  => ['reference_no', 'status', 'department_id', 'created_at'],
+                        'columns'  => ['reference_no', 'status', 'org_unit_id', 'created_at'],
                         'per_page' => 10,
                     ],
                 ],

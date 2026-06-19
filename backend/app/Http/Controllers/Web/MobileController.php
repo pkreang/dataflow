@@ -25,11 +25,10 @@ class MobileController extends Controller
      * Find the primary "repair" form visible to the current user — used as
      * the target of the home hero card + global FAB. Picks the first active
      * form whose document_type starts with "repair" or "maintenance"; null
-     * if none exists or none is visible to the user's department.
+     * if none exists or none is visible to the user's org unit.
      */
     private function primaryRepairForm(): ?DocumentForm
     {
-        $userDepartmentId = (int) (session('user.department_id') ?? 0);
         $userOrgUnitId = (int) (session('user.org_unit_id') ?? 0);
 
         return DocumentForm::query()
@@ -38,7 +37,7 @@ class MobileController extends Controller
                 $q->where('document_type', 'like', 'repair%')
                     ->orWhere('document_type', 'like', 'maintenance%');
             })
-            ->visibleToUser($userOrgUnitId, $userDepartmentId)
+            ->visibleToUser($userOrgUnitId)
             ->orderBy('id')
             ->first();
     }
@@ -83,11 +82,10 @@ class MobileController extends Controller
             ->limit(5)
             ->get();
 
-        $userDepartmentId = (int) (session('user.department_id') ?? 0);
         $userOrgUnitId = (int) (session('user.org_unit_id') ?? 0);
         $quickForms = DocumentForm::query()
             ->where('is_active', true)
-            ->visibleToUser($userOrgUnitId, $userDepartmentId)
+            ->visibleToUser($userOrgUnitId)
             ->orderBy('name')
             ->limit(3)
             ->get();
@@ -149,12 +147,11 @@ class MobileController extends Controller
 
     public function forms(): View
     {
-        $userDepartmentId = (int) (session('user.department_id') ?? 0);
         $userOrgUnitId = (int) (session('user.org_unit_id') ?? 0);
 
         $forms = DocumentForm::query()
             ->where('is_active', true)
-            ->visibleToUser($userOrgUnitId, $userDepartmentId)
+            ->visibleToUser($userOrgUnitId)
             ->orderBy('name')
             ->get();
 
@@ -184,7 +181,7 @@ class MobileController extends Controller
     public function me(): View
     {
         $userId = (int) (session('user.id') ?? 0);
-        $user = $userId ? User::with(['jobPosition', 'department'])->find($userId) : null;
+        $user = $userId ? User::with(['jobPosition', 'orgUnit'])->find($userId) : null;
 
         return view('mobile.me', compact('user'));
     }

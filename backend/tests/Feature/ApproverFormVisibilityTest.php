@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalInstanceStep;
 use App\Models\ApprovalWorkflow;
-use App\Models\Department;
+use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
@@ -70,26 +70,26 @@ class ApproverFormVisibilityTest extends TestCase
         $response->assertDontSee($submission->reference_no);
     }
 
-    public function test_form_list_drops_restricted_searchable_columns_for_cross_dept_approver(): void
+    public function test_form_list_drops_restricted_searchable_columns_for_cross_org_unit_approver(): void
     {
         [$submission, $form, $approver] = $this->makeSubmissionAwaitingApprover();
 
-        // Approver belongs to a real department; the restricted field is visible
-        // only to a DIFFERENT department, so we exercise the in_array mismatch
-        // (not just the null-dept short-circuit).
-        $approverDept = Department::factory()->create();
-        $otherDept = Department::factory()->create();
-        $approver->forceFill(['department_id' => $approverDept->id])->save();
+        // Approver belongs to a real org_unit; the restricted field is visible
+        // only to a DIFFERENT org_unit, so we exercise the in_array mismatch
+        // (not just the null-org short-circuit).
+        $approverOrg = OrgUnit::create(['name' => 'Approver Org', 'type' => 'department', 'is_active' => true]);
+        $otherOrg = OrgUnit::create(['name' => 'Other Org', 'type' => 'department', 'is_active' => true]);
+        $approver->forceFill(['org_unit_id' => $approverOrg->id])->save();
 
         DocumentFormField::create([
             'form_id' => $form->id, 'field_key' => 'secret', 'label' => 'Secret',
             'field_type' => 'text', 'sort_order' => 1, 'is_searchable' => true,
-            'visible_to_departments' => [$otherDept->id],
+            'visible_to_org_units' => [$otherOrg->id],
         ]);
         DocumentFormField::create([
             'form_id' => $form->id, 'field_key' => 'note', 'label' => 'Note',
             'field_type' => 'text', 'sort_order' => 2, 'is_searchable' => true,
-            'visible_to_departments' => [],
+            'visible_to_org_units' => [],
         ]);
 
         $submission->forceFill(['payload' => [
@@ -105,7 +105,7 @@ class ApproverFormVisibilityTest extends TestCase
         // pass can't come from the filter nuking every column.
         $response->assertSee('PUBLICOKVALUE');
         // The genuinely new exposure: a restricted searchable value must NOT leak
-        // into the list columns for a cross-department approver.
+        // into the list columns for a cross-org-unit approver.
         $response->assertDontSee('TOPSECRETVALUE');
     }
 
@@ -177,7 +177,6 @@ class ApproverFormVisibilityTest extends TestCase
 
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'ms_test',
             'reference_no' => 'MS-'.self::$seq,
@@ -225,7 +224,6 @@ class ApproverFormVisibilityTest extends TestCase
 
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'av_test',
             'reference_no' => 'AV-'.self::$seq,

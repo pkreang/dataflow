@@ -155,7 +155,6 @@ class FormFormulaFieldTest extends TestCase
         ]);
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'formula_upd_test',
             'reference_no' => 'FUPD-1',

@@ -5,7 +5,6 @@
     $cascadingRelations = \App\Support\LookupRegistry::cascadingRelations();
     $searchableTypes = \App\Models\DocumentFormField::SEARCHABLE_TYPES;
     $workflowStepsByDocType = $workflowStepsByDocType ?? [];
-    $departments = $departments ?? collect();
     $companyUsers = $companyUsers ?? [];
     $initialFields = old('fields', $isEdit ? $documentForm->fields->map(function ($f) {
         $isLookup = $f->field_type === 'lookup';
@@ -40,12 +39,11 @@
             'required_rules' => $f->required_rules ?? [],
             'validation_rules' => (object) ($f->validation_rules ?? []),
             'editable_by' => $f->editable_by ?? ['requester'],
-            'visible_to_departments' => array_map('intval', $f->visible_to_departments ?? []),
             'visible_to_org_units' => array_map('intval', $f->visible_to_org_units ?? []),
         ];
     })->values() : [
-        ['field_key' => 'title', 'label' => __('common.document_form_default_title'), 'label_en' => 'Title', 'label_th' => __('common.document_form_default_title'), 'field_type' => 'text', 'is_required' => true, 'is_searchable' => true, 'is_readonly' => false, 'placeholder' => '', 'default_value' => '', 'options_raw' => '', 'lookup_source' => '', 'depends_on' => '', 'foreign_key' => '', 'col_span' => 0, 'table_columns' => [], 'visibility_rules' => [], 'validation_rules' => new \stdClass, 'editable_by' => ['requester'], 'visible_to_departments' => [], 'visible_to_org_units' => []],
-        ['field_key' => 'amount', 'label' => __('common.document_form_default_amount'), 'label_en' => 'Amount', 'label_th' => __('common.document_form_default_amount'), 'field_type' => 'number', 'is_required' => true, 'is_searchable' => true, 'is_readonly' => false, 'placeholder' => '', 'default_value' => '', 'options_raw' => '', 'lookup_source' => '', 'depends_on' => '', 'foreign_key' => '', 'col_span' => 0, 'table_columns' => [], 'visibility_rules' => [], 'validation_rules' => new \stdClass, 'editable_by' => ['requester'], 'visible_to_departments' => [], 'visible_to_org_units' => []],
+        ['field_key' => 'title', 'label' => __('common.document_form_default_title'), 'label_en' => 'Title', 'label_th' => __('common.document_form_default_title'), 'field_type' => 'text', 'is_required' => true, 'is_searchable' => true, 'is_readonly' => false, 'placeholder' => '', 'default_value' => '', 'options_raw' => '', 'lookup_source' => '', 'depends_on' => '', 'foreign_key' => '', 'col_span' => 0, 'table_columns' => [], 'visibility_rules' => [], 'validation_rules' => new \stdClass, 'editable_by' => ['requester'], 'visible_to_org_units' => []],
+        ['field_key' => 'amount', 'label' => __('common.document_form_default_amount'), 'label_en' => 'Amount', 'label_th' => __('common.document_form_default_amount'), 'field_type' => 'number', 'is_required' => true, 'is_searchable' => true, 'is_readonly' => false, 'placeholder' => '', 'default_value' => '', 'options_raw' => '', 'lookup_source' => '', 'depends_on' => '', 'foreign_key' => '', 'col_span' => 0, 'table_columns' => [], 'visibility_rules' => [], 'validation_rules' => new \stdClass, 'editable_by' => ['requester'], 'visible_to_org_units' => []],
     ]);
 @endphp
 
@@ -55,12 +53,11 @@
         'requester' => __('common.role_requester'),
         'step_prefix' => __('common.role_step_prefix'),
     ];
-    $departmentsJs = $departments->map(fn ($d) => ['id' => (int) $d->id, 'name' => $d->name])->values()->all();
     $orgUnitsJs = ($orgUnits ?? collect())->map(fn ($o) => ['id' => (int) $o->id, 'name' => $o->name])->values()->all();
     $companyUsersJs = is_array($companyUsers) ? $companyUsers : (is_iterable($companyUsers) ? iterator_to_array($companyUsers) : []);
 @endphp
 
-<div x-data="formBuilder({{ Js::from($initialFields) }}, {{ Js::from($lookupSources) }}, {{ Js::from($cascadingRelations) }}, {{ Js::from($searchableTypes) }}, {{ Js::from($workflowStepsByDocType) }}, {{ Js::from($departmentsJs) }}, {{ Js::from($orgUnitsJs) }}, {{ Js::from($initialDocumentType) }}, {{ Js::from($roleLabels) }}, {{ Js::from($companyUsersJs) }}, {{ Js::from($runningNumberConfigs ?? []) }})" x-cloak>
+<div x-data="formBuilder({{ Js::from($initialFields) }}, {{ Js::from($lookupSources) }}, {{ Js::from($cascadingRelations) }}, {{ Js::from($searchableTypes) }}, {{ Js::from($workflowStepsByDocType) }}, {{ Js::from($orgUnitsJs) }}, {{ Js::from($initialDocumentType) }}, {{ Js::from($roleLabels) }}, {{ Js::from($companyUsersJs) }}, {{ Js::from($runningNumberConfigs ?? []) }})" x-cloak>
     @include('settings.document-forms._form-preview-modal')
 
     @include('settings.document-forms._form-save-confirmation')
@@ -237,25 +234,6 @@
             <textarea name="description" rows="2" class="form-input mt-1 resize-y">{{ old('description', $documentForm?->description ?? '') }}</textarea>
         </div>
 
-        @if($departments->count())
-        <div>
-            <label class="form-label">{{ __('common.document_form_allowed_departments') }}</label>
-            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{{ __('common.document_form_allowed_departments_hint') }}</p>
-            <div class="mt-2 flex flex-wrap gap-x-5 gap-y-2">
-                @foreach($departments as $dept)
-                    <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
-                        <input type="checkbox"
-                            name="allowed_departments[]"
-                            value="{{ $dept->id }}"
-                            @checked(in_array($dept->id, old('allowed_departments', $allowedDepartmentIds ?? [])))
-                            class="rounded border-slate-300 text-blue-600 dark:border-slate-600">
-                        <span class="text-sm text-slate-700 dark:text-slate-300">{{ $dept->name }}</span>
-                    </label>
-                @endforeach
-            </div>
-        </div>
-        @endif
-
         @if(($orgUnits ?? collect())->count())
         <div>
             <label class="form-label">{{ __('common.org_unit') }}</label>
@@ -360,7 +338,6 @@
                 <input type="hidden" :name="`fields[${idx}][required_rules]`" :value="JSON.stringify(field.required_rules ?? [])">
                 <input type="hidden" :name="`fields[${idx}][validation_rules]`" :value="JSON.stringify(field.validation_rules ?? {})">
                 <input type="hidden" :name="`fields[${idx}][editable_by]`" :value="JSON.stringify(field.editable_by ?? [])">
-                <input type="hidden" :name="`fields[${idx}][visible_to_departments]`" :value="JSON.stringify(field.visible_to_departments ?? [])">
                 <input type="hidden" :name="`fields[${idx}][visible_to_org_units]`" :value="JSON.stringify(field.visible_to_org_units ?? [])">
                 <input type="hidden" :name="`fields[${idx}][required_at_step]`" :value="JSON.stringify((field.required_at_step ?? []).map(n => 'step_' + n))">
             </div>
@@ -984,28 +961,6 @@
                                                 {{ __('common.field_editable_by_none_hint') }}
                                             </p>
                                         </div>
-                                        {{-- visible_to_departments --}}
-                                        <div>
-                                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{{ __('common.field_visible_to_departments') }}</p>
-                                            @if(count($departmentsJs))
-                                                <div class="flex flex-wrap gap-x-4 gap-y-1 max-h-36 overflow-y-auto p-1 rounded border border-slate-200 dark:border-slate-600">
-                                                    <template x-for="dept in departments" :key="dept.id">
-                                                        <label class="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
-                                                            <input type="checkbox" :value="dept.id"
-                                                                   :checked="(fields[selectedFieldIdx].visible_to_departments || []).map(Number).includes(dept.id)"
-                                                                   @change="toggleArrayValue(fields[selectedFieldIdx], 'visible_to_departments', dept.id, true)"
-                                                                   class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700">
-                                                            <span x-text="dept.name"></span>
-                                                        </label>
-                                                    </template>
-                                                </div>
-                                                <p x-show="!(fields[selectedFieldIdx].visible_to_departments || []).length" class="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                                                    {{ __('common.field_visible_to_departments_all_hint') }}
-                                                </p>
-                                            @else
-                                                <p class="text-xs text-slate-400 dark:text-slate-500">{{ __('common.field_visible_to_departments_empty') }}</p>
-                                            @endif
-                                        </div>
                                         {{-- visible_to_org_units --}}
                                         <div>
                                             <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{{ __('common.org_unit') }}</p>
@@ -1022,7 +977,7 @@
                                                     </template>
                                                 </div>
                                                 <p x-show="!(fields[selectedFieldIdx].visible_to_org_units || []).length" class="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                                                    {{ __('common.field_visible_to_departments_all_hint') }}
+                                                    {{ __('common.field_visible_to_org_units_all_hint') }}
                                                 </p>
                                             @endif
                                         </div>
@@ -1051,7 +1006,6 @@
                 : 'row_' + Math.random().toString(36).slice(2, 11);
         }
         if (!Array.isArray(f.editable_by)) f.editable_by = ['requester'];
-        if (!Array.isArray(f.visible_to_departments)) f.visible_to_departments = [];
         if (!Array.isArray(f.visible_to_org_units)) f.visible_to_org_units = [];
         if (!Array.isArray(f.required_rules)) f.required_rules = [];
         if (!Array.isArray(f.required_at_step)) f.required_at_step = [];
@@ -1080,7 +1034,7 @@
         return f;
     }
 
-    function formBuilder(initialFields, lookupSources, cascadingRelations, searchableTypes, workflowStepsByDocType, departments, orgUnits, initialDocumentType, roleLabels, companyUsers, runningNumberConfigs) {
+    function formBuilder(initialFields, lookupSources, cascadingRelations, searchableTypes, workflowStepsByDocType, orgUnits, initialDocumentType, roleLabels, companyUsers, runningNumberConfigs) {
         const SEARCHABLE_TYPES = searchableTypes || [];
         const defaultSearchable = (type) => SEARCHABLE_TYPES.includes(type);
         return {
@@ -1089,7 +1043,6 @@
             cascadingRelations: cascadingRelations || {},
             searchableTypes: SEARCHABLE_TYPES,
             workflowStepsByDocType: workflowStepsByDocType || {},
-            departments: departments || [],
             orgUnits: orgUnits || [],
             companyUsers: companyUsers || [],
             runningNumberConfigs: runningNumberConfigs || {},

@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 /**
  * Optional demo / pilot dataset (not run from DatabaseSeeder).
  *
- * Departments: SCH_* only (SchoolEFormTemplateSeeder). No CMMS equipment/spare-parts demo.
+ * Org units: SCH_* only (SchoolEFormTemplateSeeder). No CMMS equipment/spare-parts demo.
  *
  *   php artisan db:seed --class=DevelopmentDemoSeeder
  */

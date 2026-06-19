@@ -46,8 +46,8 @@
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         <x-status-badge :status="$item->status" />
                         · {{ __('common.workflow_step_short') }} {{ $item->current_step_no }}
-                        @if($item->department)
-                            · {{ $item->department->name }}
+                        @if($item->orgUnit)
+                            · {{ $item->orgUnit->name }}
                         @endif
                     </p>
                 </a>

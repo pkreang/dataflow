@@ -15,7 +15,7 @@ class ResetTestingUserLayerCommand extends Command
                             {--dry-run : List users that would be removed without deleting}
                             {--force : Skip confirmation (for scripts / non-interactive)}';
 
-    protected $description = 'Remove users (except --keep emails) and related test data while keeping companies, departments, and positions.';
+    protected $description = 'Remove users (except --keep emails) and related test data while keeping companies, org units, and positions.';
 
     public function handle(): int
     {
@@ -102,7 +102,7 @@ class ResetTestingUserLayerCommand extends Command
             User::query()->withTrashed()->whereIn('id', $ids)->get()->each->forceDelete();
         });
 
-        $this->info('Done. Companies, departments, positions, and role definitions were not modified.');
+        $this->info('Done. Companies, org units, positions, and role definitions were not modified.');
 
         return self::SUCCESS;
     }

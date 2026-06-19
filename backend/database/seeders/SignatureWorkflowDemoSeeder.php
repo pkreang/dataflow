@@ -106,7 +106,7 @@ class SignatureWorkflowDemoSeeder extends Seeder
 
         // 4. Form → workflow binding (no amount condition)
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $form->id, 'department_id' => null],
+            ['form_id' => $form->id],
             ['use_amount_condition' => false, 'workflow_id' => $wf->id]
         );
 
@@ -128,7 +128,7 @@ class SignatureWorkflowDemoSeeder extends Seeder
             $submission = DocumentFormSubmission::create([
                 'form_id' => $form->id,
                 'user_id' => $requester->id,
-                'department_id' => $requester->department_id,
+                'org_unit_id' => $requester->org_unit_id,
                 'payload' => $sample,
                 'status' => 'submitted',
                 'created_at' => $createdAt,
@@ -137,7 +137,7 @@ class SignatureWorkflowDemoSeeder extends Seeder
 
             $instance = ApprovalInstance::create([
                 'workflow_id' => $wf->id,
-                'department_id' => $requester->department_id,
+                'org_unit_id' => $requester->org_unit_id,
                 'requester_user_id' => $requester->id,
                 'document_type' => 'sign_demo',
                 'reference_no' => $refNo,

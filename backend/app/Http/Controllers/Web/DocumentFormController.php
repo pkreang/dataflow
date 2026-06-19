@@ -6,7 +6,6 @@ use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
-use App\Models\Department;
 use App\Models\OrgUnit;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
@@ -87,30 +86,26 @@ class DocumentFormController extends Controller
     {
         $lookupSources = LookupRegistry::sources();
         $workflowStepsByDocType = $this->workflowStepsByDocType();
-        $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $orgUnits = OrgUnit::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
         $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
         $preset = ['document_type' => $request->query('document_type')];
-        $allowedDepartmentIds = [];
         $allowedOrgUnitIds = [];
 
-        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'departments', 'orgUnits', 'companyUsers', 'runningNumberConfigs', 'preset', 'allowedDepartmentIds', 'allowedOrgUnitIds'));
+        return view('settings.document-forms.create', compact('lookupSources', 'workflowStepsByDocType', 'orgUnits', 'companyUsers', 'runningNumberConfigs', 'preset', 'allowedOrgUnitIds'));
     }
 
     public function edit(DocumentForm $documentForm): View
     {
-        $documentForm->load(['fields', 'departments', 'orgUnits']);
+        $documentForm->load(['fields', 'orgUnits']);
         $lookupSources = LookupRegistry::sources();
         $workflowStepsByDocType = $this->workflowStepsByDocType();
-        $departments = Department::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $orgUnits = OrgUnit::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $companyUsers = $this->companyUsersForPicker();
         $runningNumberConfigs = $this->runningNumberConfigsForBuilder();
-        $allowedDepartmentIds = $documentForm->departments->pluck('id')->all();
         $allowedOrgUnitIds = $documentForm->orgUnits->pluck('id')->all();
 
-        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'departments', 'orgUnits', 'companyUsers', 'runningNumberConfigs', 'allowedDepartmentIds', 'allowedOrgUnitIds'));
+        return view('settings.document-forms.edit', compact('documentForm', 'lookupSources', 'workflowStepsByDocType', 'orgUnits', 'companyUsers', 'runningNumberConfigs', 'allowedOrgUnitIds'));
     }
 
     /**
@@ -246,8 +241,6 @@ class DocumentFormController extends Controller
             'target_document_types' => ['nullable', 'array'],
             'target_document_types.*' => ['string', 'max:50'],
             'layout_columns' => ['nullable', 'integer', Rule::in([1, 2, 3, 4])],
-            'allowed_departments'   => ['nullable', 'array'],
-            'allowed_departments.*' => ['integer', 'exists:departments,id'],
             'allowed_org_units'     => ['nullable', 'array'],
             'allowed_org_units.*'   => ['integer', 'exists:org_units,id'],
             'table_name' => [
@@ -281,7 +274,6 @@ class DocumentFormController extends Controller
             'fields.*.required_at_step' => ['nullable', 'string', 'max:500'],
             'fields.*.validation_rules' => ['nullable', 'string', 'max:65535'],
             'fields.*.editable_by' => ['nullable', 'string', 'max:2000'],
-            'fields.*.visible_to_departments' => ['nullable', 'string', 'max:2000'],
             'fields.*.visible_to_org_units' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -472,12 +464,10 @@ class DocumentFormController extends Controller
                     'required_at_step' => $this->parseRequiredAtStep($field),
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
-                    'visible_to_departments' => $this->parseDepartmentIds($field),
                     'visible_to_org_units' => $this->parseOrgUnitIds($field),
                 ]);
             }
 
-            $form->departments()->sync($validated['allowed_departments'] ?? []);
             $form->orgUnits()->sync($validated['allowed_org_units'] ?? []);
         });
 
@@ -544,12 +534,10 @@ class DocumentFormController extends Controller
                     'required_at_step' => $this->parseRequiredAtStep($field),
                     'validation_rules' => $this->parseJsonField($field['validation_rules'] ?? null),
                     'editable_by' => $this->parseEditableBy($field, $validated['document_type']),
-                    'visible_to_departments' => $this->parseDepartmentIds($field),
                     'visible_to_org_units' => $this->parseOrgUnitIds($field),
                 ]);
             }
 
-            $documentForm->departments()->sync($validated['allowed_departments'] ?? []);
             $documentForm->orgUnits()->sync($validated['allowed_org_units'] ?? []);
 
             // First-time table creation for forms that had no dedicated table yet
@@ -643,7 +631,7 @@ class DocumentFormController extends Controller
                 'widget_type' => 'table',
                 'data_source' => $sourceKey,
                 'config' => [
-                    'columns' => ['reference_no', 'status', 'department_id', 'created_at'],
+                    'columns' => ['reference_no', 'status', 'org_unit_id', 'created_at'],
                     'per_page' => 10,
                 ],
                 'col_span' => 2,
@@ -695,7 +683,6 @@ class DocumentFormController extends Controller
                     'default_value' => $field->default_value,
                     'is_readonly' => $field->is_readonly,
                     'options' => $field->options,
-                    'visible_to_departments' => $field->visible_to_departments,
                     'editable_by' => $field->editable_by,
                     'visibility_rules' => $field->visibility_rules,
                     'required_rules' => $field->required_rules,
@@ -1036,10 +1023,6 @@ class DocumentFormController extends Controller
         return $clean ?: null;
     }
 
-    /**
-     * Normalise `visible_to_departments` into a list of integer IDs. Unknown
-     * IDs are dropped silently. Empty list → null (visible to everyone).
-     */
     private function parseRequiredAtStep(array $field): ?array
     {
         $raw = $field['required_at_step'] ?? null;
@@ -1065,25 +1048,6 @@ class DocumentFormController extends Controller
         ));
 
         return $steps ?: null;
-    }
-
-    private function parseDepartmentIds(array $field): ?array
-    {
-        $decoded = $this->decodeJsonList($field['visible_to_departments'] ?? null);
-        if ($decoded === null) {
-            return null;
-        }
-
-        $ids = array_values(array_unique(array_map('intval', $decoded)));
-        $ids = array_values(array_filter($ids, fn ($id) => $id > 0));
-        if (! $ids) {
-            return null;
-        }
-
-        $valid = Department::whereIn('id', $ids)->pluck('id')->all();
-        $valid = array_values(array_intersect($ids, $valid));
-
-        return $valid ?: null;
     }
 
     private function parseOrgUnitIds(array $field): ?array

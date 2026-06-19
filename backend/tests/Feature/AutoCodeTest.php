@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\ApprovalWorkflow;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\Department;
+use App\Models\OrgUnit;
 use App\Models\DocumentForm;
 use App\Models\DocumentType;
 use App\Models\Equipment;
@@ -30,12 +30,12 @@ class AutoCodeTest extends TestCase
 
     public function test_auto_code_generated_on_create_for_each_entity(): void
     {
-        $dept = Department::create(['name' => 'IT', 'code' => 'IT']);
+        $dept = OrgUnit::create(['name' => 'IT', 'type' => 'department']);
         $pos  = Position::create(['name' => 'Manager', 'code' => 'MGR']);
         $cat  = EquipmentCategory::create(['name' => 'Pump', 'code' => 'PUMP']);
         $loc  = EquipmentLocation::create(['name' => 'Bldg A', 'code' => 'BLDA']);
 
-        $this->assertSame('DEPT-001', $dept->auto_code);
+        $this->assertSame('ORG-001', $dept->auto_code);
         $this->assertSame('POS-001', $pos->auto_code);
         $this->assertSame('EQCAT-001', $cat->auto_code);
         $this->assertSame('EQLOC-001', $loc->auto_code);
@@ -116,27 +116,27 @@ class AutoCodeTest extends TestCase
 
     public function test_auto_code_increments_per_entity_independently(): void
     {
-        $d1 = Department::create(['name' => 'A', 'code' => 'A']);
-        $d2 = Department::create(['name' => 'B', 'code' => 'B']);
-        $d3 = Department::create(['name' => 'C', 'code' => 'C']);
+        $d1 = OrgUnit::create(['name' => 'A', 'type' => 'department']);
+        $d2 = OrgUnit::create(['name' => 'B', 'type' => 'department']);
+        $d3 = OrgUnit::create(['name' => 'C', 'type' => 'department']);
         $p1 = Position::create(['name' => 'X', 'code' => 'X']);
         $p2 = Position::create(['name' => 'Y', 'code' => 'Y']);
 
-        $this->assertSame(['DEPT-001', 'DEPT-002', 'DEPT-003'], [$d1->auto_code, $d2->auto_code, $d3->auto_code]);
+        $this->assertSame(['ORG-001', 'ORG-002', 'ORG-003'], [$d1->auto_code, $d2->auto_code, $d3->auto_code]);
         $this->assertSame(['POS-001', 'POS-002'], [$p1->auto_code, $p2->auto_code]);
     }
 
     public function test_auto_code_skips_after_delete_does_not_reuse(): void
     {
-        $d1 = Department::create(['name' => 'A', 'code' => 'A']);
-        $d2 = Department::create(['name' => 'B', 'code' => 'B']);
-        $d3 = Department::create(['name' => 'C', 'code' => 'C']);
+        $d1 = OrgUnit::create(['name' => 'A', 'type' => 'department']);
+        $d2 = OrgUnit::create(['name' => 'B', 'type' => 'department']);
+        $d3 = OrgUnit::create(['name' => 'C', 'type' => 'department']);
 
         $d2->delete();
 
-        $d4 = Department::create(['name' => 'D', 'code' => 'D']);
+        $d4 = OrgUnit::create(['name' => 'D', 'type' => 'department']);
 
-        $this->assertSame('DEPT-004', $d4->auto_code);
+        $this->assertSame('ORG-004', $d4->auto_code);
     }
 
     public function test_auto_code_request_override_ignored_for_document_type(): void
@@ -190,13 +190,13 @@ class AutoCodeTest extends TestCase
      */
     public function test_direct_mass_assignment_with_auto_code_does_overwrite_trait(): void
     {
-        $dept = Department::create([
+        $dept = OrgUnit::create([
             'name' => 'Import',
-            'code' => 'IMP',
-            'auto_code' => 'DEPT-IMPORTED',
+            'type' => 'department',
+            'auto_code' => 'ORG-IMPORTED',
         ]);
 
-        $this->assertSame('DEPT-IMPORTED', $dept->auto_code);
+        $this->assertSame('ORG-IMPORTED', $dept->auto_code);
     }
 
     // ── Helpers ─────────────────────────────────────────────
@@ -231,7 +231,6 @@ class AutoCodeTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name) ?: $user->email,
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => $user->department_id,
                 'can_change_password' => true,
                 'roles' => $user->getRoleNames()->toArray(),
             ],

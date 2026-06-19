@@ -125,13 +125,11 @@ class DashboardWidgetDataController extends Controller
         $request->validate([
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date',
-            'department_id' => 'nullable|integer',
             'org_unit_id' => 'nullable|integer',
         ]);
 
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
-        $departmentId = $request->query('department_id');
         $orgUnitId = $request->query('org_unit_id');
 
         $config = $widget->config ?? [];
@@ -164,9 +162,6 @@ class DashboardWidgetDataController extends Controller
             }
         }
 
-        if ($departmentId && isset($source['filter_fields']['department_id'])) {
-            $query->where('department_id', $departmentId);
-        }
         if ($orgUnitId && isset($source['filter_fields']['org_unit_id'])) {
             $query->where('org_unit_id', $orgUnitId);
         }
@@ -463,7 +458,7 @@ class DashboardWidgetDataController extends Controller
     }
 
     /**
-     * Resolve raw FK values (e.g. department_id=3) to human-readable labels
+     * Resolve raw FK values (e.g. org_unit_id=3) to human-readable labels
      * (e.g. "ฝ่ายควบคุมคุณภาพ") for chart axis/legend display. Falls back to the
      * raw value if no mapping is found.
      */
@@ -484,7 +479,6 @@ class DashboardWidgetDataController extends Controller
     private function labelMapFor(string $column): ?array
     {
         return match ($column) {
-            'department_id' => $this->lookupTable('departments', 'name'),
             'org_unit_id' => $this->lookupTable('org_units', 'name'),
             'user_id', 'requester_user_id', 'assignee_user_id' => $this->userNameLookup(),
             'workflow_id' => $this->lookupTable('approval_workflows', 'name'),
@@ -542,7 +536,7 @@ class DashboardWidgetDataController extends Controller
             })
             ->toArray();
 
-        // Resolve FK columns (department_id → name, user_id → full name, etc.)
+        // Resolve FK columns (org_unit_id → name, user_id → full name, etc.)
         // so the table shows human-readable values instead of raw integer IDs.
         $maps = [];
         foreach ($selectColumns as $col) {

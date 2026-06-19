@@ -255,7 +255,6 @@ class DocumentTypeControllerTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name) ?: $user->email,
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => $user->department_id,
                 'can_change_password' => true,
                 'roles' => $user->getRoleNames()->toArray(),
             ],

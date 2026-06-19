@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * binding org_unit → workflow ต่อ document_type (org-model consolidation).
- * คู่ขนานกับ DepartmentWorkflowBinding จนกว่า resolveWorkflowId จะย้ายมาอ่านตัวนี้ (Phase 2a).
+  * org_unit ↔ workflow binding ต่อ document_type (resolveWorkflowId อ่านผ่าน resolveOrgUnitBindingWorkflowId).
  */
 class OrgUnitWorkflowBinding extends Model
 {

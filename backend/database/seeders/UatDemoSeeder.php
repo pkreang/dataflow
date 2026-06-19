@@ -6,7 +6,6 @@ use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormWorkflowPolicy;
@@ -59,17 +58,7 @@ class UatDemoSeeder extends Seeder
             ['name' => 'สาขาหลัก', 'is_active' => true]
         );
 
-        // 3. Departments
-        $deptAcad = Department::updateOrCreate(
-            ['code' => 'UAT_ACAD'],
-            ['name' => 'ฝ่ายวิชาการ', 'is_active' => true]
-        );
-        $deptAdmin = Department::updateOrCreate(
-            ['code' => 'UAT_ADMIN'],
-            ['name' => 'ฝ่ายธุรการ', 'is_active' => true]
-        );
-
-        // 4. Positions
+        // 3. Positions
         $posTeacher = Position::updateOrCreate(
             ['code' => 'UAT_TEACHER'],
             ['name' => 'ครู', 'is_active' => true]
@@ -95,7 +84,6 @@ class UatDemoSeeder extends Seeder
                 'password' => 'password',
                 'password_changed_at' => now(),
                 'password_must_change' => false,
-                'department_id' => $deptAcad->id,
                 'position_id' => $posTeacher->id,
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
@@ -114,7 +102,6 @@ class UatDemoSeeder extends Seeder
                 'password' => 'password',
                 'password_changed_at' => now(),
                 'password_must_change' => false,
-                'department_id' => $deptAcad->id,
                 'position_id' => $posHead->id,
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
@@ -133,7 +120,6 @@ class UatDemoSeeder extends Seeder
                 'password' => 'password',
                 'password_changed_at' => now(),
                 'password_must_change' => false,
-                'department_id' => $deptAdmin->id,
                 'position_id' => $posMgr->id,
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
@@ -152,7 +138,6 @@ class UatDemoSeeder extends Seeder
                 'password' => 'password',
                 'password_changed_at' => now(),
                 'password_must_change' => false,
-                'department_id' => $deptAcad->id,
                 'position_id' => $posTeacher->id,
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
@@ -215,7 +200,7 @@ class UatDemoSeeder extends Seeder
         $form = DocumentForm::where('form_key', 'leave_request_default')->first();
         if ($form) {
             DocumentFormWorkflowPolicy::updateOrCreate(
-                ['form_id' => $form->id, 'department_id' => null, 'position_id' => null],
+                ['form_id' => $form->id, 'position_id' => null],
                 ['workflow_id' => $wf->id, 'use_amount_condition' => false, 'field_conditions' => []]
             );
         }
@@ -228,7 +213,7 @@ class UatDemoSeeder extends Seeder
 
         // 10. Workflow variants — ฟอร์มใบลาแยก 1 ฟอร์มต่อ 1 รูปแบบ routing
         if ($form) {
-            $this->seedWorkflowVariants($form, $deptAdmin, $posTeacher, $posHead, $posMgr, $employee, $manager, $gm, $substitute, $company, $branch, $root, $wf);
+            $this->seedWorkflowVariants($form, $posTeacher, $posHead, $posMgr, $employee, $manager, $gm, $substitute, $company, $branch, $root, $wf);
         }
 
         // 11. กะตัวอย่าง + ผูก employee เข้ากะเช้า (UAT เมนูตารางกะ)
@@ -266,7 +251,6 @@ class UatDemoSeeder extends Seeder
      */
     private function seedWorkflowVariants(
         DocumentForm $baseForm,
-        Department $deptAdmin,
         Position $posTeacher,
         Position $posHead,
         Position $posMgr,
@@ -294,7 +278,6 @@ class UatDemoSeeder extends Seeder
                 'password' => 'password',
                 'password_changed_at' => now(),
                 'password_must_change' => false,
-                'department_id' => $deptAdmin->id,
                 'position_id' => $posHr->id,
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
@@ -365,7 +348,7 @@ class UatDemoSeeder extends Seeder
         $formByDays = $this->bindVariantForm($baseForm, 'leave_request_by_days', 'ใบลา (ตามจำนวนวัน)', $wfShort);
         // field condition ชนะ default: total_days > 2 → workflow 2 ขั้น (ดู badge "ขั้นสูง" ในหน้า routing)
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $formByDays->id, 'department_id' => null, 'position_id' => null],
+            ['form_id' => $formByDays->id, 'position_id' => null],
             [
                 'workflow_id' => $wfShort->id,
                 'use_amount_condition' => false,
@@ -437,7 +420,7 @@ class UatDemoSeeder extends Seeder
         }
 
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $form->id, 'department_id' => null, 'position_id' => null],
+            ['form_id' => $form->id, 'position_id' => null],
             ['workflow_id' => $workflow->id, 'use_amount_condition' => false, 'field_conditions' => []]
         );
 

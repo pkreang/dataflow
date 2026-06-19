@@ -72,7 +72,6 @@ class UserController extends Controller
             'password' => ['required', 'string', new PasswordPolicy],
             'company_id' => 'nullable|exists:companies,id',
             'branch_id' => 'nullable|exists:branches,id',
-            'department_id' => 'nullable|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
             'phone' => 'nullable|string|max:255',
             'roles' => 'array',
@@ -89,7 +88,6 @@ class UserController extends Controller
             'password_must_change' => Setting::getBool('password_force_change_first_login'),
             'company_id' => $request->company_id,
             'branch_id' => $request->branch_id,
-            'department_id' => $request->department_id,
             'position_id' => $request->position_id,
             'phone' => $request->phone,
         ]);
@@ -115,7 +113,6 @@ class UserController extends Controller
             'email' => 'sometimes|email|unique:users,email,'.$id,
             'company_id' => 'sometimes|nullable|exists:companies,id',
             'branch_id' => 'sometimes|nullable|exists:branches,id',
-            'department_id' => 'sometimes|nullable|exists:departments,id',
             'position_id' => 'sometimes|nullable|exists:positions,id',
             'phone' => 'sometimes|nullable|string|max:255',
             'is_active' => 'sometimes|boolean',
@@ -129,7 +126,7 @@ class UserController extends Controller
         $data = $request->only([
             'first_name', 'last_name', 'email',
             'company_id', 'branch_id',
-            'department_id', 'position_id', 'phone',
+            'position_id', 'phone',
             'is_active',
         ]);
 

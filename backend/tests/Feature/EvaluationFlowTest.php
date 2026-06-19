@@ -51,7 +51,6 @@ class EvaluationFlowTest extends TestCase
 
         $instance = ApprovalInstance::create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $owner->id,
             'document_type' => 'test',
             'reference_no' => 'TEST-0001',
@@ -63,7 +62,6 @@ class EvaluationFlowTest extends TestCase
         return DocumentFormSubmission::create([
             'form_id' => $form->id,
             'user_id' => $owner->id,
-            'department_id' => null,
             'approval_instance_id' => $instance->id,
             'payload' => ['title' => 'demo'],
             'status' => 'submitted',

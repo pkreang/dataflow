@@ -14,7 +14,6 @@ class DocumentFormSubmission extends Model
         'form_id',
         'user_id',
         'created_by_user_id',
-        'department_id',
         'org_unit_id',
         'payload',
         'status',
@@ -103,11 +102,6 @@ class DocumentFormSubmission extends Model
     public function isCreator(?int $userId): bool
     {
         return $userId && (int) $this->created_by_user_id === (int) $userId;
-    }
-
-    public function department()
-    {
-        return $this->belongsTo(Department::class);
     }
 
     public function orgUnit()

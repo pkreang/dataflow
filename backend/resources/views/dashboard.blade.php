@@ -44,5 +44,5 @@
         <div class="alert-success mb-4">{{ session('success') }}</div>
     @endif
 
-    @include('_partials.dashboard-widget-grid', ['dashboard' => $dashboard, 'departments' => $departments])
+    @include('_partials.dashboard-widget-grid', ['dashboard' => $dashboard, 'orgUnits' => $orgUnits])
 @endsection

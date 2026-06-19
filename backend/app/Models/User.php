@@ -37,7 +37,6 @@ class User extends Authenticatable implements HasLocalePreference
         'password_must_change',
         'avatar',
         'signature_path',
-        'department_id',
         'position_id',
         'manager_id',
         'org_unit_id',
@@ -95,11 +94,6 @@ class User extends Authenticatable implements HasLocalePreference
     public function branch()
     {
         return $this->belongsTo(Branch::class);
-    }
-
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
     }
 
     /** Master position (Settings → Positions). The `position` string column is kept in sync for display/API. */

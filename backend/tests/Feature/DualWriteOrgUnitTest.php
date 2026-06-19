@@ -2,30 +2,28 @@
 
 namespace Tests\Feature;
 
-use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
-use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentFormSubmission;
 use App\Models\OrgUnit;
+use App\Models\OrgUnitWorkflowBinding;
 use App\Services\ApprovalFlowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithSettingsAuth;
 use Tests\TestCase;
 
 /**
- * Org-model consolidation Phase 1 — dual-write. ทุกจุดที่เขียน department_id ต้องเขียน
- * org_unit_id คู่กันโดยให้ค่าทั้งสองมาจาก entity เดียวกัน (ไม่ขัดกัน). readers ยังใช้
- * department_id; เทสต์นี้ล็อกว่า org_unit_id ถูก populate พร้อมกัน. ดู doc/org-model-consolidation-spec.md
+ * Org-model consolidation — every per-submission / per-instance write captures the
+ * owner's org_unit_id. (Formerly Phase 1 dual-write of department_id; department is
+ * gone, so this now just locks the org_unit write path.)
  */
 class DualWriteOrgUnitTest extends TestCase
 {
     use InteractsWithSettingsAuth, RefreshDatabase;
 
-    public function test_draft_create_dual_writes_owner_org_unit(): void
+    public function test_draft_create_writes_owner_org_unit(): void
     {
         $orgUnit = OrgUnit::create(['name' => 'Engineering', 'type' => 'department', 'is_active' => true]);
         $user = $this->makeRegularUser('dw-owner-'.uniqid().'@example.test');
@@ -41,22 +39,21 @@ class DualWriteOrgUnitTest extends TestCase
         $this->assertSame($orgUnit->id, (int) $submission->org_unit_id);
     }
 
-    public function test_start_dual_writes_org_unit_on_instance(): void
+    public function test_start_writes_org_unit_on_instance(): void
     {
         $orgUnit = OrgUnit::create(['name' => 'Ops', 'type' => 'department', 'is_active' => true]);
         $requester = $this->makeRegularUser('dw-req-'.uniqid().'@example.test');
         $requester->update(['org_unit_id' => $orgUnit->id]);
 
-        $workflow = $this->makeRoleWorkflow('dw_type_'.uniqid());
+        $workflow = $this->makeRoleWorkflow('dw_type_'.uniqid(), $orgUnit->id);
 
+        // org_unit omitted → start() resolves it from the requester.
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $workflow->document_type,
-            departmentId: null,
             requesterUserId: $requester->id,
             payload: ['x' => 1],
         );
 
-        // departmentId omitted → start() resolves both dept + org_unit from requester.
         $this->assertSame($orgUnit->id, (int) $instance->fresh()->org_unit_id);
     }
 
@@ -67,27 +64,17 @@ class DualWriteOrgUnitTest extends TestCase
         $requester = $this->makeRegularUser('dw-exp-'.uniqid().'@example.test');
         $requester->update(['org_unit_id' => $home->id]);
 
-        $workflow = $this->makeRoleWorkflow('dw_type2_'.uniqid());
+        $workflow = $this->makeRoleWorkflow('dw_type2_'.uniqid(), $target->id);
 
         // CMMS-style: caller supplies the document's target org unit explicitly.
         $instance = app(ApprovalFlowService::class)->start(
             documentType: $workflow->document_type,
-            departmentId: null,
             requesterUserId: $requester->id,
             payload: [],
             orgUnitId: $target->id,
         );
 
         $this->assertSame($target->id, (int) $instance->fresh()->org_unit_id);
-    }
-
-    public function test_bridge_resolves_department_to_org_unit(): void
-    {
-        $orgUnit = OrgUnit::create(['name' => 'Bridged', 'type' => 'department', 'is_active' => true]);
-        $dept = Department::create(['name' => 'Legacy Dept', 'code' => 'LGY', 'is_active' => true, 'org_unit_id' => $orgUnit->id]);
-
-        $this->assertSame($orgUnit->id, OrgUnit::idForDepartment($dept->id));
-        $this->assertNull(OrgUnit::idForDepartment(null));
     }
 
     // ── Helpers ─────────────────────────────────────────────
@@ -106,7 +93,7 @@ class DualWriteOrgUnitTest extends TestCase
         return $form->fresh('fields');
     }
 
-    private function makeRoleWorkflow(string $documentType): ApprovalWorkflow
+    private function makeRoleWorkflow(string $documentType, int $orgUnitId): ApprovalWorkflow
     {
         $workflow = ApprovalWorkflow::query()->create([
             'name' => 'DW WF '.uniqid(),
@@ -119,10 +106,10 @@ class DualWriteOrgUnitTest extends TestCase
             'approver_type' => 'user', 'approver_ref' => (string) $approver->id,
             'min_approvals' => 1, 'is_active' => true,
         ]);
-        // start() ไม่มี formKey → resolve ผ่าน department_workflow_bindings (binding แรกของ document_type)
-        $dept = Department::create(['name' => 'WF Dept '.uniqid(), 'code' => 'WF'.random_int(1000, 9999), 'is_active' => true]);
-        DepartmentWorkflowBinding::query()->create([
-            'department_id' => $dept->id,
+        // start() has no formKey → resolve via org_unit_workflow_bindings on the
+        // requester's org unit.
+        OrgUnitWorkflowBinding::query()->create([
+            'org_unit_id' => $orgUnitId,
             'document_type' => $documentType,
             'workflow_id' => $workflow->id,
         ]);

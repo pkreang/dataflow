@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Settings;
 
-use App\Models\Department;
 use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\User;
@@ -26,7 +25,6 @@ class UsersCrudTest extends TestCase
     public function test_super_admin_can_create_user_with_default_role(): void
     {
         $admin = $this->makeSuperAdmin();
-        $dept = Department::create(['name' => 'D', 'code' => 'D', 'is_active' => true]);
         $position = Position::create(['name' => 'P', 'code' => 'P', 'is_active' => true]);
         $role = Role::firstWhere('name', 'admin') ?? Role::create(['name' => 'admin', 'guard_name' => 'web']);
 
@@ -34,7 +32,6 @@ class UsersCrudTest extends TestCase
             'first_name' => 'New',
             'last_name' => 'Hire',
             'email' => 'new-hire@example.test',
-            'department_id' => $dept->id,
             'position_id' => $position->id,
             'role_type' => 'default',
             'role_id' => $role->id,
@@ -50,7 +47,6 @@ class UsersCrudTest extends TestCase
     public function test_super_admin_can_assign_org_unit_on_create(): void
     {
         $admin = $this->makeSuperAdmin();
-        $dept = Department::create(['name' => 'D', 'code' => 'D', 'is_active' => true]);
         $position = Position::create(['name' => 'P', 'code' => 'P', 'is_active' => true]);
         $org = OrgUnit::create(['name' => 'Engineering', 'type' => 'department', 'is_active' => true]);
         $role = Role::firstWhere('name', 'admin') ?? Role::create(['name' => 'admin', 'guard_name' => 'web']);
@@ -58,7 +54,6 @@ class UsersCrudTest extends TestCase
         $this->actingAsWebSession($admin)->post(route('users.store'), [
             'first_name' => 'Org', 'last_name' => 'Member',
             'email' => 'org-member@example.test',
-            'department_id' => $dept->id,
             'org_unit_id' => $org->id,
             'position_id' => $position->id,
             'role_type' => 'default', 'role_id' => $role->id,
@@ -85,14 +80,12 @@ class UsersCrudTest extends TestCase
             'password' => 'pw',
             'is_active' => true,
         ]);
-        $dept = Department::create(['name' => 'D', 'code' => 'D', 'is_active' => true]);
         $position = Position::create(['name' => 'P', 'code' => 'P', 'is_active' => true]);
 
         $this->actingAsWebSession($admin)->post(route('users.store'), [
             'first_name' => 'New',
             'last_name' => 'Hire',
             'email' => 'dup@example.test',
-            'department_id' => $dept->id,
             'position_id' => $position->id,
             'role_type' => 'custom',
             'permissions' => [],

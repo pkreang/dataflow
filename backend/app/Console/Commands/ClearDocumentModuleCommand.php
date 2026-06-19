@@ -54,10 +54,10 @@ class ClearDocumentModuleCommand extends Command
             $inst = ApprovalInstance::query()->whereIn('document_type', self::DOC_TYPES)->delete();
             $this->line("Deleted {$inst} approval instance(s) (repair / PM-AM).");
 
-            $bindings = DB::table('department_workflow_bindings')
+            $bindings = DB::table('org_unit_workflow_bindings')
                 ->whereIn('document_type', self::DOC_TYPES)
                 ->delete();
-            $this->line("Deleted {$bindings} department workflow binding(s).");
+            $this->line("Deleted {$bindings} org unit workflow binding(s).");
 
             $workflows = ApprovalWorkflow::query()->whereIn('document_type', self::DOC_TYPES)->delete();
             $this->line("Deleted {$workflows} approval workflow(s).");

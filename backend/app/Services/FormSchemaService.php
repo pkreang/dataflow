@@ -12,7 +12,7 @@ class FormSchemaService
 {
     /** Standard columns present in every fdata_* table (never touched by syncTable). */
     public const RESERVED_COLUMNS = [
-        'id', 'user_id', 'department_id', 'org_unit_id', 'status',
+        'id', 'user_id', 'org_unit_id', 'status',
         'reference_no', 'approval_instance_id',
         'created_at', 'updated_at',
     ];
@@ -40,7 +40,6 @@ class FormSchemaService
         Schema::create($table, function (Blueprint $bp) use ($form) {
             $bp->id();
             $bp->unsignedBigInteger('user_id')->nullable()->index();
-            $bp->unsignedBigInteger('department_id')->nullable()->index();
             $bp->unsignedBigInteger('org_unit_id')->nullable()->index();
             $bp->enum('status', ['draft', 'submitted'])->default('draft')->index();
             $bp->string('reference_no')->nullable();
@@ -136,7 +135,7 @@ class FormSchemaService
      * Insert a row into the fdata_* table. Returns the inserted row ID, or null if no table.
      *
      * @param  array<string, mixed>  $fieldPayload  Field key → value pairs from the form submission
-     * @param  array<string, mixed>  $meta           Reserved column values (user_id, department_id, status, etc.)
+     * @param  array<string, mixed>  $meta           Reserved column values (user_id, org_unit_id, status, etc.)
      */
     public function insertRow(DocumentForm $form, array $fieldPayload, array $meta = []): ?int
     {

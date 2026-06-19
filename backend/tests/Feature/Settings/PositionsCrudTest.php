@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Settings;
 
-use App\Models\Department;
 use App\Models\Position;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -73,11 +72,6 @@ class PositionsCrudTest extends TestCase
     public function test_position_with_users_cannot_be_destroyed(): void
     {
         $admin = $this->makeSuperAdmin();
-        $department = Department::create([
-            'name' => 'D1',
-            'code' => 'D1',
-            'is_active' => true,
-        ]);
         $position = Position::create([
             'name' => 'Inuse',
             'code' => 'INU',
@@ -89,7 +83,6 @@ class PositionsCrudTest extends TestCase
             'email' => 'position-holder@example.test',
             'password' => 'pw',
             'is_active' => true,
-            'department_id' => $department->id,
             'position_id' => $position->id,
         ]);
 

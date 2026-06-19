@@ -74,7 +74,7 @@
                             @if(!$isSection)
                                 <label for="field_{{ $field->field_key }}" class="form-label">{{ $field->label }}</label>
                             @endif
-                            @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value, 'userDeptId' => $userDeptId ?? null])
+                            @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value])
                             @if(!$isSection)
                                 @error('form_payload.' . $field->field_key)
                                     <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ $message }}</p>
@@ -131,8 +131,8 @@
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             <x-status-badge :status="$item->status" />
                             · {{ __('common.workflow_step_short') }} {{ $item->current_step_no }}
-                            @if($item->department)
-                                · {{ $item->department->name }}
+                            @if($item->orgUnit)
+                                · {{ $item->orgUnit->name }}
                             @endif
                         </p>
                     </a>

@@ -5,8 +5,6 @@ namespace Database\Seeders;
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
 use App\Models\Company;
-use App\Models\Department;
-use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentType;
@@ -15,6 +13,8 @@ use App\Models\EquipmentCategory;
 use App\Models\EquipmentLocation;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
+use App\Models\OrgUnit;
+use App\Models\OrgUnitWorkflowBinding;
 use App\Models\PmPlan;
 use App\Models\PmTaskItem;
 use App\Models\Position;
@@ -29,10 +29,10 @@ use Spatie\Permission\Models\Role;
 /**
  * NTEQ Polymer Co., Ltd. — โรงงานแปรรูปยางพารา จ.มุกดาหาร
  *
- * Seeds: company, departments (7), positions (8), users (8+admin),
+ * Seeds: company, org units (root + 7 departments), positions (8), users (8+admin),
  * equipment categories + locations + equipment, document type (maintenance_request),
  * 3-step approval workflow, maintenance form with 18 fields (visibility rules + validation),
- * and department workflow bindings.
+ * and org unit workflow bindings.
  *
  * Idempotent (updateOrCreate). Safe to re-run.
  *
@@ -72,7 +72,12 @@ class NteqPolymerDemoSeeder extends Seeder
             ]
         );
 
-        // ── 3. Departments (7) ──────────────────────────────
+        // ── 3. Org Units (root company + 7 departments) ─────
+        $orgRoot = OrgUnit::firstOrCreate(
+            ['name' => $company->name, 'parent_id' => null],
+            ['type' => 'company', 'is_active' => true]
+        );
+
         $departments = [
             ['code' => 'PROD',  'name' => 'ฝ่ายผลิต',                        'description' => 'สายผลิตยางแท่ง STR/MVC — กำลังผลิต 72,000 ตัน/ปี'],
             ['code' => 'MAINT', 'name' => 'ฝ่ายซ่อมบำรุง',                    'description' => 'ดูแลเครื่องจักร ระบบไฟฟ้า ระบบควบคุม'],
@@ -83,12 +88,14 @@ class NteqPolymerDemoSeeder extends Seeder
             ['code' => 'MGMT',  'name' => 'ฝ่ายบริหาร',                       'description' => 'ผู้บริหาร บัญชี HR'],
         ];
 
-        $deptMap = [];
-        foreach ($departments as $d) {
-            $dept = Department::updateOrCreate(['code' => $d['code']], ['name' => $d['name'], 'description' => $d['description']]);
-            $deptMap[$d['code']] = $dept;
+        $orgMap = [];
+        foreach ($departments as $i => $d) {
+            $orgMap[$d['code']] = OrgUnit::updateOrCreate(
+                ['name' => $d['name'], 'parent_id' => $orgRoot->id],
+                ['type' => 'department', 'is_active' => true, 'sort_order' => $i + 1]
+            );
         }
-        $this->command?->info('Departments: '.count($departments));
+        $this->command?->info('Org Units: 1 company + '.count($departments).' departments');
 
         // ── 4. Positions (8) ────────────────────────────────
         $positions = [
@@ -133,7 +140,7 @@ class NteqPolymerDemoSeeder extends Seeder
                     'first_name' => $u['first_name'],
                     'last_name' => $u['last_name'],
                     'password' => 'Nteq1234!',
-                    'department_id' => $deptMap[$u['dept']]->id,
+                    'org_unit_id' => $orgMap[$u['dept']]->id,
                     'position_id' => $posMap[$u['pos']]->id,
                     'company_id' => $company->id,
                     'is_active' => true,
@@ -149,12 +156,25 @@ class NteqPolymerDemoSeeder extends Seeder
         $admin = User::where('email', 'admin@example.com')->first();
         if ($admin) {
             $admin->update([
-                'department_id' => $deptMap['MGMT']->id,
+                'org_unit_id' => $orgMap['MGMT']->id,
                 'position_id' => $posMap['PLANT_MGR']->id,
                 'company_id' => $company->id,
             ]);
         }
         $this->command?->info('Users: '.count($users).' + admin updated');
+
+        // Set each org unit's head to its most senior member (head_user_id).
+        // Workflow routing is position-based, so this is for org-chart realism only.
+        $seniorityRank = ['PLANT_MGR' => 6, 'DEPT_MGR' => 5, 'SUPERVISOR' => 4, 'SHIFT_LEAD' => 3, 'EHS_OFFICER' => 2, 'TECHNICIAN' => 1, 'LAB_TECH' => 1, 'OPERATOR' => 0];
+        foreach ($orgMap as $orgUnit) {
+            $head = $orgUnit->members()
+                ->get()
+                ->sortByDesc(fn ($m) => $seniorityRank[optional($m->jobPosition)->code] ?? -1)
+                ->first();
+            if ($head) {
+                $orgUnit->update(['head_user_id' => $head->id]);
+            }
+        }
 
         // ── 6. Equipment Categories ─────────────────────────
         $categories = [
@@ -359,14 +379,14 @@ class NteqPolymerDemoSeeder extends Seeder
         }
         $this->command?->info('Workflow: 3-step maintenance approval');
 
-        // ── 10. Department ↔ Workflow Binding ────────────────
+        // ── 10. Org Unit ↔ Workflow Binding ──────────────────
         foreach (['PROD', 'MAINT', 'QC', 'WH'] as $deptCode) {
-            DepartmentWorkflowBinding::updateOrCreate(
-                ['department_id' => $deptMap[$deptCode]->id, 'document_type' => 'maintenance_request'],
+            OrgUnitWorkflowBinding::updateOrCreate(
+                ['org_unit_id' => $orgMap[$deptCode]->id, 'document_type' => 'maintenance_request'],
                 ['workflow_id' => $wfMaint->id]
             );
         }
-        $this->command?->info('Workflow bindings: 4 departments → maintenance workflow');
+        $this->command?->info('Workflow bindings: 4 org units → maintenance workflow');
 
         // ── 10.5 Lookup lists (DB-driven) ────────────
         $priorityList = LookupList::updateOrCreate(
@@ -636,7 +656,7 @@ class NteqPolymerDemoSeeder extends Seeder
 
         // Global workflow policy for the form
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $form->id, 'department_id' => null],
+            ['form_id' => $form->id],
             ['use_amount_condition' => false, 'workflow_id' => $wfMaint->id]
         );
 

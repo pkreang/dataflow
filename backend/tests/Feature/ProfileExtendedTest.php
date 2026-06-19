@@ -141,26 +141,6 @@ class ProfileExtendedTest extends TestCase
         $response->assertSee(__('common.my_pending_approvals'));
     }
 
-    public function test_department_id_cannot_be_changed_via_post(): void
-    {
-        $this->seedBase();
-        [$user, $position] = $this->makeUserWithPosition();
-
-        $originalDept = \App\Models\Department::create(['code' => 'OG', 'name' => 'Original']);
-        $elevatedDept = \App\Models\Department::create(['code' => 'EL', 'name' => 'Elevated']);
-        $user->update(['department_id' => $originalDept->id]);
-
-        $this->actingAsWebSession($user)->put(route('profile.update'), [
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'email' => $user->email,
-            'department_id' => $elevatedDept->id,    // attempt to reassign self
-            'phone' => '080-0000-000',
-        ]);
-
-        $this->assertSame($originalDept->id, $user->fresh()->department_id);
-    }
-
     public function test_position_id_cannot_be_changed_via_post(): void
     {
         $this->seedBase();
@@ -237,12 +217,6 @@ class ProfileExtendedTest extends TestCase
     {
         $this->seedBase();
         [$target, $position] = $this->makeUserWithPosition();
-        $dept = \App\Models\Department::create([
-            'code' => 'EMAILTST',
-            'name' => 'Email Lock Test Dept',
-            'is_active' => true,
-        ]);
-        $target->update(['department_id' => $dept->id]);
         $originalEmail = $target->fresh()->email;
 
         $admin = User::create([
@@ -253,14 +227,12 @@ class ProfileExtendedTest extends TestCase
             'is_active' => true,
             'is_super_admin' => true,
             'position_id' => $position->id,
-            'department_id' => $dept->id,
         ]);
 
         $response = $this->actingAsWebSession($admin)->put(route('users.update', $target->id), [
             'first_name' => $target->first_name,
             'last_name' => $target->last_name,
             'email' => 'admin-changed-'.uniqid().'@evil.test',
-            'department_id' => $dept->id,
             'position_id' => $position->id,
             'phone' => '081-000-0000', // distinct change to prove the update ran
         ]);
@@ -317,7 +289,6 @@ class ProfileExtendedTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name) ?: $user->email,
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => $user->department_id,
                 'can_change_password' => true,
                 'roles' => $user->getRoleNames()->toArray(),
             ],

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Department;
 use App\Models\DocumentForm;
+use App\Models\OrgUnit;
 use App\Models\User;
 use App\Services\NavigationService;
 use Database\Seeders\PermissionSeeder;
@@ -15,24 +15,24 @@ class DynamicFormsMenuTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_menu_shows_forms_bound_to_user_department_and_hides_other_department_forms(): void
+    public function test_menu_shows_forms_bound_to_user_org_unit_and_hides_other_org_unit_forms(): void
     {
         $this->seedBase();
 
-        $deptProd = Department::create(['code' => 'PROD', 'name' => 'Production']);
-        $deptQc = Department::create(['code' => 'QC', 'name' => 'QC']);
+        $orgProd = OrgUnit::create(['name' => 'Production', 'type' => 'department', 'is_active' => true]);
+        $orgQc = OrgUnit::create(['name' => 'QC', 'type' => 'department', 'is_active' => true]);
 
         $prodForm = DocumentForm::create(['form_key' => 'prod_form', 'name' => 'Prod Form', 'document_type' => 'generic', 'is_active' => true]);
-        $prodForm->departments()->attach($deptProd->id);
+        $prodForm->orgUnits()->attach($orgProd->id);
 
         $qcForm = DocumentForm::create(['form_key' => 'qc_form', 'name' => 'QC Form', 'document_type' => 'generic', 'is_active' => true]);
-        $qcForm->departments()->attach($deptQc->id);
+        $qcForm->orgUnits()->attach($orgQc->id);
 
         $publicForm = DocumentForm::create(['form_key' => 'public_form', 'name' => 'Public Form', 'document_type' => 'generic', 'is_active' => true]);
 
-        $prodUser = $this->makeUser(['department_id' => $deptProd->id]);
+        $prodUser = $this->makeUser(['org_unit_id' => $orgProd->id]);
 
-        $menus = app(NavigationService::class)->getMenus([], false, $prodUser->department_id);
+        $menus = app(NavigationService::class)->getMenus([], false, $prodUser->org_unit_id);
 
         $docsMenu = $menus->firstWhere('label', 'Documents');
         $this->assertNotNull($docsMenu);
@@ -63,11 +63,11 @@ class DynamicFormsMenuTest extends TestCase
     {
         $this->seedBase();
 
-        $dept = Department::create(['code' => 'X', 'name' => 'X']);
+        $org = OrgUnit::create(['name' => 'X', 'type' => 'department', 'is_active' => true]);
         $boundForm = DocumentForm::create(['form_key' => 'bound', 'name' => 'Bound', 'document_type' => 'generic', 'is_active' => true]);
-        $boundForm->departments()->attach($dept->id);
+        $boundForm->orgUnits()->attach($org->id);
 
-        // Super-admin with no department still sees the bound form.
+        // Super-admin with no org_unit still sees the bound form.
         $menus = app(NavigationService::class)->getMenus([], true, null);
         $docs = $menus->firstWhere('label', 'Documents');
 
@@ -79,12 +79,12 @@ class DynamicFormsMenuTest extends TestCase
     {
         $this->seedBase();
 
-        $dept = Department::create(['code' => 'A', 'name' => 'A']);
-        $otherDept = Department::create(['code' => 'B', 'name' => 'B']);
+        $org = OrgUnit::create(['name' => 'A', 'type' => 'department', 'is_active' => true]);
+        $otherOrg = OrgUnit::create(['name' => 'B', 'type' => 'department', 'is_active' => true]);
         $form = DocumentForm::create(['form_key' => 'only_a', 'name' => 'Only A', 'document_type' => 'generic', 'is_active' => true]);
-        $form->departments()->attach($dept->id);
+        $form->orgUnits()->attach($org->id);
 
-        $menus = app(NavigationService::class)->getMenus([], false, $otherDept->id);
+        $menus = app(NavigationService::class)->getMenus([], false, $otherOrg->id);
         $this->assertNull($menus->firstWhere('label', 'Documents'));
     }
 
@@ -92,13 +92,13 @@ class DynamicFormsMenuTest extends TestCase
     {
         $this->seedBase();
 
-        $deptA = Department::create(['code' => 'AA', 'name' => 'AA']);
-        $deptB = Department::create(['code' => 'BB', 'name' => 'BB']);
+        $orgA = OrgUnit::create(['name' => 'AA', 'type' => 'department', 'is_active' => true]);
+        $orgB = OrgUnit::create(['name' => 'BB', 'type' => 'department', 'is_active' => true]);
 
         $restrictedForm = DocumentForm::create(['form_key' => 'restricted', 'name' => 'Restricted', 'document_type' => 'generic', 'is_active' => true]);
-        $restrictedForm->departments()->attach($deptA->id);
+        $restrictedForm->orgUnits()->attach($orgA->id);
 
-        $userB = $this->makeUser(['department_id' => $deptB->id]);
+        $userB = $this->makeUser(['org_unit_id' => $orgB->id]);
 
         $response = $this->actingAsWebSession($userB)->get('/forms/restricted/submissions');
         $response->assertNotFound();
@@ -247,7 +247,7 @@ class DynamicFormsMenuTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name) ?: $user->email,
                 'email' => $user->email,
                 'is_super_admin' => (bool) $user->is_super_admin,
-                'department_id' => $user->department_id,
+                'org_unit_id' => $user->org_unit_id,
                 'can_change_password' => true,
                 'roles' => $user->getRoleNames()->toArray(),
             ],

@@ -1,16 +1,13 @@
 @php
     $inputClass = 'form-input mt-1';
 
-    // Visibility check (Feature 1B) — Phase 2c: org_unit-first, department fallback
-    $userDeptId = $userDeptId ?? null;
+    // Visibility check (Feature 1B) — by org_unit
     $userOrgUnitId = $userOrgUnitId ?? null;
     $editorRole = $editorRole ?? 'requester';
     $editorUserId = $editorUserId ?? null;
-    $visibleDepts = $field->visible_to_departments;
     $visibleOrgs = $field->visible_to_org_units;
-    $isVisible = (empty($visibleOrgs) && empty($visibleDepts))
-        || (!empty($visibleOrgs) && $userOrgUnitId !== null && in_array((int) $userOrgUnitId, array_map('intval', $visibleOrgs)))
-        || (!empty($visibleDepts) && $userDeptId !== null && in_array((int) $userDeptId, array_map('intval', $visibleDepts)));
+    $isVisible = empty($visibleOrgs)
+        || ($userOrgUnitId !== null && in_array((int) $userOrgUnitId, array_map('intval', $visibleOrgs)));
 
     // Editability check (Feature 2) — token set may contain role tokens
     // ('requester', 'step_N') and user tokens ('user:{id}').

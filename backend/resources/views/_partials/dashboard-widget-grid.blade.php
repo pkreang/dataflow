@@ -1,12 +1,12 @@
 {{--
     Shared widget grid + filter bar used by /dashboard (home) and
     /reports/dashboards/{id} (designer-built reports). Pulls $dashboard +
-    $departments from the parent. The page-level template is responsible for
+    $orgUnits from the parent. The page-level template is responsible for
     pushing the api-token meta tag because @push must run inside the layout
     extends, not from a sub-include.
 --}}
 
-{{-- Global filter bar (date + department; Refresh re-runs every widget). --}}
+{{-- Global filter bar (date + org unit; Refresh re-runs every widget). --}}
 <div x-data="{}"
      class="mb-6 flex flex-wrap items-end gap-3 card p-4">
     <div class="flex flex-col gap-1">
@@ -20,12 +20,12 @@
                class="form-input py-1.5">
     </div>
     <div class="flex flex-col gap-1">
-        <label for="filter-department" class="text-xs font-medium text-slate-500 dark:text-slate-400">Department</label>
-        <select id="filter-department"
+        <label for="filter-org-unit" class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ __('common.org_unit') }}</label>
+        <select id="filter-org-unit"
                 class="form-input py-1.5">
-            <option value="">All Departments</option>
-            @foreach($departments as $dept)
-                <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+            <option value="">{{ __('common.all') ?? 'All' }}</option>
+            @foreach($orgUnits as $orgUnit)
+                <option value="{{ $orgUnit->id }}">{{ $orgUnit->name }}</option>
             @endforeach
         </select>
     </div>

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
-use App\Models\Department;
 use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\Setting;
@@ -42,7 +41,7 @@ class UserController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = User::with(['roles', 'jobPosition', 'department', 'shiftSchedules.shift']);
+        $query = User::with(['roles', 'jobPosition', 'orgUnit', 'shiftSchedules.shift']);
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
@@ -129,10 +128,8 @@ class UserController extends Controller implements HasMiddleware
                 }
             }
             try {
-                $deptName = trim($data['department'] ?? $data['แผนก'] ?? '');
                 $positionName = trim($data['position'] ?? $data['ตำแหน่ง'] ?? '');
                 $orgUnitName = trim($data['org_unit'] ?? $data['หน่วยงาน'] ?? '');
-                $deptId = $deptName !== '' ? Department::where('name', $deptName)->value('id') : null;
                 $posId = $positionName !== '' ? Position::where('name', $positionName)->value('id') : null;
                 $orgUnitId = $orgUnitName !== '' ? OrgUnit::where('name', $orgUnitName)->value('id') : null;
 
@@ -143,7 +140,6 @@ class UserController extends Controller implements HasMiddleware
                     'password' => CompliantPasswordGenerator::generate(),
                     'password_changed_at' => now(),
                     'password_must_change' => Setting::getBool('password_force_change_first_login'),
-                    'department_id' => $deptId,
                     'position_id' => $posId,
                     'org_unit_id' => $orgUnitId,
                     'phone' => trim($data['phone'] ?? $data['เบอร์โทร'] ?? '') ?: null,
@@ -171,7 +167,6 @@ class UserController extends Controller implements HasMiddleware
         $roles = Role::orderBy('name')->get();
         $permGrid = $this->buildPermissionMatrix();
         $positions = Position::query()->where('is_active', true)->orderBy('name')->get();
-        $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
         $orgUnits = OrgUnit::where('is_active', true)->orderBy('name')->get();
 
         return view('users.create', [
@@ -180,7 +175,6 @@ class UserController extends Controller implements HasMiddleware
             'permissionActions' => $permGrid['actions'],
             'permissionActionLabels' => $permGrid['action_labels'],
             'positions' => $positions,
-            'departments' => $departments,
             'orgUnits' => $orgUnits,
         ]);
     }
@@ -264,16 +258,6 @@ class UserController extends Controller implements HasMiddleware
             })
             ->orderBy('name')
             ->get();
-        $departments = Department::query()
-            ->where(function ($q) use ($user) {
-                $q->where('is_active', true);
-                if ($user->department_id) {
-                    $q->orWhere('id', $user->department_id);
-                }
-            })
-            ->orderBy('name')
-            ->get();
-
         $canEditEmail = PasswordCapabilityService::canEditEmailInApp($user);
         $allUsers = User::query()
             ->where('is_active', true)
@@ -291,7 +275,6 @@ class UserController extends Controller implements HasMiddleware
             'permissionActions' => $permGrid['actions'],
             'permissionActionLabels' => $permGrid['action_labels'],
             'positions' => $positions,
-            'departments' => $departments,
             'canEditEmail' => $canEditEmail,
             'allUsers' => $allUsers,
             'orgUnits' => $orgUnits,

@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentType;
 use App\Models\OrgUnit;
@@ -18,12 +17,12 @@ class DocumentFormPermissionsStoreTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_valid_editable_by_steps_and_departments_are_persisted(): void
+    public function test_valid_editable_by_steps_and_org_units_are_persisted(): void
     {
         $this->seedBase();
         $this->makeWorkflowWithSteps('maintenance_request', 3);
-        $dept1 = Department::create(['name' => 'Production', 'code' => 'PROD', 'is_active' => true]);
-        $dept2 = Department::create(['name' => 'IT', 'code' => 'IT', 'is_active' => true]);
+        $org1 = OrgUnit::create(['name' => 'Production', 'type' => 'department', 'is_active' => true]);
+        $org2 = OrgUnit::create(['name' => 'IT', 'type' => 'department', 'is_active' => true]);
 
         $response = $this->actingAsSuperAdmin()->post(route('settings.document-forms.store'), [
             'form_key' => 'perm_form',
@@ -37,7 +36,7 @@ class DocumentFormPermissionsStoreTest extends TestCase
                     'label' => 'Remarks',
                     'field_type' => 'text',
                     'editable_by' => json_encode(['requester', 'step_2']),
-                    'visible_to_departments' => json_encode([$dept1->id, $dept2->id]),
+                    'visible_to_org_units' => json_encode([$org1->id, $org2->id]),
                 ],
             ],
         ]);
@@ -48,7 +47,7 @@ class DocumentFormPermissionsStoreTest extends TestCase
         $field = $form->fields->first();
 
         $this->assertEqualsCanonicalizing(['requester', 'step_2'], $field->editable_by);
-        $this->assertEqualsCanonicalizing([$dept1->id, $dept2->id], $field->visible_to_departments);
+        $this->assertEqualsCanonicalizing([$org1->id, $org2->id], $field->visible_to_org_units);
     }
 
     public function test_org_unit_visibility_persists_at_form_and_field(): void
@@ -97,7 +96,7 @@ class DocumentFormPermissionsStoreTest extends TestCase
                     'label' => 'Remarks',
                     'field_type' => 'text',
                     'editable_by' => json_encode(['requester']),
-                    'visible_to_departments' => json_encode([]),
+                    'visible_to_org_units' => json_encode([]),
                 ],
             ],
         ]);
@@ -105,14 +104,14 @@ class DocumentFormPermissionsStoreTest extends TestCase
         $field = DocumentForm::where('form_key', 'perm_null')->firstOrFail()->fields->first();
 
         $this->assertNull($field->editable_by, 'default ["requester"] should be stored as NULL to avoid column bloat');
-        $this->assertNull($field->visible_to_departments);
+        $this->assertNull($field->visible_to_org_units);
     }
 
-    public function test_stale_steps_and_unknown_departments_are_filtered_out(): void
+    public function test_stale_steps_and_unknown_org_units_are_filtered_out(): void
     {
         $this->seedBase();
         $this->makeWorkflowWithSteps('maintenance_request', 2);
-        $dept = Department::create(['name' => 'Production', 'code' => 'PROD', 'is_active' => true]);
+        $org = OrgUnit::create(['name' => 'Production', 'type' => 'department', 'is_active' => true]);
 
         $this->actingAsSuperAdmin()->post(route('settings.document-forms.store'), [
             'form_key' => 'perm_filter',
@@ -127,8 +126,8 @@ class DocumentFormPermissionsStoreTest extends TestCase
                     'field_type' => 'text',
                     // workflow has only step_1, step_2 — step_5 is stale and should be dropped
                     'editable_by' => json_encode(['requester', 'step_2', 'step_5']),
-                    // 99999 is not a real department
-                    'visible_to_departments' => json_encode([$dept->id, 99999]),
+                    // 99999 is not a real org_unit
+                    'visible_to_org_units' => json_encode([$org->id, 99999]),
                 ],
             ],
         ]);
@@ -136,7 +135,7 @@ class DocumentFormPermissionsStoreTest extends TestCase
         $field = DocumentForm::where('form_key', 'perm_filter')->firstOrFail()->fields->first();
 
         $this->assertEqualsCanonicalizing(['requester', 'step_2'], $field->editable_by);
-        $this->assertSame([$dept->id], $field->visible_to_departments);
+        $this->assertSame([$org->id], $field->visible_to_org_units);
     }
 
     private function seedBase(): void
@@ -192,7 +191,7 @@ class DocumentFormPermissionsStoreTest extends TestCase
                 'name' => trim($user->first_name.' '.$user->last_name),
                 'email' => $user->email,
                 'is_super_admin' => true,
-                'department_id' => null,
+                'org_unit_id' => null,
                 'can_change_password' => true,
                 'roles' => [],
             ],

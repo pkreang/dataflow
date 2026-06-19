@@ -51,13 +51,11 @@ class EvaluationController extends Controller
         $validated = $request->validate($spec['rules'], [], $spec['attributes']);
 
         $userId = (int) (session('user.id') ?? 0);
-        $userDeptId = session('user.department_id');
         $userOrgUnitId = session('user.org_unit_id') ?? \App\Models\User::find($userId)?->org_unit_id;
 
         DocumentFormSubmission::create([
             'form_id' => $evalForm->id,
             'user_id' => $userId,
-            'department_id' => $userDeptId,
             'org_unit_id' => $userOrgUnitId,
             'parent_submission_id' => $submission->id,
             'payload' => $validated['fields'] ?? [],

@@ -436,10 +436,10 @@ Alpine.data('dashboardWidget', (widgetId, dashboardId, widgetType) => ({
         const params = new URLSearchParams();
         const dateFrom = document.getElementById('filter-date-from')?.value;
         const dateTo = document.getElementById('filter-date-to')?.value;
-        const deptId = document.getElementById('filter-department')?.value;
+        const deptId = document.getElementById('filter-org-unit')?.value;
         if (dateFrom) params.append('date_from', dateFrom);
         if (dateTo) params.append('date_to', dateTo);
-        if (deptId) params.append('department_id', deptId);
+        if (deptId) params.append('org_unit_id', deptId);
         return params;
     },
 
@@ -607,10 +607,10 @@ window.downloadDashboardZip = async function (dashboardId) {
     const params = new URLSearchParams();
     const dateFrom = document.getElementById('filter-date-from')?.value;
     const dateTo = document.getElementById('filter-date-to')?.value;
-    const deptId = document.getElementById('filter-department')?.value;
+    const deptId = document.getElementById('filter-org-unit')?.value;
     if (dateFrom) params.append('date_from', dateFrom);
     if (dateTo) params.append('date_to', dateTo);
-    if (deptId) params.append('department_id', deptId);
+    if (deptId) params.append('org_unit_id', deptId);
 
     const apiToken = document.querySelector('meta[name="api-token"]')?.content || '';
     try {

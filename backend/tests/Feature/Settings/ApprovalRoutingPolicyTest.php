@@ -4,10 +4,9 @@ namespace Tests\Feature\Settings;
 
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
-use App\Models\Department;
-use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
+use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\User;
 use App\Services\ApprovalFlowService;
@@ -87,7 +86,7 @@ class ApprovalRoutingPolicyTest extends TestCase
 
         $this->assertDatabaseHas('document_form_workflow_policies', [
             'form_id' => $form->id,
-            'department_id' => null,
+            'org_unit_id' => null,
             'position_id' => null,
             'workflow_id' => $workflow->id,
         ]);
@@ -141,33 +140,12 @@ class ApprovalRoutingPolicyTest extends TestCase
         $this->assertDatabaseHas('document_form_workflow_policies', ['id' => $policy->id]);
     }
 
-    public function test_add_department_exception(): void
-    {
-        $admin = $this->makeSuperAdmin();
-        $form = $this->makeForm();
-        $workflow = $this->makeWorkflow();
-        $dept = Department::factory()->create();
-
-        $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
-            'exceptions' => [
-                ['form_id' => $form->id, 'scope' => 'department', 'department_id' => $dept->id, 'workflow_id' => $workflow->id],
-            ],
-        ])->assertRedirect(route('settings.approval-routing'));
-
-        $this->assertDatabaseHas('document_form_workflow_policies', [
-            'form_id' => $form->id,
-            'department_id' => $dept->id,
-            'position_id' => null,
-            'workflow_id' => $workflow->id,
-        ]);
-    }
-
     public function test_add_org_unit_exception(): void
     {
         $admin = $this->makeSuperAdmin();
         $form = $this->makeForm();
         $workflow = $this->makeWorkflow();
-        $org = \App\Models\OrgUnit::create(['name' => 'Eng', 'type' => 'department', 'is_active' => true]);
+        $org = OrgUnit::create(['name' => 'Eng', 'type' => 'department', 'is_active' => true]);
 
         $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
             'exceptions' => [
@@ -177,7 +155,6 @@ class ApprovalRoutingPolicyTest extends TestCase
 
         $this->assertDatabaseHas('document_form_workflow_policies', [
             'form_id' => $form->id,
-            'department_id' => null,
             'org_unit_id' => $org->id,
             'position_id' => null,
             'workflow_id' => $workflow->id,
@@ -199,7 +176,7 @@ class ApprovalRoutingPolicyTest extends TestCase
 
         $this->assertDatabaseHas('document_form_workflow_policies', [
             'form_id' => $form->id,
-            'department_id' => null,
+            'org_unit_id' => null,
             'position_id' => $position->id,
             'workflow_id' => $workflow->id,
         ]);
@@ -211,24 +188,24 @@ class ApprovalRoutingPolicyTest extends TestCase
         $form = $this->makeForm();
         $wf1 = $this->makeWorkflow();
         $wf2 = $this->makeWorkflow();
-        $dept = Department::factory()->create();
+        $org = OrgUnit::create(['name' => 'Eng', 'type' => 'department', 'is_active' => true]);
         DocumentFormWorkflowPolicy::create([
             'form_id' => $form->id,
-            'department_id' => $dept->id,
+            'org_unit_id' => $org->id,
             'workflow_id' => $wf1->id,
             'use_amount_condition' => false,
         ]);
 
         $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
             'exceptions' => [
-                ['form_id' => $form->id, 'scope' => 'department', 'department_id' => $dept->id, 'workflow_id' => $wf2->id],
+                ['form_id' => $form->id, 'scope' => 'org_unit', 'org_unit_id' => $org->id, 'workflow_id' => $wf2->id],
             ],
         ])->assertRedirect(route('settings.approval-routing'));
 
-        $this->assertSame(1, DocumentFormWorkflowPolicy::where('form_id', $form->id)->where('department_id', $dept->id)->count());
+        $this->assertSame(1, DocumentFormWorkflowPolicy::where('form_id', $form->id)->where('org_unit_id', $org->id)->count());
         $this->assertDatabaseHas('document_form_workflow_policies', [
             'form_id' => $form->id,
-            'department_id' => $dept->id,
+            'org_unit_id' => $org->id,
             'workflow_id' => $wf2->id,
         ]);
     }
@@ -238,10 +215,10 @@ class ApprovalRoutingPolicyTest extends TestCase
         $admin = $this->makeSuperAdmin();
         $form = $this->makeForm();
         $workflow = $this->makeWorkflow();
-        $dept = Department::factory()->create();
+        $org = OrgUnit::create(['name' => 'Eng', 'type' => 'department', 'is_active' => true]);
         $policy = DocumentFormWorkflowPolicy::create([
             'form_id' => $form->id,
-            'department_id' => $dept->id,
+            'org_unit_id' => $org->id,
             'workflow_id' => $workflow->id,
             'use_amount_condition' => false,
         ]);
@@ -258,10 +235,10 @@ class ApprovalRoutingPolicyTest extends TestCase
         $admin = $this->makeSuperAdmin();
         $form = $this->makeForm();
         $workflow = $this->makeWorkflow();
-        $dept = Department::factory()->create();
+        $org = OrgUnit::create(['name' => 'Eng', 'type' => 'department', 'is_active' => true]);
         $policy = DocumentFormWorkflowPolicy::create([
             'form_id' => $form->id,
-            'department_id' => $dept->id,
+            'org_unit_id' => $org->id,
             'workflow_id' => $workflow->id,
             'use_amount_condition' => false,
             'field_conditions' => [
@@ -292,32 +269,6 @@ class ApprovalRoutingPolicyTest extends TestCase
         ]);
     }
 
-    public function test_department_workflow_bindings_are_untouched(): void
-    {
-        $admin = $this->makeSuperAdmin();
-        $form = $this->makeForm();
-        $workflow = $this->makeWorkflow();
-        $dept = Department::factory()->create();
-        DepartmentWorkflowBinding::create([
-            'department_id' => $dept->id,
-            'document_type' => 'repair_request',
-            'workflow_id' => $workflow->id,
-        ]);
-
-        $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
-            'defaults' => [(string) $form->id => (string) $workflow->id],
-            'exceptions' => [
-                ['form_id' => $form->id, 'scope' => 'department', 'department_id' => $dept->id, 'workflow_id' => $workflow->id],
-            ],
-        ])->assertRedirect(route('settings.approval-routing'));
-
-        $this->assertDatabaseHas('department_workflow_bindings', [
-            'department_id' => $dept->id,
-            'document_type' => 'repair_request',
-            'workflow_id' => $workflow->id,
-        ]);
-    }
-
     public function test_override_toggle_persists(): void
     {
         $admin = $this->makeSuperAdmin();
@@ -343,8 +294,8 @@ class ApprovalRoutingPolicyTest extends TestCase
             'email' => 'requester-routing@example.com', 'password' => 'password',
             'is_active' => true, 'is_super_admin' => false,
         ]);
-        $deptA = Department::factory()->create();
-        $deptB = Department::factory()->create();
+        $orgA = OrgUnit::create(['name' => 'Org A', 'type' => 'department', 'is_active' => true]);
+        $orgB = OrgUnit::create(['name' => 'Org B', 'type' => 'department', 'is_active' => true]);
         $form = DocumentForm::factory()->create(['document_type' => $docType]);
         $wfDefault = $this->makeWorkflowWithStage($docType, $approver);
         $wfException = $this->makeWorkflowWithStage($docType, $approver);
@@ -352,7 +303,7 @@ class ApprovalRoutingPolicyTest extends TestCase
         $this->actingAsWebSession($admin)->post(route('settings.approval-routing.save'), [
             'defaults' => [(string) $form->id => (string) $wfDefault->id],
             'exceptions' => [
-                ['form_id' => $form->id, 'scope' => 'department', 'department_id' => $deptA->id, 'workflow_id' => $wfException->id],
+                ['form_id' => $form->id, 'scope' => 'org_unit', 'org_unit_id' => $orgA->id, 'workflow_id' => $wfException->id],
             ],
         ])->assertRedirect(route('settings.approval-routing'));
 
@@ -360,7 +311,7 @@ class ApprovalRoutingPolicyTest extends TestCase
 
         $instanceA = $svc->start(
             documentType: $docType,
-            departmentId: $deptA->id,
+            orgUnitId: $orgA->id,
             requesterUserId: $requester->id,
             formKey: $form->form_key,
         );
@@ -368,7 +319,7 @@ class ApprovalRoutingPolicyTest extends TestCase
 
         $instanceB = $svc->start(
             documentType: $docType,
-            departmentId: $deptB->id,
+            orgUnitId: $orgB->id,
             requesterUserId: $requester->id,
             formKey: $form->form_key,
         );

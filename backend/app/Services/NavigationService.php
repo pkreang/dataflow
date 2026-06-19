@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Cache;
 class NavigationService
 {
     /**
-     * Build the menu tree filtered by the current user's permissions + department.
-     * Form-linked menu rows (document_form_id not null) honor department visibility
+     * Build the menu tree filtered by the current user's permissions + org unit.
+     * Form-linked menu rows (document_form_id not null) honor org_unit visibility
      * at render time; everything else uses static permission/super-admin rules.
      */
-    public function getMenus(array $permissions, bool $isSuperAdmin, ?int $userDepartmentId = null, ?int $userOrgUnitId = null): Collection
+    public function getMenus(array $permissions, bool $isSuperAdmin, ?int $userOrgUnitId = null): Collection
     {
         $tree = Cache::remember('navigation_menus_tree', 3600, function () {
             return NavigationMenu::rootMenus()->with('children')->get();
@@ -23,12 +23,12 @@ class NavigationService
 
         return $tree
             ->map(fn ($menu) => clone $menu)
-            ->filter(fn ($menu) => $this->isAccessible($menu, $permissions, $isSuperAdmin, $userDepartmentId, $userOrgUnitId))
-            ->map(function ($menu) use ($permissions, $isSuperAdmin, $userDepartmentId, $userOrgUnitId) {
+            ->filter(fn ($menu) => $this->isAccessible($menu, $permissions, $isSuperAdmin, $userOrgUnitId))
+            ->map(function ($menu) use ($permissions, $isSuperAdmin, $userOrgUnitId) {
                 if ($menu->children->isNotEmpty()) {
                     $filtered = $menu->children
                         ->map(fn ($c) => clone $c)
-                        ->filter(fn ($child) => $this->isAccessible($child, $permissions, $isSuperAdmin, $userDepartmentId, $userOrgUnitId));
+                        ->filter(fn ($child) => $this->isAccessible($child, $permissions, $isSuperAdmin, $userOrgUnitId));
                     $menu->setRelation('children', $filtered);
                 }
 
@@ -98,16 +98,16 @@ class NavigationService
         });
     }
 
-    private function isAccessible(NavigationMenu $menu, array $permissions, bool $isSuperAdmin, ?int $userDepartmentId = null, ?int $userOrgUnitId = null): bool
+    private function isAccessible(NavigationMenu $menu, array $permissions, bool $isSuperAdmin, ?int $userOrgUnitId = null): bool
     {
         if ($this->menuRouteRequiresInstanceSuperAdmin($menu->route)) {
             return $isSuperAdmin;
         }
 
-        // Form-linked menu rows respect org_unit/department visibility in addition
+        // Form-linked menu rows respect org_unit visibility in addition
         // to the menu's own is_active flag. Super-admin sees every form.
         if ($menu->document_form_id && ! $isSuperAdmin) {
-            if (! $this->menuVisibleForDocumentForm((int) $menu->document_form_id, $userDepartmentId, $userOrgUnitId)) {
+            if (! $this->menuVisibleForDocumentForm((int) $menu->document_form_id, $userOrgUnitId)) {
                 return false;
             }
         }
@@ -140,21 +140,21 @@ class NavigationService
     }
 
     /**
-     * Cached per-request lookup: does the form's department binding admit the
-     * given user department? Keeps the sidebar snappy when a user has many
+     * Cached per-request lookup: does the form's org_unit visibility admit the
+     * given user's org unit? Keeps the sidebar snappy when a user has many
      * form-linked rows.
      */
-    private function menuVisibleForDocumentForm(int $formId, ?int $userDepartmentId, ?int $userOrgUnitId = null): bool
+    private function menuVisibleForDocumentForm(int $formId, ?int $userOrgUnitId = null): bool
     {
         static $cache = [];
-        $key = $formId.'|'.($userOrgUnitId ?? 'null').'|'.($userDepartmentId ?? 'null');
+        $key = $formId.'|'.($userOrgUnitId ?? 'null');
         if (array_key_exists($key, $cache)) {
             return $cache[$key];
         }
 
         return $cache[$key] = DocumentForm::query()
             ->whereKey($formId)
-            ->visibleToUser($userOrgUnitId, $userDepartmentId)
+            ->visibleToUser($userOrgUnitId)
             ->exists();
     }
 }

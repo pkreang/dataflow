@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Org-model consolidation Phase 2d — reports/dashboard filter by org_unit_id (คู่กับ department_id).
+ * Org-model consolidation Phase 2d — reports/dashboard filter by org_unit_id.
  * ดู doc/org-model-consolidation-spec.md
  */
 class ReportOrgUnitFilterTest extends TestCase

@@ -40,13 +40,12 @@ class DocumentFormSubmissionController extends Controller
     public function index(): View
     {
         $userId = (int) (session('user.id') ?? 0);
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
 
         $forms = DocumentForm::query()
             ->where('is_active', true)
             ->where('document_type', '!=', 'evaluation') // eval forms triggered via parent submission only
-            ->visibleToUser($userOrgUnitId, $userDeptId)
+            ->visibleToUser($userOrgUnitId)
             ->orderBy('name')
             ->get()
             ->groupBy('document_type');
@@ -76,7 +75,6 @@ class DocumentFormSubmissionController extends Controller
     public function listByForm(DocumentForm $documentForm, Request $request, ApproverIdentity $approverIdentity): View
     {
         $userId = (int) (session('user.id') ?? 0);
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
         $identity = $approverIdentity->fromSession();
@@ -86,19 +84,19 @@ class DocumentFormSubmissionController extends Controller
         // submissions on every form regardless of their own org unit.
         abort_unless(
             $isSuperAdmin
-                || DocumentForm::query()->whereKey($documentForm->id)->visibleToUser($userOrgUnitId, $userDeptId)->exists(),
+                || DocumentForm::query()->whereKey($documentForm->id)->visibleToUser($userOrgUnitId)->exists(),
             404
         );
 
-        // Drop searchable columns the viewer can't see by department, mirroring
+        // Drop searchable columns the viewer can't see by org unit, mirroring
         // the field-level visibility in dynamic-field.blade.php. Without this the
         // approver-pending rows below would surface restricted searchable values
-        // in the list columns (the list renderer doesn't honor visible_to_departments).
+        // in the list columns (the list renderer doesn't honor visible_to_org_units).
         $searchable = $documentForm->fields()
             ->where('is_searchable', true)
             ->orderBy('sort_order')
             ->get()
-            ->filter(fn ($field) => $isSuperAdmin || $this->fieldVisibleToUser($field, $userOrgUnitId, $userDeptId))
+            ->filter(fn ($field) => $isSuperAdmin || $this->fieldVisibleToUser($field, $userOrgUnitId))
             ->values();
         $filters = $this->extractFilters($request, $searchable);
 
@@ -288,7 +286,6 @@ class DocumentFormSubmissionController extends Controller
         $sessionUserId = (int) (session('user.id') ?? 0);
         [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
             $documentForm,
-            session('user.department_id') ?? User::find($sessionUserId)?->department_id,
             session('user.org_unit_id') ?? User::find($sessionUserId)?->org_unit_id,
         );
 
@@ -330,10 +327,7 @@ class DocumentFormSubmissionController extends Controller
             $createdById = $userId;
         }
 
-        $userDeptId = $createdById
-            ? User::find($ownerId)?->department_id
-            : (session('user.department_id') ?? User::find($userId)?->department_id);
-        // Phase 1 dual-write: org_unit จากเจ้าของใบเดียวกับ department → คอลัมน์ตรงกัน
+        // org_unit จากเจ้าของใบ (ผู้รับผลประโยชน์เมื่อยื่นแทน)
         $userOrgUnitId = $createdById
             ? User::find($ownerId)?->org_unit_id
             : (session('user.org_unit_id') ?? User::find($userId)?->org_unit_id);
@@ -342,17 +336,15 @@ class DocumentFormSubmissionController extends Controller
             'form_id' => $documentForm->id,
             'user_id' => $ownerId,
             'created_by_user_id' => $createdById,
-            'department_id' => $userDeptId,
             'org_unit_id' => $userOrgUnitId,
             'payload' => $payload,
             'status' => 'draft',
             'assigned_editor_user_ids' => $createdById ? [$createdById] : null,
         ]);
 
-        // Dual-write: insert into fdata_* table
+        // Mirror into fdata_* table
         $fdataRowId = $this->writeFdataRow($documentForm, $payload, [
             'user_id' => $ownerId,
-            'department_id' => $userDeptId,
             'org_unit_id' => $userOrgUnitId,
             'status' => 'draft',
         ]);
@@ -388,7 +380,6 @@ class DocumentFormSubmissionController extends Controller
 
         [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
             $submission->form()->first(),
-            $submission->department_id,
             $submission->org_unit_id,
         );
 
@@ -403,7 +394,7 @@ class DocumentFormSubmissionController extends Controller
      *
      * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
      */
-    private function resolveOverridePicker(?DocumentForm $form, ?int $departmentId, ?int $orgUnitId = null): array
+    private function resolveOverridePicker(?DocumentForm $form, ?int $orgUnitId = null): array
     {
         if (! $form || ! Setting::getBool('approval.allow_requester_override', false)) {
             return [collect(), collect()];
@@ -411,7 +402,6 @@ class DocumentFormSubmissionController extends Controller
 
         $workflow = $this->approvalFlow->previewWorkflow(
             $form->document_type,
-            $departmentId,
             (int) (session('user.id') ?? 0),
             $form->form_key,
             null,
@@ -541,7 +531,6 @@ class DocumentFormSubmissionController extends Controller
         if ($form?->hasDedicatedTable()) {
             $newId = $this->schemaService->insertRow($form, $trashed->payload ?? [], [
                 'user_id' => $trashed->user_id,
-                'department_id' => $trashed->department_id,
                 'org_unit_id' => $trashed->org_unit_id,
                 'status' => $trashed->status,
                 'reference_no' => $trashed->reference_no,
@@ -699,7 +688,6 @@ class DocumentFormSubmissionController extends Controller
             $positionId = (int) (User::find($ownerId)?->position_id ?? 0);
             $instance = $approvalFlowService->start(
                 documentType: $form->document_type,
-                departmentId: $submission->department_id,
                 requesterUserId: $ownerId,
                 referenceNo: null,
                 payload: $payload,
@@ -750,7 +738,7 @@ class DocumentFormSubmissionController extends Controller
             );
         }
 
-        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department', 'orgUnit']);
+        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'orgUnit']);
         $activity = SubmissionActivityLog::with('user')
             ->where('submission_id', $submission->id)
             ->latest('created_at')
@@ -767,7 +755,6 @@ class DocumentFormSubmissionController extends Controller
         // owner, prior/next-step approvers, non-pending — gets 'view_only'
         // (read-only, no regression). The PATCH route re-filters server-side.
         $editorRole = $this->resolveEditorRole($submission, $userId);
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorUserId = $userId ?: null;
 
@@ -820,7 +807,6 @@ class DocumentFormSubmissionController extends Controller
             'assignedEditorRows',
             'assignableUsers',
             'editorRole',
-            'userDeptId',
             'userOrgUnitId',
             'editorUserId',
             'canAct',
@@ -874,7 +860,7 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeView($submission);
         abort_if($submission->status === 'draft', 404);
 
-        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department', 'orgUnit', 'user']);
+        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'orgUnit', 'user']);
 
         SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
 
@@ -886,7 +872,7 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeView($submission);
         abort_if($submission->status === 'draft', 404);
 
-        $submission->load(['form.fields', 'instance.steps', 'department', 'orgUnit', 'user']);
+        $submission->load(['form.fields', 'instance.steps', 'orgUnit', 'user']);
 
         $pdf = Pdf::loadView('pdf.submission', compact('submission'))
             ->setPaper('a4', 'portrait')
@@ -981,13 +967,11 @@ class DocumentFormSubmissionController extends Controller
 
         $submission->load('form');
         $form = $submission->form;
-        $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
         $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
 
         $copy = DocumentFormSubmission::create([
             'form_id' => $form->id,
             'user_id' => $userId,
-            'department_id' => $userDeptId,
             'org_unit_id' => $userOrgUnitId,
             'payload' => $submission->payload ?? [],
             'status' => 'draft',
@@ -999,7 +983,6 @@ class DocumentFormSubmissionController extends Controller
         if ($form->hasDedicatedTable()) {
             $rowId = $this->schemaService->insertRow($form, $submission->payload ?? [], [
                 'user_id' => $userId,
-                'department_id' => $userDeptId,
                 'org_unit_id' => $userOrgUnitId,
                 'status' => 'draft',
             ]);
@@ -1106,25 +1089,19 @@ class DocumentFormSubmissionController extends Controller
      * every approver) while still letting auditors who handled the doc look back at it.
      */
     /**
-     * Field visibility — Phase 2c: org_unit-first, department fallback (mirror
-     * dynamic-field.blade.php). field ที่ไม่มี restriction ทั้ง org และ dept เห็นทุกคน;
-     * ถ้ามี → เห็นเฉพาะคนที่ org_unit ตรง หรือ department ตรง. ใช้ drop คอลัมน์ restricted
-     * จาก searchable list ก่อน render.
+     * Field visibility by org_unit (mirror dynamic-field.blade.php). field ที่ไม่มี
+     * restriction org เห็นทุกคน; ถ้ามี → เห็นเฉพาะคนที่ org_unit ตรง. ใช้ drop คอลัมน์
+     * restricted จาก searchable list ก่อน render.
      */
-    private function fieldVisibleToUser(DocumentFormField $field, int|string|null $userOrgUnitId, int|string|null $userDeptId): bool
+    private function fieldVisibleToUser(DocumentFormField $field, int|string|null $userOrgUnitId): bool
     {
         $orgs = $field->visible_to_org_units;
-        $depts = $field->visible_to_departments;
-        if (empty($orgs) && empty($depts)) {
+        if (empty($orgs)) {
             return true;
         }
 
-        $orgMatch = ! empty($orgs) && $userOrgUnitId !== null
+        return $userOrgUnitId !== null
             && in_array((int) $userOrgUnitId, array_map('intval', $orgs), true);
-        $deptMatch = ! empty($depts) && $userDeptId !== null
-            && in_array((int) $userDeptId, array_map('intval', $depts), true);
-
-        return $orgMatch || $deptMatch;
     }
 
     private function isApproverForSubmission(DocumentFormSubmission $submission, int $userId): bool

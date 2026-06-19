@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
-use App\Models\Department;
+use App\Models\OrgUnit;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormSubmission;
@@ -40,12 +40,12 @@ class FactoriesTest extends TestCase
         $this->assertNull($u->email_verified_at);
     }
 
-    public function test_department_factory(): void
+    public function test_org_unit_factory(): void
     {
-        $d = Department::factory()->create();
+        $o = OrgUnit::factory()->create();
 
-        $this->assertNotNull($d->id);
-        $this->assertNotEmpty($d->code);
+        $this->assertNotNull($o->id);
+        $this->assertNotEmpty($o->name);
     }
 
     public function test_company_factory(): void

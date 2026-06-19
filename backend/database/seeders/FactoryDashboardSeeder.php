@@ -62,7 +62,7 @@ class FactoryDashboardSeeder extends Seeder
                 'title' => 'ตามแผนกผู้ขอ',
                 'widget_type' => 'chart',
                 'data_source' => 'repair_requests',
-                'config' => ['chart_type' => 'bar', 'group_by' => 'department_id', 'aggregation' => 'count'],
+                'config' => ['chart_type' => 'bar', 'group_by' => 'org_unit_id', 'aggregation' => 'count'],
                 'col_span' => 2,
                 'sort_order' => 3,
             ],
@@ -71,7 +71,7 @@ class FactoryDashboardSeeder extends Seeder
                 'widget_type' => 'table',
                 'data_source' => 'repair_requests',
                 'config' => [
-                    'columns' => ['reference_no', 'status', 'department_id', 'created_at'],
+                    'columns' => ['reference_no', 'status', 'org_unit_id', 'created_at'],
                     'per_page' => 10,
                 ],
                 'col_span' => 2,

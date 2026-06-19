@@ -4,9 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
+use App\Models\OrgUnit;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -21,18 +21,18 @@ class DemoDashboardDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $departmentIds = Department::pluck('id')->all();
+        $orgUnitIds = OrgUnit::where('type', 'department')->pluck('id')->all();
         $userIds = User::pluck('id')->all();
-        if (empty($departmentIds) || empty($userIds)) {
-            $this->command?->warn('Departments or users missing — seed those first.');
+        if (empty($orgUnitIds) || empty($userIds)) {
+            $this->command?->warn('Org units or users missing — seed those first.');
             return;
         }
 
-        $this->seedRepairRequests($departmentIds, $userIds);
-        $this->seedNteqMaintenance($departmentIds, $userIds);
+        $this->seedRepairRequests($orgUnitIds, $userIds);
+        $this->seedNteqMaintenance($orgUnitIds, $userIds);
     }
 
-    private function seedRepairRequests(array $departmentIds, array $userIds): void
+    private function seedRepairRequests(array $orgUnitIds, array $userIds): void
     {
         $existing = ApprovalInstance::where('document_type', 'repair_request')->count();
         if ($existing > 20) {
@@ -61,7 +61,7 @@ class DemoDashboardDataSeeder extends Seeder
                 $createdAt = Carbon::now()->subDays($daysAgo)->subHours(random_int(0, 23));
                 ApprovalInstance::create([
                     'workflow_id'       => $workflowId,
-                    'department_id'     => $departmentIds[array_rand($departmentIds)],
+                    'org_unit_id'       => $orgUnitIds[array_rand($orgUnitIds)],
                     'requester_user_id' => $userIds[array_rand($userIds)],
                     'document_type'     => 'repair_request',
                     'reference_no'      => sprintf('RR-%s-%04d', $createdAt->format('ym'), $created + 1),
@@ -77,7 +77,7 @@ class DemoDashboardDataSeeder extends Seeder
         $this->command?->info("Seeded {$created} repair_request approval instances.");
     }
 
-    private function seedNteqMaintenance(array $departmentIds, array $userIds): void
+    private function seedNteqMaintenance(array $orgUnitIds, array $userIds): void
     {
         $form = DocumentForm::where('form_key', 'nteq_maintenance')->first();
         if (! $form) {
@@ -108,7 +108,7 @@ class DemoDashboardDataSeeder extends Seeder
             for ($i = 0; $i < $count; $i++) {
                 $daysAgo = random_int(0, 180);
                 $createdAt = Carbon::now()->subDays($daysAgo)->subHours(random_int(0, 23));
-                $deptId = $departmentIds[array_rand($departmentIds)];
+                $orgUnitId = $orgUnitIds[array_rand($orgUnitIds)];
                 $userId = $userIds[array_rand($userIds)];
                 $refNo = sprintf('NTEQ-%s-%04d', $createdAt->format('ym'), $created + 1);
 
@@ -124,7 +124,7 @@ class DemoDashboardDataSeeder extends Seeder
                 if ($hasFdata && $fdataTable) {
                     $fdataRowId = DB::table($fdataTable)->insertGetId([
                         'user_id'       => $userId,
-                        'department_id' => $deptId,
+                        'org_unit_id'   => $orgUnitId,
                         'status'        => $status,
                         'reference_no'  => $refNo,
                         'document_date' => $createdAt->toDateString(),
@@ -139,7 +139,7 @@ class DemoDashboardDataSeeder extends Seeder
                 DocumentFormSubmission::create([
                     'form_id'              => $form->id,
                     'user_id'              => $userId,
-                    'department_id'        => $deptId,
+                    'org_unit_id'          => $orgUnitId,
                     'payload'              => $payload,
                     'status'               => $status,
                     'reference_no'         => $refNo,

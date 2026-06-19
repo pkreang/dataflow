@@ -272,9 +272,9 @@ class LeaveRequestTemplateSeeder extends Seeder
 
     private function seedPolicy(DocumentForm $form, ApprovalWorkflow $workflow): void
     {
-        // department_id = null → applies to all departments (global policy)
+        // org_unit_id = null → applies to all org units (global policy)
         DocumentFormWorkflowPolicy::updateOrCreate(
-            ['form_id' => $form->id, 'department_id' => null],
+            ['form_id' => $form->id],
             [
                 'workflow_id' => $workflow->id,
                 'use_amount_condition' => false,

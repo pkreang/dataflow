@@ -43,16 +43,16 @@
             @csrf
             @method('PUT')
 
-            {{-- Department --}}
+            {{-- Org unit --}}
             <div class="max-w-md">
-                <label class="form-label">{{ __('common.department_optional') }}</label>
-                <select name="department_id" class="form-input">
+                <label class="form-label">{{ __('common.org_unit_optional') }}</label>
+                <select name="org_unit_id" class="form-input">
                     <option value="">{{ __('common.global_default') }}</option>
-                    @foreach($departments as $department)
-                        <option value="{{ $department->id }}" @selected(old('department_id', $policy->department_id) == $department->id)>{{ $department->name }}</option>
+                    @foreach($orgUnits as $orgUnit)
+                        <option value="{{ $orgUnit->id }}" @selected(old('org_unit_id', $policy->org_unit_id) == $orgUnit->id)>{{ $orgUnit->name }}</option>
                     @endforeach
                 </select>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('common.policy_department_hint') }}</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('common.policy_org_unit_hint') }}</p>
             </div>
 
             {{-- Position --}}

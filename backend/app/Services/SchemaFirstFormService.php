@@ -10,7 +10,7 @@ class SchemaFirstFormService
 {
     /** Columns the form UI should never touch. */
     public const RESERVED_COLUMNS = [
-        'id', 'user_id', 'department_id', 'status',
+        'id', 'user_id', 'org_unit_id', 'status',
         'reference_no', 'approval_instance_id',
         'created_at', 'updated_at',
     ];
@@ -112,7 +112,6 @@ class SchemaFirstFormService
                 'validation_rules' => $ann->validation_rules,
 
                 // Flags used by dynamic-field component (must be array, not null)
-                'visible_to_departments' => [],
                 'effective_editable_by' => ['requester'],
             ];
         });

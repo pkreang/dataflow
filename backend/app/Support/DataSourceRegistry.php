@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\ApprovalInstance;
 use App\Models\Company;
-use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
 use App\Models\Equipment;
@@ -52,13 +51,11 @@ class DataSourceRegistry
                 ],
                 'group_by_fields' => [
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
@@ -69,7 +66,6 @@ class DataSourceRegistry
                 'display_columns' => [
                     'reference_no' => 'Ref No',
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                     'created_at' => 'Created At',
@@ -90,13 +86,11 @@ class DataSourceRegistry
                 ],
                 'group_by_fields' => [
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
@@ -107,7 +101,6 @@ class DataSourceRegistry
                 'display_columns' => [
                     'reference_no' => 'Ref No',
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                     'created_at' => 'Created At',
@@ -130,11 +123,9 @@ class DataSourceRegistry
                 ],
                 'group_by_fields' => [
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                 ],
                 'filter_fields' => [
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                 ],
                 'date_fields' => [
@@ -158,13 +149,11 @@ class DataSourceRegistry
                 ],
                 'group_by_fields' => [
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
@@ -175,7 +164,6 @@ class DataSourceRegistry
                 'display_columns' => [
                     'reference_no' => 'Ref No',
                     'status' => 'Status',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                     'created_at' => 'Created At',
@@ -290,13 +278,11 @@ class DataSourceRegistry
                     'id' => 'Count',
                 ],
                 'group_by_fields' => [
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'company_id' => 'Company',
                 ],
                 'filter_fields' => [
                     'is_active' => 'Active',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'company_id' => 'Company',
                 ],
@@ -306,28 +292,7 @@ class DataSourceRegistry
                 'display_columns' => [
                     'name' => 'Name',
                     'email' => 'Email',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
-                    'created_at' => 'Created At',
-                ],
-            ],
-
-            'departments' => [
-                'label_en' => 'Departments',
-                'label_th' => 'แผนก',
-                'model' => Department::class,
-                'base_query' => null,
-                'aggregate_fields' => [
-                    'id' => 'Count',
-                ],
-                'group_by_fields' => [],
-                'filter_fields' => [],
-                'date_fields' => [
-                    'created_at' => 'Created At',
-                ],
-                'display_columns' => [
-                    'name' => 'Name',
-                    'code' => 'Code',
                     'created_at' => 'Created At',
                 ],
             ],
@@ -368,14 +333,12 @@ class DataSourceRegistry
                     'status' => 'Status',
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                 ],
                 'date_fields' => [
@@ -387,7 +350,6 @@ class DataSourceRegistry
                     'status' => 'Status',
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
-                    'department_id' => 'Department',
                     'org_unit_id' => 'Org Unit',
                     'created_at' => 'Created At',
                 ],
@@ -424,19 +386,16 @@ class DataSourceRegistry
             $aggregate = ['id' => 'Count'];
             $groupBy = [
                 'status' => 'Submission status',
-                'department_id' => 'Department',
                 'org_unit_id' => 'Org Unit',
                 'user_id' => 'Requester',
             ];
             $filter = [
                 'status' => 'Status',
-                'department_id' => 'Department',
                 'org_unit_id' => 'Org Unit',
             ];
             $display = [
                 'reference_no' => 'Ref No',
                 'status' => 'Status',
-                'department_id' => 'Department',
                 'org_unit_id' => 'Org Unit',
                 'user_id' => 'Requester',
                 'created_at' => 'Created',

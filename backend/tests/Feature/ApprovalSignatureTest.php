@@ -132,7 +132,6 @@ class ApprovalSignatureTest extends TestCase
 
         $instance = ApprovalInstance::query()->create([
             'workflow_id' => $workflow->id,
-            'department_id' => null,
             'requester_user_id' => $requester->id,
             'document_type' => 'sig_test',
             'reference_no' => "SIG-{$counter}",

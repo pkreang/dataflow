@@ -29,7 +29,7 @@ class PendingApprovalsDemoSeeder extends Seeder
 
         // Use any other user as the requester so admin (current viewer) is not the requester
         $requester = User::query()->where('id', '!=', $admin->id)->first() ?? $admin;
-        $deptId = $admin->department_id ?? \App\Models\Department::value('id');
+        $orgUnitId = $admin->org_unit_id ?? \App\Models\OrgUnit::where('type', 'department')->value('id');
         $workflowId = ApprovalWorkflow::query()->orderBy('id')->value('id');
         $form = DocumentForm::query()->where('form_key', 'repair_request_default')->first()
             ?? DocumentForm::query()->where('is_active', true)->first();
@@ -54,7 +54,7 @@ class PendingApprovalsDemoSeeder extends Seeder
             $submission = DocumentFormSubmission::create([
                 'form_id' => $form->id,
                 'user_id' => $requester->id,
-                'department_id' => $deptId,
+                'org_unit_id' => $orgUnitId,
                 'payload' => $sample,
                 'status' => 'submitted',
                 'created_at' => $createdAt,
@@ -65,7 +65,7 @@ class PendingApprovalsDemoSeeder extends Seeder
 
             $instance = ApprovalInstance::create([
                 'workflow_id' => $workflowId,
-                'department_id' => $deptId,
+                'org_unit_id' => $orgUnitId,
                 'requester_user_id' => $requester->id,
                 'document_type' => 'repair_request',
                 'reference_no' => $refNo,
