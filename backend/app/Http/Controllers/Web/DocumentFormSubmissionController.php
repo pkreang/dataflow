@@ -750,7 +750,7 @@ class DocumentFormSubmissionController extends Controller
             );
         }
 
-        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department']);
+        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department', 'orgUnit']);
         $activity = SubmissionActivityLog::with('user')
             ->where('submission_id', $submission->id)
             ->latest('created_at')
@@ -874,7 +874,7 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeView($submission);
         abort_if($submission->status === 'draft', 404);
 
-        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department', 'user']);
+        $submission->load(['form.fields', 'instance.steps', 'instance.workflow', 'department', 'orgUnit', 'user']);
 
         SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'printed');
 
@@ -886,7 +886,7 @@ class DocumentFormSubmissionController extends Controller
         $this->authorizeView($submission);
         abort_if($submission->status === 'draft', 404);
 
-        $submission->load(['form.fields', 'instance.steps', 'department', 'user']);
+        $submission->load(['form.fields', 'instance.steps', 'department', 'orgUnit', 'user']);
 
         $pdf = Pdf::loadView('pdf.submission', compact('submission'))
             ->setPaper('a4', 'portrait')

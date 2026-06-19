@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ApprovalInstance extends Model
 {
@@ -50,7 +51,7 @@ class ApprovalInstance extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function orgUnit()
+    public function orgUnit(): BelongsTo
     {
         return $this->belongsTo(OrgUnit::class, 'org_unit_id');
     }

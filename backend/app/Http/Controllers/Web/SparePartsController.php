@@ -77,7 +77,7 @@ class SparePartsController extends Controller
             ->where('document_type', 'spare_parts_requisition')
             ->where('requester_user_id', $userId)
             ->when($status, fn ($q) => $q->where('status', $status))
-            ->with(['department'])
+            ->with(['department', 'orgUnit'])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -198,7 +198,7 @@ class SparePartsController extends Controller
         abort_unless($instance->document_type === 'spare_parts_requisition', 404);
         $this->authorizeViewInstance($instance);
 
-        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'department']);
+        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'department', 'orgUnit']);
         $userId = (int) (session('user.id') ?? 0);
 
         $lineItems = SparePartRequisitionItem::query()

@@ -36,7 +36,7 @@ class MaintenanceController extends Controller
             ->where('document_type', 'pm_am_plan')
             ->where('requester_user_id', $userId)
             ->when($status, fn ($q) => $q->where('status', $status))
-            ->with(['department'])
+            ->with(['department', 'orgUnit'])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -119,7 +119,7 @@ class MaintenanceController extends Controller
         abort_unless($instance->document_type === 'pm_am_plan', 404);
         $this->authorizeViewInstance($instance);
 
-        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'department']);
+        $instance->load(['steps.actor', 'workflow', 'requester.company', 'requester.branch', 'department', 'orgUnit']);
         $userId = (int) (session('user.id') ?? 0);
 
         $formForLabels = DocumentForm::query()

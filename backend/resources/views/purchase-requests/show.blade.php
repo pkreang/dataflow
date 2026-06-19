@@ -50,7 +50,7 @@
                 </div>
                 <div class="flex justify-between gap-4 text-sm">
                     <dt class="text-slate-500 dark:text-slate-400">{{ __('common.department') }}</dt>
-                    <dd class="text-slate-900 dark:text-slate-100">{{ $instance->department?->name ?? '—' }}</dd>
+                    <dd class="text-slate-900 dark:text-slate-100">{{ $instance->orgUnit?->name ?? $instance->department?->name ?? '—' }}</dd>
                 </div>
                 <div class="flex justify-between gap-4 text-sm">
                     <dt class="text-slate-500 dark:text-slate-400">{{ __('common.user') }}</dt>

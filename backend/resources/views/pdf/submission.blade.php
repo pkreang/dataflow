@@ -102,8 +102,8 @@ body {
         @if($submission->user)
         <td><span class="lbl">{{ __('common.requester') }}: </span>{{ $submission->user->first_name }} {{ $submission->user->last_name }}</td>
         @endif
-        @if($submission->department)
-        <td><span class="lbl">{{ __('common.department') }}: </span>{{ $submission->department->name }}</td>
+        @if($submission->orgUnit || $submission->department)
+        <td><span class="lbl">{{ $submission->orgUnit ? __('common.org_unit') : __('common.department') }}: </span>{{ $submission->orgUnit?->name ?? $submission->department?->name }}</td>
         @endif
         <td></td>
     </tr></tbody></table>

@@ -125,7 +125,7 @@ return [
     'recent_approval_instances' => 'รายการอนุมัติล่าสุด',
     'auto_assign_settings_desc' => 'กำหนดกฎการแจกงานอัตโนมัติ',
     'org_units' => 'โครงสร้างองค์กร',
-    'org_unit' => 'Org Unit',
+    'org_unit' => 'หน่วยงาน',
     'org_unit_list' => 'รายการ Org Unit',
     'org_unit_created' => 'สร้าง Org Unit เรียบร้อยแล้ว',
     'org_type' => 'ประเภท',
