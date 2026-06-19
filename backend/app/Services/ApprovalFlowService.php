@@ -14,6 +14,7 @@ use App\Models\DepartmentWorkflowBinding;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\OrgUnit;
+use App\Models\OrgUnitWorkflowBinding;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -51,16 +52,21 @@ class ApprovalFlowService
         }
 
         $routingMode = $this->routingMode($documentType);
-        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, $positionId, $payload);
+        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, $positionId, $payload, $orgUnitId);
 
         $binding = null;
         if ($resolvedWorkflowId === null) {
-            $binding = $this->resolveDepartmentBinding($documentType, $departmentId);
+            // Phase 2a: org_unit binding ชนะ dept binding (org-first, dept fallback)
+            $resolvedWorkflowId = $this->resolveOrgUnitBindingWorkflowId($documentType, $orgUnitId);
 
-            if (! $binding) {
-                throw new RuntimeException($this->bindingMissingMessage($documentType, $departmentId));
+            if ($resolvedWorkflowId === null) {
+                $binding = $this->resolveDepartmentBinding($documentType, $departmentId);
+
+                if (! $binding) {
+                    throw new RuntimeException($this->bindingMissingMessage($documentType, $departmentId));
+                }
+                $resolvedWorkflowId = (int) $binding->workflow_id;
             }
-            $resolvedWorkflowId = (int) $binding->workflow_id;
         }
 
         $workflow = ApprovalWorkflow::query()
@@ -200,15 +206,23 @@ class ApprovalFlowService
         ?int $departmentId,
         int $requesterUserId,
         ?string $formKey = null,
-        ?float $amount = null
+        ?float $amount = null,
+        ?int $orgUnitId = null
     ): ?ApprovalWorkflow {
+        // resolve ทั้ง dept+org_unit จาก requester เมื่อ caller ไม่ส่งมา — ต้อง parity
+        // กับ start() เพื่อให้ picker preview workflow ตัวเดียวกับที่ submit จะสร้าง
         if ($departmentId === null) {
-            $departmentId = User::find($requesterUserId)?->department_id;
+            $requester = User::find($requesterUserId);
+            $departmentId = $requester?->department_id;
+            $orgUnitId ??= $requester?->org_unit_id;
         }
 
         $routingMode = $this->routingMode($documentType);
-        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode);
+        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $departmentId, $formKey, $amount, $routingMode, 0, [], $orgUnitId);
 
+        if ($resolvedWorkflowId === null) {
+            $resolvedWorkflowId = $this->resolveOrgUnitBindingWorkflowId($documentType, $orgUnitId);
+        }
         if ($resolvedWorkflowId === null) {
             $binding = $this->resolveDepartmentBinding($documentType, $departmentId);
             if (! $binding) {
@@ -237,7 +251,8 @@ class ApprovalFlowService
         ?float $amount,
         string $routingMode,
         int $positionId = 0,
-        array $payload = []
+        array $payload = [],
+        ?int $orgUnitId = null
     ): ?int {
         if (! $formKey) {
             return null;
@@ -256,16 +271,22 @@ class ApprovalFlowService
             ->with('ranges')
             ->where('form_id', $form->id);
 
-        // Priority: position-specific > department-specific > global
+        // Priority: position-specific > org_unit-specific > department-specific > global
         // Collect all policies that could match, then pick most specific.
-        $policyQuery->where(function ($query) use ($departmentId, $positionId) {
-            // Global fallback always included
+        // (Phase 2a: org_unit ชนะ department; department คง fallback ระหว่าง transition)
+        $policyQuery->where(function ($query) use ($departmentId, $orgUnitId, $positionId) {
+            // Global fallback always included (no scoping at all)
             $query->where(function ($q) {
-                $q->whereNull('department_id')->whereNull('position_id');
+                $q->whereNull('department_id')->whereNull('org_unit_id')->whereNull('position_id');
             });
+            if ($orgUnitId) {
+                $query->orWhere(function ($q) use ($orgUnitId) {
+                    $q->where('org_unit_id', $orgUnitId)->whereNull('position_id');
+                });
+            }
             if ($departmentId) {
                 $query->orWhere(function ($q) use ($departmentId) {
-                    $q->where('department_id', $departmentId)->whereNull('position_id');
+                    $q->where('department_id', $departmentId)->whereNull('org_unit_id')->whereNull('position_id');
                 });
             }
             if ($positionId) {
@@ -273,6 +294,7 @@ class ApprovalFlowService
             }
         })
             ->orderByRaw('(position_id IS NOT NULL) DESC')
+            ->orderByRaw('(org_unit_id IS NOT NULL) DESC')
             ->orderByRaw('(department_id IS NOT NULL) DESC');
 
         $policy = $policyQuery->first();
@@ -328,6 +350,24 @@ class ApprovalFlowService
             'contains' => str_contains($strVal, (string) $expected),
             default => false,
         };
+    }
+
+    /**
+     * Phase 2a — org_unit binding ต่อ document_type (ชนะ dept binding).
+     * คืน workflow_id หรือ null ถ้าไม่มี binding ของ org_unit นี้.
+     */
+    private function resolveOrgUnitBindingWorkflowId(string $documentType, ?int $orgUnitId): ?int
+    {
+        if (! $orgUnitId) {
+            return null;
+        }
+
+        $binding = OrgUnitWorkflowBinding::query()
+            ->where('document_type', $documentType)
+            ->where('org_unit_id', $orgUnitId)
+            ->first();
+
+        return $binding ? (int) $binding->workflow_id : null;
     }
 
     private function resolveDepartmentBinding(string $documentType, ?int $departmentId): ?DepartmentWorkflowBinding

@@ -283,9 +283,11 @@ class DocumentFormSubmissionController extends Controller
             : collect();
 
         // Requester-override: offer the approver picker up-front on creation.
+        $sessionUserId = (int) (session('user.id') ?? 0);
         [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
             $documentForm,
-            session('user.department_id') ?? User::find((int) (session('user.id') ?? 0))?->department_id,
+            session('user.department_id') ?? User::find($sessionUserId)?->department_id,
+            session('user.org_unit_id') ?? User::find($sessionUserId)?->org_unit_id,
         );
 
         return view('forms.create', [
@@ -385,6 +387,7 @@ class DocumentFormSubmissionController extends Controller
         [$overrideStages, $eligibleApprovers] = $this->resolveOverridePicker(
             $submission->form()->first(),
             $submission->department_id,
+            $submission->org_unit_id,
         );
 
         return view('forms.edit-draft', compact('submission', 'overrideStages', 'eligibleApprovers'));
@@ -398,7 +401,7 @@ class DocumentFormSubmissionController extends Controller
      *
      * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
      */
-    private function resolveOverridePicker(?DocumentForm $form, ?int $departmentId): array
+    private function resolveOverridePicker(?DocumentForm $form, ?int $departmentId, ?int $orgUnitId = null): array
     {
         if (! $form || ! Setting::getBool('approval.allow_requester_override', false)) {
             return [collect(), collect()];
@@ -409,6 +412,8 @@ class DocumentFormSubmissionController extends Controller
             $departmentId,
             (int) (session('user.id') ?? 0),
             $form->form_key,
+            null,
+            $orgUnitId,
         );
         $overrideStages = $workflow
             ? ApprovalWorkflowStage::query()
