@@ -69,7 +69,7 @@
                             @if(!$isSection)
                                 <label class="form-label">{{ $field->label }}</label>
                             @endif
-                            @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value, 'userDeptId' => $userDeptId ?? null])
+                            @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value, 'userDeptId' => $userDeptId ?? null, 'userOrgUnitId' => $userOrgUnitId ?? null])
                         </div>
                     @endforeach
                     </div>

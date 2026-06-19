@@ -334,6 +334,7 @@
                                 'editorRole'   => $editorRole,
                                 'editorUserId' => $editorUserId ?? null,
                                 'userDeptId'   => $userDeptId ?? null,
+                                'userOrgUnitId' => $userOrgUnitId ?? null,
                                 'referenceNo'  => $submission->reference_no,
                                 'qrPayload'    => null,
                             ])
@@ -379,6 +380,7 @@
                         'editorRole'   => 'view_only',
                         'editorUserId' => $editorUserId ?? null,
                         'userDeptId'   => $userDeptId ?? null,
+                                'userOrgUnitId' => $userOrgUnitId ?? null,
                         'referenceNo'  => $submission->reference_no,
                         'qrPayload'    => $qrPayloadForField,
                     ])

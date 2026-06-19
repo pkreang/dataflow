@@ -89,6 +89,7 @@
                                     'name'       => $fName,
                                     'value'      => $fValue,
                                     'userDeptId' => $userDeptId,
+                                    'userOrgUnitId' => $userOrgUnitId ?? null,
                                     'editorRole' => $editorRole,
                                 ])
                             </div>

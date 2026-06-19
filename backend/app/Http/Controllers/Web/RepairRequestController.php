@@ -61,7 +61,7 @@ class RepairRequestController extends Controller
             $branch = $userModel->branch;
         }
 
-        return view('repair-requests.index', compact('myInstances', 'departments', 'form', 'status', 'showAdminHints', 'company', 'branch', 'userDeptId', 'perPage'));
+        return view('repair-requests.index', compact('myInstances', 'departments', 'form', 'status', 'showAdminHints', 'company', 'branch', 'userDeptId', 'userOrgUnitId', 'perPage'));
     }
 
     public function show(ApprovalInstance $instance): View
@@ -81,6 +81,7 @@ class RepairRequestController extends Controller
         $formFields = $formForLabels?->fields ?? collect();
 
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorRole = $this->resolveEditorRole($instance, $userId);
 
         $canAct = false;
@@ -99,7 +100,7 @@ class RepairRequestController extends Controller
             $branch = $requester->branch;
         }
 
-        return view('repair-requests.show', compact('instance', 'canAct', 'formFields', 'formForLabels', 'userDeptId', 'editorRole', 'company', 'branch'));
+        return view('repair-requests.show', compact('instance', 'canAct', 'formFields', 'formForLabels', 'userDeptId', 'userOrgUnitId', 'editorRole', 'company', 'branch'));
     }
 
     public function myJobs(): View

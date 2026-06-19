@@ -80,7 +80,7 @@
                                     @endforeach
                                 </select>
                             @else
-                                @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value, 'userDeptId' => $userDeptId ?? null])
+                                @include('components.dynamic-field', ['field' => $field, 'name' => $name, 'value' => $value, 'userDeptId' => $userDeptId ?? null, 'userOrgUnitId' => $userOrgUnitId ?? null])
                             @endif
                             @if(!$isSection)
                                 @error('form_payload.' . $field->field_key)

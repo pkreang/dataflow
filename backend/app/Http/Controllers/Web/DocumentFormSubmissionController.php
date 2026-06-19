@@ -98,7 +98,7 @@ class DocumentFormSubmissionController extends Controller
             ->where('is_searchable', true)
             ->orderBy('sort_order')
             ->get()
-            ->filter(fn ($field) => $isSuperAdmin || $this->fieldVisibleToDept($field, $userDeptId))
+            ->filter(fn ($field) => $isSuperAdmin || $this->fieldVisibleToUser($field, $userOrgUnitId, $userDeptId))
             ->values();
         $filters = $this->extractFilters($request, $searchable);
 
@@ -768,6 +768,7 @@ class DocumentFormSubmissionController extends Controller
         // (read-only, no regression). The PATCH route re-filters server-side.
         $editorRole = $this->resolveEditorRole($submission, $userId);
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorUserId = $userId ?: null;
 
         // Whether this viewer may act (approve/reject) on the document right now.
@@ -820,6 +821,7 @@ class DocumentFormSubmissionController extends Controller
             'assignableUsers',
             'editorRole',
             'userDeptId',
+            'userOrgUnitId',
             'editorUserId',
             'canAct',
         ));
@@ -1104,20 +1106,25 @@ class DocumentFormSubmissionController extends Controller
      * every approver) while still letting auditors who handled the doc look back at it.
      */
     /**
-     * Department-based field visibility — same predicate as dynamic-field.blade.php:
-     * a field with no visible_to_departments is visible to all; otherwise only to
-     * users whose department is listed. Used to drop restricted columns from the
-     * searchable list before rendering.
+     * Field visibility — Phase 2c: org_unit-first, department fallback (mirror
+     * dynamic-field.blade.php). field ที่ไม่มี restriction ทั้ง org และ dept เห็นทุกคน;
+     * ถ้ามี → เห็นเฉพาะคนที่ org_unit ตรง หรือ department ตรง. ใช้ drop คอลัมน์ restricted
+     * จาก searchable list ก่อน render.
      */
-    private function fieldVisibleToDept(DocumentFormField $field, int|string|null $userDeptId): bool
+    private function fieldVisibleToUser(DocumentFormField $field, int|string|null $userOrgUnitId, int|string|null $userDeptId): bool
     {
+        $orgs = $field->visible_to_org_units;
         $depts = $field->visible_to_departments;
-        if (empty($depts)) {
+        if (empty($orgs) && empty($depts)) {
             return true;
         }
 
-        return $userDeptId !== null
+        $orgMatch = ! empty($orgs) && $userOrgUnitId !== null
+            && in_array((int) $userOrgUnitId, array_map('intval', $orgs), true);
+        $deptMatch = ! empty($depts) && $userDeptId !== null
             && in_array((int) $userDeptId, array_map('intval', $depts), true);
+
+        return $orgMatch || $deptMatch;
     }
 
     private function isApproverForSubmission(DocumentFormSubmission $submission, int $userId): bool

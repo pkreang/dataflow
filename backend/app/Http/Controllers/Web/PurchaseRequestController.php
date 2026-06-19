@@ -66,7 +66,7 @@ class PurchaseRequestController extends Controller
             $branch = $userModel->branch;
         }
 
-        return view('purchase-requests.create', compact('departments', 'form', 'company', 'branch', 'userDeptId'));
+        return view('purchase-requests.create', compact('departments', 'form', 'company', 'branch', 'userDeptId', 'userOrgUnitId'));
     }
 
     public function store(Request $request, ApprovalFlowService $approvalFlowService): RedirectResponse
@@ -133,6 +133,7 @@ class PurchaseRequestController extends Controller
         $formFields = $formForLabels?->fields ?? collect();
 
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorRole = $this->resolveEditorRole($instance, $userId);
 
         $canAct = false;
@@ -160,7 +161,7 @@ class PurchaseRequestController extends Controller
 
         return view('purchase-requests.show', compact(
             'instance', 'lineItems', 'canAct', 'canCreatePo',
-            'formFields', 'formForLabels', 'userDeptId', 'editorRole', 'company', 'branch'
+            'formFields', 'formForLabels', 'userDeptId', 'userOrgUnitId', 'editorRole', 'company', 'branch'
         ));
     }
 

@@ -68,6 +68,7 @@
                         'name' => $name,
                         'value' => $value,
                         'userDeptId' => null,
+                        'userOrgUnitId' => null,
                         'editorRole' => 'requester',
                     ])
                     @error($field->field_key)

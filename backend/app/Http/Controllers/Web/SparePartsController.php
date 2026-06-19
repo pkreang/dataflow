@@ -113,7 +113,7 @@ class SparePartsController extends Controller
             $branch = $userModel->branch;
         }
 
-        return view('spare-parts.requisition-create', compact('departments', 'form', 'spareParts', 'parentType', 'parentId', 'company', 'branch', 'userDeptId'));
+        return view('spare-parts.requisition-create', compact('departments', 'form', 'spareParts', 'parentType', 'parentId', 'company', 'branch', 'userDeptId', 'userOrgUnitId'));
     }
 
     public function requisitionSubmit(Request $request, ApprovalFlowService $approvalFlowService): RedirectResponse
@@ -215,6 +215,7 @@ class SparePartsController extends Controller
         $formFields = $formForLabels?->fields ?? collect();
 
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorRole = $this->resolveEditorRole($instance, $userId);
 
         $canAct = false;
@@ -237,7 +238,7 @@ class SparePartsController extends Controller
             $branch = $requester->branch;
         }
 
-        return view('spare-parts.requisition-show', compact('instance', 'lineItems', 'canAct', 'canIssue', 'formFields', 'formForLabels', 'userDeptId', 'editorRole', 'company', 'branch'));
+        return view('spare-parts.requisition-show', compact('instance', 'lineItems', 'canAct', 'canIssue', 'formFields', 'formForLabels', 'userDeptId', 'userOrgUnitId', 'editorRole', 'company', 'branch'));
     }
 
     public function issueItems(Request $request, ApprovalInstance $instance): RedirectResponse

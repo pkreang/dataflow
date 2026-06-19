@@ -67,7 +67,7 @@ class MaintenanceController extends Controller
             $branch = $userModel->branch;
         }
 
-        return view('maintenance.create-plan', compact('departments', 'form', 'equipmentList', 'company', 'branch', 'userDeptId'));
+        return view('maintenance.create-plan', compact('departments', 'form', 'equipmentList', 'company', 'branch', 'userDeptId', 'userOrgUnitId'));
     }
 
     public function autoAssign(): View
@@ -131,6 +131,7 @@ class MaintenanceController extends Controller
         $formFields = $formForLabels?->fields ?? collect();
 
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $editorRole = $this->resolveEditorRole($instance, $userId);
 
         $canAct = false;
@@ -149,7 +150,7 @@ class MaintenanceController extends Controller
             $branch = $requester->branch;
         }
 
-        return view('maintenance.show', compact('instance', 'canAct', 'formFields', 'formForLabels', 'userDeptId', 'editorRole', 'company', 'branch'));
+        return view('maintenance.show', compact('instance', 'canAct', 'formFields', 'formForLabels', 'userDeptId', 'userOrgUnitId', 'editorRole', 'company', 'branch'));
     }
 
     private function resolveEditorRole(ApprovalInstance $instance, int $userId): string
