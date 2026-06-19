@@ -72,6 +72,21 @@
 ### Phase 4 — ทิ้ง department (coordinated removal — ต้องทำพร้อมกันกัน test แดง)
 **Interdependency:** user form require department_id · readers มี dept fallback · ~40 test fixtures set department_id → drop ต้อง coordinated.
 
+**สถานะ Phase 4 (ทำแล้ว):**
+- **4a ✅ (47d084c)** ลบ department admin UI: routes(web+api) + DepartmentController(web+api) + settings/departments views + nav entry + DepartmentsCrudTest; user form department_id required→nullable; phpstan-baseline ล้าง stale entries
+- **4b-1 ✅ (1ace24a)** CMMS (แจ้งซ่อม/จัดซื้อ/เบิกอะไหล่/PM) ตัด department dropdown → route ตาม org_unit ของผู้ยื่น (start() resolve เอง)
+- **4b-2 ✅ (3d86c92)** user form ตัด department selector + UserController store/update เลิก save department_id
+- **→ department หายจาก UI ทุกหน้าแล้ว. column/table/model + dual-write + fallback ยังอยู่ (internal). 737 tests, analyse 96.**
+
+**4c เหลือ (internal drop — mechanical sweep, ทุกชิ้น cascade เข้า fixtures):**
+- เอา dual-write department_id ออก (submission/instance/eval/mobile/inbound/auth-session/start()) + dept fallback ออกจาก readers (scopeVisibleToUser ลด param→12 callers, fieldVisibleToUser, resolveDepartmentBinding, NavigationService threading, DataSourceRegistry, DashboardWidget filter, print/pdf/CMMS-show display) + OrgUnit::idForDepartment ลบ
+- migration drop department_id (users/approval_instances/document_form_submissions/document_form_workflow_policies) + fdata_* (FormSchemaService) + drop tables departments/department_workflow_bindings/document_form_departments + bridge
+- ลบ Department + DepartmentWorkflowBinding models + imports 8 models; DepartmentSeeder; **OrgStructureDemoSeeder rewrite ให้สร้าง org tree ตรงๆ ไม่ mirror Department**; UserController import/index dept refs
+- ~40 test fixtures (group A `Department::create`→`OrgUnit`, group B 4 rewrite assertions, group C ~25 ลบ department_id) — ใช้ test failures เป็น checklist
+- verify: `grep -rn department_id app/ database/` = 0
+
+**OLD 4a/4b/4c plan ด้านล่าง (อ้างอิง):**
+
 **4a UI/admin teardown:** ลบ web routes 327-338 + api routes 70-74 (DepartmentController web+api) · ลบ `resources/views/settings/departments/*` · NavigationMenuSeeder:87 entry · user form department_id required→ลบ (org_unit required แทน) · DepartmentsCrudTest ลบ
 **4b reader/writer teardown:** เอา dual-write department_id ออก (submissions/instances/6 controllers/Mobile/Eval/Inbound) · เอา dept fallback ออกจาก ApprovalFlowService (resolveDepartmentBinding) + DocumentForm::scopeVisibleToUser + fieldVisibleToUser + DataSourceRegistry + display · OrgUnit::idForDepartment ลบ
 **4c schema drop:** migration drop `department_id` (users/approval_instances/document_form_submissions/document_form_workflow_policies) + fdata_* (FormSchemaService RESERVED_COLUMNS+createTable) · drop tables departments + department_workflow_bindings + document_form_departments + bridge column · ลบ Department + DepartmentWorkflowBinding models + imports ใน 8 models · DepartmentSeeder
