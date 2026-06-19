@@ -30,6 +30,7 @@ class MobileController extends Controller
     private function primaryRepairForm(): ?DocumentForm
     {
         $userDepartmentId = (int) (session('user.department_id') ?? 0);
+        $userOrgUnitId = (int) (session('user.org_unit_id') ?? 0);
 
         return DocumentForm::query()
             ->where('is_active', true)
@@ -37,7 +38,7 @@ class MobileController extends Controller
                 $q->where('document_type', 'like', 'repair%')
                     ->orWhere('document_type', 'like', 'maintenance%');
             })
-            ->visibleToUser($userDepartmentId)
+            ->visibleToUser($userOrgUnitId, $userDepartmentId)
             ->orderBy('id')
             ->first();
     }
@@ -83,9 +84,10 @@ class MobileController extends Controller
             ->get();
 
         $userDepartmentId = (int) (session('user.department_id') ?? 0);
+        $userOrgUnitId = (int) (session('user.org_unit_id') ?? 0);
         $quickForms = DocumentForm::query()
             ->where('is_active', true)
-            ->visibleToUser($userDepartmentId)
+            ->visibleToUser($userOrgUnitId, $userDepartmentId)
             ->orderBy('name')
             ->limit(3)
             ->get();
@@ -148,10 +150,11 @@ class MobileController extends Controller
     public function forms(): View
     {
         $userDepartmentId = (int) (session('user.department_id') ?? 0);
+        $userOrgUnitId = (int) (session('user.org_unit_id') ?? 0);
 
         $forms = DocumentForm::query()
             ->where('is_active', true)
-            ->visibleToUser($userDepartmentId)
+            ->visibleToUser($userOrgUnitId, $userDepartmentId)
             ->orderBy('name')
             ->get();
 

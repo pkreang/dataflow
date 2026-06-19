@@ -52,13 +52,20 @@ class DocumentForm extends Model
     }
 
     /**
-     * Filter forms visible to a user's department.
-     * Forms with no department restrictions are visible to everyone.
+     * Filter forms visible to a user — Phase 2b: org_unit-first, department fallback.
+     * Form เห็นได้เมื่อ (ก) ไม่มี restriction ทั้ง org_unit และ department, หรือ
+     * (ข) org_unit ของ user อยู่ใน orgUnits ของ form, หรือ (ค) department ตรง (fallback).
+     * เซ็ต org config ว่าง → ลดรูปเป็นพฤติกรรม department เดิม (non-breaking).
      */
-    public function scopeVisibleToUser(Builder $query, ?int $departmentId): Builder
+    public function scopeVisibleToUser(Builder $query, ?int $orgUnitId, ?int $departmentId = null): Builder
     {
-        return $query->where(function ($q) use ($departmentId) {
-            $q->whereDoesntHave('departments');
+        return $query->where(function ($q) use ($orgUnitId, $departmentId) {
+            $q->where(function ($noRestrict) {
+                $noRestrict->whereDoesntHave('orgUnits')->whereDoesntHave('departments');
+            });
+            if ($orgUnitId !== null) {
+                $q->orWhereHas('orgUnits', fn ($oq) => $oq->where('org_units.id', $orgUnitId));
+            }
             if ($departmentId !== null) {
                 $q->orWhereHas('departments', fn ($dq) => $dq->where('departments.id', $departmentId));
             }

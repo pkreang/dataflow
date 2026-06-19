@@ -22,7 +22,7 @@ class MobileFormController extends Controller
         $forms = DocumentForm::query()
             ->where('is_active', true)
             ->where('document_type', '!=', 'evaluation')
-            ->visibleToUser($user->department_id)
+            ->visibleToUser($user->org_unit_id, $user->department_id)
             ->orderBy('name')
             ->get(['id', 'form_key', 'name', 'document_type', 'description', 'layout_columns']);
 

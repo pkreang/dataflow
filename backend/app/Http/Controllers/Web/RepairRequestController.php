@@ -41,12 +41,13 @@ class RepairRequestController extends Controller
             ->withQueryString();
 
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $departments = Department::query()->where('is_active', true)->orderBy('name')->get();
         $form = DocumentForm::query()
             ->with('fields')
             ->where('document_type', 'repair_request')
             ->where('is_active', true)
-            ->visibleToUser($userDeptId)
+            ->visibleToUser($userOrgUnitId, $userDeptId)
             ->orderBy('id')
             ->first();
 

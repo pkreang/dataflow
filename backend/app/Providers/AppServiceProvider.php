@@ -76,9 +76,10 @@ class AppServiceProvider extends ServiceProvider
                 $perms = session('user_permissions', []);
                 $isSuperAdmin = session('user.is_super_admin', false);
                 $userDeptId = session('user.department_id');
+                $userOrgUnitId = session('user.org_unit_id');
                 $userId = (int) (session('user.id') ?? 0);
                 $navService = app(NavigationService::class);
-                $menus = $navService->getMenus($perms, $isSuperAdmin, $userDeptId);
+                $menus = $navService->getMenus($perms, $isSuperAdmin, $userDeptId, $userOrgUnitId);
                 $view->with('navigationMenus', $menus);
                 $view->with('pinnedMenus', $userId > 0 ? $navService->getPinnedMenus($userId, $menus) : collect());
 

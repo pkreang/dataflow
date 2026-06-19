@@ -41,11 +41,12 @@ class DocumentFormSubmissionController extends Controller
     {
         $userId = (int) (session('user.id') ?? 0);
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
 
         $forms = DocumentForm::query()
             ->where('is_active', true)
             ->where('document_type', '!=', 'evaluation') // eval forms triggered via parent submission only
-            ->visibleToUser($userDeptId)
+            ->visibleToUser($userOrgUnitId, $userDeptId)
             ->orderBy('name')
             ->get()
             ->groupBy('document_type');
@@ -76,15 +77,16 @@ class DocumentFormSubmissionController extends Controller
     {
         $userId = (int) (session('user.id') ?? 0);
         $userDeptId = session('user.department_id') ?? User::find($userId)?->department_id;
+        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
         $isSuperAdmin = (bool) session('user.is_super_admin', false);
         $identity = $approverIdentity->fromSession();
 
         abort_if(! $documentForm->is_active, 404);
-        // Super-admins bypass the department-scope check so they can monitor /
-        // support submissions on every form regardless of their own department.
+        // Super-admins bypass the scope check so they can monitor / support
+        // submissions on every form regardless of their own org unit.
         abort_unless(
             $isSuperAdmin
-                || DocumentForm::query()->whereKey($documentForm->id)->visibleToUser($userDeptId)->exists(),
+                || DocumentForm::query()->whereKey($documentForm->id)->visibleToUser($userOrgUnitId, $userDeptId)->exists(),
             404
         );
 

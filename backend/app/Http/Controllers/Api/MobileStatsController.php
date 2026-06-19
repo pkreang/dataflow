@@ -39,7 +39,7 @@ class MobileStatsController extends Controller
 
         $formsAvailable = DocumentForm::query()
             ->where('is_active', true)
-            ->visibleToUser($user->department_id)
+            ->visibleToUser($user->org_unit_id, $user->department_id)
             ->count();
 
         return response()->json([
