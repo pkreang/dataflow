@@ -73,7 +73,7 @@ class UsersCrudTest extends TestCase
     {
         $admin = $this->makeSuperAdmin();
         $this->actingAsWebSession($admin)->post(route('users.store'), [])
-            ->assertSessionHasErrors(['first_name', 'last_name', 'email', 'department_id', 'position_id']);
+            ->assertSessionHasErrors(['first_name', 'last_name', 'email', 'position_id']);
     }
 
     public function test_duplicate_email_rejected(): void

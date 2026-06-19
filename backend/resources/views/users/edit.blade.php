@@ -127,8 +127,8 @@
                     @endif
                 </div>
                 <div>
-                    <label for="department_id" class="form-label">{{ __('common.department') }} <span class="text-red-500">*</span></label>
-                    <select name="department_id" id="department_id" required
+                    <label for="department_id" class="form-label">{{ __('common.department') }}</label>
+                    <select name="department_id" id="department_id"
                             class="form-input @error('department_id') form-input-error @enderror">
                         <option value="">{{ __('common.choose_department') }}</option>
                         @foreach ($departments as $dept)

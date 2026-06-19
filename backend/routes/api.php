@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DashboardWidgetDataController;
-use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DevicePushTokenController;
 use App\Http\Controllers\Api\LineWebhookController;
 use App\Http\Controllers\Api\MobileApprovalController;
@@ -65,14 +64,6 @@ Route::prefix('v1')->group(function () {
             Route::delete('/profile/{company}/branches/{branch}', [CompanyController::class, 'branchDestroy']);
         });
 
-        // Departments — same as web Settings → Departments (users.is_super_admin only)
-        Route::middleware('super-admin')->group(function () {
-            Route::get('/departments', [DepartmentController::class, 'index']);
-            Route::get('/departments/{department}', [DepartmentController::class, 'show']);
-            Route::post('/departments', [DepartmentController::class, 'store']);
-            Route::put('/departments/{department}', [DepartmentController::class, 'update']);
-            Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
-        });
 
         // Mobile API — forms, submissions, approvals, stats
         Route::prefix('mobile')->group(function () {

@@ -139,41 +139,6 @@ class AutoCodeTest extends TestCase
         $this->assertSame('DEPT-004', $d4->auto_code);
     }
 
-    public function test_code_user_input_normalize_runs_before_unique_check(): void
-    {
-        $this->seedBase();
-        $admin = $this->makeSuperAdmin();
-
-        Department::create(['name' => 'Existing', 'code' => 'IT']);
-
-        // Lowercase 'it' normalizes to 'IT' → must produce friendly 422,
-        // not a 500 from DB-level unique violation.
-        $resp = $this->actingAsWebSession($admin)->post(route('settings.departments.store'), [
-            'name' => 'Duplicate',
-            'code' => 'it',
-        ]);
-
-        $resp->assertSessionHasErrors('code');
-        $this->assertSame(1, Department::where('code', 'IT')->count());
-    }
-
-    public function test_auto_code_cannot_be_overridden_via_request(): void
-    {
-        $this->seedBase();
-        $admin = $this->makeSuperAdmin();
-
-        $resp = $this->actingAsWebSession($admin)->post(route('settings.departments.store'), [
-            'name' => 'IT',
-            'code' => 'IT',
-            'auto_code' => 'DEPT-999', // attacker-supplied — should be ignored
-        ]);
-
-        $resp->assertSessionHasNoErrors();
-        $created = Department::where('code', 'IT')->first();
-        $this->assertNotNull($created);
-        $this->assertSame('DEPT-001', $created->auto_code);
-    }
-
     public function test_auto_code_request_override_ignored_for_document_type(): void
     {
         $this->seedBase();

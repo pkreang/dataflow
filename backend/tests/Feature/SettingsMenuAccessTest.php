@@ -21,7 +21,6 @@ class SettingsMenuAccessTest extends TestCase
     {
         return [
             'branding' => ['settings.branding'],
-            'departments index' => ['settings.departments.index'],
             'positions index' => ['settings.positions.index'],
             'equipment categories index' => ['settings.equipment.index'],
             'equipment locations index' => ['settings.equipment-locations.index'],

@@ -210,23 +210,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/Web/Cmms/PmWorkOrderController.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Department\:\:\$workflowBindings\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/DepartmentController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Web/DepartmentController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/Web/DepartmentController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\DocumentForm\:\:\$fields\.$#'

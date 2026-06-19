@@ -191,7 +191,7 @@ class UserController extends Controller implements HasMiddleware
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'department_id' => 'required|exists:departments,id',
+            'department_id' => 'nullable|exists:departments,id',
             'org_unit_id' => 'nullable|exists:org_units,id',
             'position_id' => 'required|exists:positions,id',
             'phone' => 'nullable|string|max:50',
@@ -316,7 +316,7 @@ class UserController extends Controller implements HasMiddleware
         $rules = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'department_id' => 'required|exists:departments,id',
+            'department_id' => 'nullable|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
             'manager_id' => ['nullable', 'exists:users,id', function ($attr, $value, $fail) use ($user) {
                 if ($value && (int) $value === (int) $user->id) {

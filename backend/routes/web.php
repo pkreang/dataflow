@@ -6,7 +6,6 @@ use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\BranchScopingController;
 use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\DashboardController;
-use App\Http\Controllers\Web\DepartmentController;
 use App\Http\Controllers\Web\DocumentFormController;
 use App\Http\Controllers\Web\DocumentFormSubmissionController;
 use App\Http\Controllers\Web\DocumentFormWorkflowPolicyController;
@@ -324,18 +323,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::middleware('super-admin')->group(function () {
         Route::get('/settings/branding', [SettingController::class, 'branding'])->name('settings.branding');
         Route::post('/settings/branding', [SettingController::class, 'saveBranding'])->name('settings.branding.save');
-        Route::get('/settings/departments', [DepartmentController::class, 'index'])->name('settings.departments.index');
-        Route::get('/settings/departments/import', [DepartmentController::class, 'importForm'])->name('settings.departments.import');
-        Route::post('/settings/departments/import', [DepartmentController::class, 'import'])->name('settings.departments.import.store');
-        Route::get('/settings/departments/import/template', [DepartmentController::class, 'downloadTemplate'])->name('settings.departments.import.template');
-        Route::get('/settings/department-workflow-bindings', fn () => redirect()->route('settings.approval-routing'))->name('settings.department-workflow-bindings.index');
-        Route::post('/settings/department-workflow-bindings', fn () => redirect()->route('settings.approval-routing'))->name('settings.department-workflow-bindings.bulk');
-        Route::get('/settings/departments/create', [DepartmentController::class, 'create'])->name('settings.departments.create');
-        Route::post('/settings/departments', [DepartmentController::class, 'store'])->name('settings.departments.store');
-        Route::get('/settings/departments/{department}/edit', [DepartmentController::class, 'edit'])->name('settings.departments.edit');
-        Route::put('/settings/departments/{department}', [DepartmentController::class, 'update'])->name('settings.departments.update');
-        Route::delete('/settings/departments/{department}', [DepartmentController::class, 'destroy'])->name('settings.departments.destroy');
-        Route::post('/settings/departments/{department}/bindings', [DepartmentController::class, 'bindWorkflow'])->name('settings.departments.bindings.store');
         Route::get('/settings/positions', [PositionController::class, 'index'])->name('settings.positions.index');
         Route::get('/settings/positions/import', [PositionController::class, 'importForm'])->name('settings.positions.import');
         Route::post('/settings/positions/import', [PositionController::class, 'import'])->name('settings.positions.import.store');

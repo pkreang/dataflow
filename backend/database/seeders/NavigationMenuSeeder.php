@@ -78,18 +78,6 @@ class NavigationMenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'id' => 11,
-                'parent_id' => 2,
-                'label' => 'Departments',
-                'label_en' => 'Departments',
-                'label_th' => 'ฝ่าย/แผนก',
-                'icon' => 'building-office',
-                'route' => '/settings/departments',
-                'permission' => 'manage_settings',
-                'sort_order' => 2,
-                'is_active' => true,
-            ],
-            [
                 'id' => 38,
                 'parent_id' => 2,
                 'label' => 'Positions',
