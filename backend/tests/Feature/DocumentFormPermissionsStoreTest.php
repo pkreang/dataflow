@@ -7,6 +7,7 @@ use App\Models\ApprovalWorkflowStage;
 use App\Models\Department;
 use App\Models\DocumentForm;
 use App\Models\DocumentType;
+use App\Models\OrgUnit;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -48,6 +49,35 @@ class DocumentFormPermissionsStoreTest extends TestCase
 
         $this->assertEqualsCanonicalizing(['requester', 'step_2'], $field->editable_by);
         $this->assertEqualsCanonicalizing([$dept1->id, $dept2->id], $field->visible_to_departments);
+    }
+
+    public function test_org_unit_visibility_persists_at_form_and_field(): void
+    {
+        $this->seedBase();
+        $this->makeWorkflowWithSteps('maintenance_request', 3);
+        $org1 = OrgUnit::create(['name' => 'Eng', 'type' => 'department', 'is_active' => true]);
+        $org2 = OrgUnit::create(['name' => 'Ops', 'type' => 'department', 'is_active' => true]);
+
+        $this->actingAsSuperAdmin()->post(route('settings.document-forms.store'), [
+            'form_key' => 'org_form',
+            'name' => 'Org Form',
+            'document_type' => 'maintenance_request',
+            'layout_columns' => 1,
+            'table_name' => 'org_form',
+            'allowed_org_units' => [$org1->id],
+            'fields' => [
+                [
+                    'field_key' => 'remarks',
+                    'label' => 'Remarks',
+                    'field_type' => 'text',
+                    'visible_to_org_units' => json_encode([$org1->id, $org2->id]),
+                ],
+            ],
+        ])->assertRedirect(route('settings.document-forms.index'));
+
+        $form = DocumentForm::where('form_key', 'org_form')->with(['fields', 'orgUnits'])->firstOrFail();
+        $this->assertEqualsCanonicalizing([$org1->id], $form->orgUnits->pluck('id')->all());
+        $this->assertEqualsCanonicalizing([$org1->id, $org2->id], $form->fields->first()->visible_to_org_units);
     }
 
     public function test_default_requester_only_stores_as_null(): void
