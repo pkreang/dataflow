@@ -53,11 +53,13 @@ class DataSourceRegistry
                 'group_by_fields' => [
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'date_fields' => [
@@ -68,6 +70,7 @@ class DataSourceRegistry
                     'reference_no' => 'Ref No',
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                     'created_at' => 'Created At',
                 ],
@@ -88,11 +91,13 @@ class DataSourceRegistry
                 'group_by_fields' => [
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'date_fields' => [
@@ -103,6 +108,7 @@ class DataSourceRegistry
                     'reference_no' => 'Ref No',
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                     'created_at' => 'Created At',
                 ],
@@ -125,9 +131,11 @@ class DataSourceRegistry
                 'group_by_fields' => [
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                 ],
                 'filter_fields' => [
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                 ],
                 'date_fields' => [
                     'created_at' => 'Created At',
@@ -151,11 +159,13 @@ class DataSourceRegistry
                 'group_by_fields' => [
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                 ],
                 'date_fields' => [
@@ -166,6 +176,7 @@ class DataSourceRegistry
                     'reference_no' => 'Ref No',
                     'status' => 'Status',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
                     'created_at' => 'Created At',
                 ],
@@ -280,11 +291,13 @@ class DataSourceRegistry
                 ],
                 'group_by_fields' => [
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'company_id' => 'Company',
                 ],
                 'filter_fields' => [
                     'is_active' => 'Active',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'company_id' => 'Company',
                 ],
                 'date_fields' => [
@@ -294,6 +307,7 @@ class DataSourceRegistry
                     'name' => 'Name',
                     'email' => 'Email',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'created_at' => 'Created At',
                 ],
             ],
@@ -355,12 +369,14 @@ class DataSourceRegistry
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                 ],
                 'date_fields' => [
                     'created_at' => 'Created At',
@@ -372,6 +388,7 @@ class DataSourceRegistry
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
                     'department_id' => 'Department',
+                    'org_unit_id' => 'Org Unit',
                     'created_at' => 'Created At',
                 ],
             ],
@@ -408,16 +425,19 @@ class DataSourceRegistry
             $groupBy = [
                 'status' => 'Submission status',
                 'department_id' => 'Department',
+                'org_unit_id' => 'Org Unit',
                 'user_id' => 'Requester',
             ];
             $filter = [
                 'status' => 'Status',
                 'department_id' => 'Department',
+                'org_unit_id' => 'Org Unit',
             ];
             $display = [
                 'reference_no' => 'Ref No',
                 'status' => 'Status',
                 'department_id' => 'Department',
+                'org_unit_id' => 'Org Unit',
                 'user_id' => 'Requester',
                 'created_at' => 'Created',
             ];
@@ -429,6 +449,11 @@ class DataSourceRegistry
             // fdata_* columns live alongside submission — only fields there are
             // directly query-able via SQL (without json_extract).
             $hasFdata = $form->hasDedicatedTable();
+            // Phase 2c/d: org_unit_id มีเฉพาะ fdata_* ที่สร้างหลัง Phase 0 — fdata เก่า
+            // ที่ยังไม่มี column ต้องถอด dimension นี้ออก ไม่งั้น query report จะ error.
+            if ($hasFdata && $form->submission_table && ! Schema::hasColumn($form->submission_table, 'org_unit_id')) {
+                unset($groupBy['org_unit_id'], $filter['org_unit_id'], $display['org_unit_id']);
+            }
             if ($hasFdata) {
                 foreach ($form->fields as $f) {
                     $key = $f->field_key;
