@@ -67,18 +67,13 @@ class ApprovalInstance extends Model
      */
     public function detailUrl(): ?string
     {
+        // Every document type is an eForm now — its detail lives at the linked
+        // submission. No linked submission ⇒ no detail page (caller omits link).
         if ($this->formSubmission) {
             return route('forms.submission.show', $this->formSubmission);
         }
 
-        $route = match ($this->document_type) {
-            'repair_request' => 'repair-requests.show',
-            default => null,
-        };
-
-        return $route && \Illuminate\Support\Facades\Route::has($route)
-            ? route($route, $this)
-            : null;
+        return null;
     }
 
     /**

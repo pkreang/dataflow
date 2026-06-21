@@ -254,7 +254,6 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
     private function documentUrl(): string
     {
         return match ($this->instance->document_type) {
-            'repair_request' => "/repair-requests/{$this->instance->id}",
             default => $this->eformSubmissionUrl(),
         };
     }

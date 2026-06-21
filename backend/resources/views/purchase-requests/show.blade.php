@@ -41,7 +41,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {{-- Left: Document form fields --}}
         <div class="card p-5">
-            @include('repair-requests._company_header', ['company' => $company ?? null, 'branch' => $branch ?? null])
+            @include('partials.company-header', ['company' => $company ?? null, 'branch' => $branch ?? null])
 
             <div class="space-y-3">
                 <div class="flex justify-between gap-4 text-sm">

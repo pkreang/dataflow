@@ -26,7 +26,6 @@ use App\Http\Controllers\Web\PositionController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\PurchaseOrderController;
 use App\Http\Controllers\Web\PurchaseRequestController;
-use App\Http\Controllers\Web\RepairRequestController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\ReportDashboardController;
 use App\Http\Controllers\Web\RoleController;
@@ -157,15 +156,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/forms/{documentForm:form_key}', [DocumentFormSubmissionController::class, 'create'])->name('forms.create');
     Route::post('/forms/{documentForm:form_key}/drafts', [DocumentFormSubmissionController::class, 'storeDraft'])->name('forms.draft.store');
 
-    // CMMS — repair requests (`document_type` = repair_request)
-    Route::get('/repair-requests/my-jobs', [RepairRequestController::class, 'myJobs'])->name('repair-requests.my-jobs');
-    Route::get('/repair-requests/assign', [RepairRequestController::class, 'assign'])->name('repair-requests.assign');
-    Route::get('/repair-requests/evaluate', [RepairRequestController::class, 'evaluate'])->name('repair-requests.evaluate');
-    Route::get('/repair-requests', [RepairRequestController::class, 'index'])->name('repair-requests.index');
-    Route::post('/repair-requests', [RepairRequestController::class, 'submit'])->name('repair-requests.submit');
-    Route::get('/repair-requests/{instance}', [RepairRequestController::class, 'show'])
-        ->name('repair-requests.show')
-        ->whereNumber('instance');
 
     Route::get('/purchase-requests', [PurchaseRequestController::class, 'index'])->name('purchase-requests.index');
     Route::get('/purchase-requests/create', [PurchaseRequestController::class, 'create'])->name('purchase-requests.create');

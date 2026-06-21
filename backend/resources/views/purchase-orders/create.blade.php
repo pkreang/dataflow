@@ -35,7 +35,7 @@
     <div x-data="poForm({{ json_encode($prLineItems->map(fn($i) => ['item_name' => $i->item_name, 'qty' => $i->qty, 'unit' => $i->unit, 'unit_price' => $i->unit_price, 'total_price' => $i->total_price, 'notes' => $i->notes ?? ''])->values()) }})" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {{-- Left: Form fields --}}
         <div class="card p-5">
-            @include('repair-requests._company_header', ['company' => $company ?? null, 'branch' => $branch ?? null])
+            @include('partials.company-header', ['company' => $company ?? null, 'branch' => $branch ?? null])
             <form id="po-form" method="POST" action="{{ route('purchase-orders.store') }}" class="space-y-3" novalidate>
                 @csrf
                 @if($form)
