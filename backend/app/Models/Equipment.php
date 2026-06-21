@@ -69,16 +69,6 @@ class Equipment extends Model
         return $this->belongsTo(Branch::class);
     }
 
-    public function pmPlans()
-    {
-        return $this->hasMany(PmPlan::class);
-    }
-
-    public function pmWorkOrders()
-    {
-        return $this->hasMany(PmWorkOrder::class);
-    }
-
     protected function autoCodePrefix(): string
     {
         return 'EQ';

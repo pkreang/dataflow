@@ -13,7 +13,6 @@ use App\Models\EquipmentLocation;
 use App\Models\LookupList;
 use App\Models\NavigationMenu;
 use App\Models\OrgUnit;
-use App\Models\PmPlan;
 use App\Models\Position;
 use App\Models\ReportDashboard;
 use App\Models\RunningNumberConfig;
@@ -92,10 +91,6 @@ class AutoCodeTest extends TestCase
         $nav = NavigationMenu::create([
             'label' => 'Test', 'icon' => 'home', 'route' => '/test', 'is_active' => true,
         ]);
-        $pm = PmPlan::create([
-            'equipment_id' => $equip->id, 'name' => 'Daily check',
-            'frequency_type' => 'date', 'interval_days' => 1, 'is_active' => true,
-        ]);
 
         $this->assertSame('USER-001', $user->auto_code);
         $this->assertSame('COMP-001', $company->auto_code);
@@ -111,7 +106,6 @@ class AutoCodeTest extends TestCase
         // NavigationMenu may already have NAV-001 from the seeder run by RefreshDatabase
         // if there are any cached seeders — assert prefix only.
         $this->assertMatchesRegularExpression('/^NAV-\d{3}$/', $nav->auto_code);
-        $this->assertSame('PMPLAN-001', $pm->auto_code);
     }
 
     public function test_auto_code_increments_per_entity_independently(): void

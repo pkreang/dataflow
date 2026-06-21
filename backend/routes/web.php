@@ -15,7 +15,6 @@ use App\Http\Controllers\Web\EquipmentLocationController;
 use App\Http\Controllers\Web\HolidayController;
 use App\Http\Controllers\Web\LookupController;
 use App\Http\Controllers\Web\LookupListController;
-use App\Http\Controllers\Web\MaintenanceController;
 use App\Http\Controllers\Web\MobileController;
 use App\Http\Controllers\Web\MyReportController;
 use App\Http\Controllers\Web\NavigationMenuController;
@@ -171,15 +170,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         ->name('repair-requests.show')
         ->whereNumber('instance');
 
-    // CMMS — maintenance (`document_type` = pm_am_plan)
-    Route::get('/maintenance/auto-assign', [MaintenanceController::class, 'autoAssign'])->name('maintenance.auto-assign');
-    Route::get('/maintenance/create-plan', [MaintenanceController::class, 'createPlan'])->name('maintenance.create-plan');
-    Route::post('/maintenance', [MaintenanceController::class, 'submitPlan'])->name('maintenance.create-plan.submit');
-    Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
-    Route::get('/maintenance/{instance}', [MaintenanceController::class, 'show'])
-        ->name('maintenance.show')
-        ->whereNumber('instance');
-
     // CMMS — spare parts (`document_type` = spare_parts_requisition)
     Route::get('/spare-parts/stock', [SparePartsController::class, 'stock'])->name('spare-parts.stock');
     Route::get('/spare-parts/withdrawal-history', [SparePartsController::class, 'withdrawalHistory'])->name('spare-parts.withdrawal-history');
@@ -290,35 +280,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/equipment-registry/{equipment}/edit', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'edit'])->name('equipment-registry.edit');
     Route::put('/equipment-registry/{equipment}', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'update'])->name('equipment-registry.update');
     Route::delete('/equipment-registry/{equipment}', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'destroy'])->name('equipment-registry.destroy');
-
-    // CMMS: PM Plans (Phase 2A)
-    Route::prefix('cmms/pm')->name('cmms.pm.')->group(function () {
-        Route::get('plans', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'index'])->name('plans.index')
-            ->middleware('permission:pm.view');
-        Route::get('plans/create', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'create'])->name('plans.create')
-            ->middleware('permission:pm.plan');
-        Route::post('plans', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'store'])->name('plans.store')
-            ->middleware('permission:pm.plan');
-        Route::get('plans/{plan}/edit', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'edit'])->name('plans.edit')
-            ->middleware('permission:pm.plan');
-        Route::put('plans/{plan}', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'update'])->name('plans.update')
-            ->middleware('permission:pm.plan');
-        Route::delete('plans/{plan}', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'destroy'])->name('plans.destroy')
-            ->middleware('permission:pm.plan');
-        Route::post('plans/{plan}/generate-work-order', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'generateWorkOrder'])->name('plans.generate-wo')
-            ->middleware('permission:pm.plan');
-
-        Route::get('work-orders', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'index'])->name('work-orders.index')
-            ->middleware('permission:pm.view');
-        Route::get('work-orders/{workOrder}', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'show'])->name('work-orders.show')
-            ->middleware('permission:pm.view');
-        Route::post('work-orders/{workOrder}/start', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'start'])->name('work-orders.start')
-            ->middleware('permission:pm.execute');
-        Route::post('work-orders/{workOrder}/complete', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'complete'])->name('work-orders.complete')
-            ->middleware('permission:pm.execute');
-        Route::post('work-orders/{workOrder}/cancel', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'cancel'])->name('work-orders.cancel')
-            ->middleware('permission:pm.plan');
-    });
 
     Route::middleware('super-admin')->group(function () {
         Route::get('/settings/branding', [SettingController::class, 'branding'])->name('settings.branding');

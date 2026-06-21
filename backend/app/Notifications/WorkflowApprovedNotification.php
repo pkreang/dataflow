@@ -81,7 +81,6 @@ class WorkflowApprovedNotification extends Notification implements ShouldQueue
     {
         return match ($this->instance->document_type) {
             'repair_request' => "/repair-requests/{$this->instance->id}",
-            'pm_am_plan' => "/maintenance/{$this->instance->id}",
             'spare_parts_requisition' => "/spare-parts/requisition/{$this->instance->id}",
             default => $this->eformSubmissionUrl(),
         };

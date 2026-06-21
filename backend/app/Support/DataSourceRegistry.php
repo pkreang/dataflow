@@ -139,36 +139,6 @@ class DataSourceRegistry
                 ],
             ],
 
-            'pm_am_plans' => [
-                'label_en' => 'PM/AM Plans',
-                'label_th' => 'แผน PM/AM',
-                'model' => null,
-                'base_query' => fn () => ApprovalInstance::where('document_type', 'pm_am_plan'),
-                'aggregate_fields' => [
-                    'id' => 'Count',
-                ],
-                'group_by_fields' => [
-                    'status' => 'Status',
-                    'org_unit_id' => 'Org Unit',
-                    'requester_user_id' => 'Requester',
-                ],
-                'filter_fields' => [
-                    'status' => 'Status',
-                    'org_unit_id' => 'Org Unit',
-                    'requester_user_id' => 'Requester',
-                ],
-                'date_fields' => [
-                    'created_at' => 'Created At',
-                    'updated_at' => 'Updated At',
-                ],
-                'display_columns' => [
-                    'reference_no' => 'Ref No',
-                    'status' => 'Status',
-                    'org_unit_id' => 'Org Unit',
-                    'requester_user_id' => 'Requester',
-                    'created_at' => 'Created At',
-                ],
-            ],
 
             'equipment' => [
                 'label_en' => 'Equipment',
