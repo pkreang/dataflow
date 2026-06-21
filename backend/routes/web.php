@@ -35,7 +35,6 @@ use App\Http\Controllers\Web\RoleController;
 use App\Http\Controllers\Web\RunningNumberController;
 use App\Http\Controllers\Web\SettingController;
 use App\Http\Controllers\Web\ShiftController;
-use App\Http\Controllers\Web\SparePartsController;
 use App\Http\Controllers\Web\SystemChangeLogController;
 use App\Http\Controllers\Web\ThailandAddressSearchController;
 use App\Http\Controllers\Web\UserController;
@@ -168,19 +167,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::post('/repair-requests', [RepairRequestController::class, 'submit'])->name('repair-requests.submit');
     Route::get('/repair-requests/{instance}', [RepairRequestController::class, 'show'])
         ->name('repair-requests.show')
-        ->whereNumber('instance');
-
-    // CMMS — spare parts (`document_type` = spare_parts_requisition)
-    Route::get('/spare-parts/stock', [SparePartsController::class, 'stock'])->name('spare-parts.stock');
-    Route::get('/spare-parts/withdrawal-history', [SparePartsController::class, 'withdrawalHistory'])->name('spare-parts.withdrawal-history');
-    Route::get('/spare-parts/requisitions/create', [SparePartsController::class, 'requisitionCreate'])->name('spare-parts.requisition.create');
-    Route::post('/spare-parts/requisitions', [SparePartsController::class, 'requisitionSubmit'])->name('spare-parts.requisition.submit');
-    Route::get('/spare-parts/requisitions', [SparePartsController::class, 'requisitionIndex'])->name('spare-parts.requisition.index');
-    Route::get('/spare-parts/requisitions/{instance}', [SparePartsController::class, 'requisitionShow'])
-        ->name('spare-parts.requisition.show')
-        ->whereNumber('instance');
-    Route::post('/spare-parts/requisitions/{instance}/issue', [SparePartsController::class, 'issueItems'])
-        ->name('spare-parts.requisition.issue')
         ->whereNumber('instance');
 
     Route::get('/purchase-requests', [PurchaseRequestController::class, 'index'])->name('purchase-requests.index');

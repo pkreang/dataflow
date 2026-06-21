@@ -73,7 +73,6 @@ class ApprovalInstance extends Model
 
         $route = match ($this->document_type) {
             'repair_request' => 'repair-requests.show',
-            'spare_parts_requisition' => 'spare-parts.requisition.show',
             default => null,
         };
 

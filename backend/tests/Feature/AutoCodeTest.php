@@ -16,7 +16,6 @@ use App\Models\OrgUnit;
 use App\Models\Position;
 use App\Models\ReportDashboard;
 use App\Models\RunningNumberConfig;
-use App\Models\SparePart;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -68,12 +67,7 @@ class AutoCodeTest extends TestCase
             'equipment_category_id' => $cat->id,
             'equipment_location_id' => $loc->id,
         ]);
-        $sp = SparePart::create([
-            'code' => 'SP1', 'name' => 'Bearing', 'unit' => 'pcs',
-            'equipment_category_id' => $cat->id,
-        ]);
-
-        // Lookup, workflow, running-number, dashboard, navigation, pm-plan
+        // Lookup, workflow, running-number, dashboard, navigation
         $lookup = LookupList::create([
             'key' => 'colors', 'label_en' => 'Colors', 'label_th' => 'สี', 'is_active' => true,
         ]);
@@ -98,7 +92,6 @@ class AutoCodeTest extends TestCase
         $this->assertSame('DOCTYPE-001', $docType->auto_code);
         $this->assertSame('FORM-001', $form->auto_code);
         $this->assertSame('EQ-001', $equip->auto_code);
-        $this->assertSame('SP-001', $sp->auto_code);
         $this->assertSame('LKLIST-001', $lookup->auto_code);
         $this->assertSame('WF-001', $wf->auto_code);
         $this->assertSame('RNC-001', $rnc->auto_code);

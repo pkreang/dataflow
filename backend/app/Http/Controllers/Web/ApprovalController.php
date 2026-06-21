@@ -227,7 +227,7 @@ class ApprovalController extends Controller
                 $changedFields ? ['changed_fields' => $changedFields] : [],
             );
         } else {
-            // Legacy form (purchase_request/spare_parts): values live in the
+            // Legacy form (purchase_request): values live in the
             // instance payload itself.
             $payload = $instance->payload ?? [];
             foreach ($safeUpdates as $key => $value) {

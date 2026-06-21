@@ -63,7 +63,6 @@ return new class extends Migration
             ['document_types',          'DOCTYPE'],
             ['document_forms',          'FORM'],
             ['equipment',               'EQ'],
-            ['spare_parts',             'SP'],
             ['lookup_lists',            'LKLIST'],
             ['approval_workflows',      'WF'],
             ['running_number_configs',  'RNC'],

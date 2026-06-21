@@ -10,7 +10,6 @@ use App\Models\EquipmentLocation;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
 use App\Models\Position;
-use App\Models\SparePart;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
@@ -65,14 +64,6 @@ class LookupRegistry
                 'display' => 'name',
                 'label_en' => 'Position',
                 'label_th' => 'ตำแหน่ง',
-                'has_active' => true,
-            ],
-            'spare_part' => [
-                'model' => SparePart::class,
-                'value' => 'id',
-                'display' => 'code_name',
-                'label_en' => 'Spare Part',
-                'label_th' => 'อะไหล่',
                 'has_active' => true,
             ],
             'equipment_category' => [
@@ -273,11 +264,6 @@ class LookupRegistry
             'equipment' => [
                 'equipment_category' => 'equipment_category_id',
                 'equipment_location' => 'equipment_location_id',
-                'company' => 'company_id',
-                'branch' => 'branch_id',
-            ],
-            'spare_part' => [
-                'equipment_category' => 'equipment_category_id',
                 'company' => 'company_id',
                 'branch' => 'branch_id',
             ],
