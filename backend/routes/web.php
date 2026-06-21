@@ -156,7 +156,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/forms/{documentForm:form_key}', [DocumentFormSubmissionController::class, 'create'])->name('forms.create');
     Route::post('/forms/{documentForm:form_key}/drafts', [DocumentFormSubmissionController::class, 'storeDraft'])->name('forms.draft.store');
 
-
     Route::get('/purchase-requests', [PurchaseRequestController::class, 'index'])->name('purchase-requests.index');
     Route::get('/purchase-requests/create', [PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
     Route::post('/purchase-requests', [PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
@@ -247,7 +246,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/settings/password-policy', [SettingController::class, 'passwordPolicy'])->name('settings.password-policy');
     Route::post('/settings/password-policy', [SettingController::class, 'savePasswordPolicy'])->name('settings.password-policy.save');
 
-
     Route::middleware('super-admin')->group(function () {
         Route::get('/settings/branding', [SettingController::class, 'branding'])->name('settings.branding');
         Route::post('/settings/branding', [SettingController::class, 'saveBranding'])->name('settings.branding.save');
@@ -293,7 +291,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/org-units/{orgUnit}/edit', [OrgUnitController::class, 'edit'])->name('settings.org-units.edit');
         Route::put('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'update'])->name('settings.org-units.update');
         Route::delete('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'destroy'])->name('settings.org-units.destroy');
-
 
         Route::get('/settings/workflow', [WorkflowController::class, 'index'])->name('settings.workflow.index');
         Route::get('/settings/workflow/create', [WorkflowController::class, 'create'])->name('settings.workflow.create');

@@ -11,8 +11,6 @@ use App\Models\User;
  */
 final class BranchScopeService
 {
-
-
     public static function masterEnabled(): bool
     {
         return Setting::getBool('branch_scoping.enabled', false);

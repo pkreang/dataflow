@@ -136,7 +136,6 @@ class DataSourceRegistry
                 ],
             ],
 
-
             'users' => [
                 'label_en' => 'Users',
                 'label_th' => 'ผู้ใช้',

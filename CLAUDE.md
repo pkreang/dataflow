@@ -2,7 +2,7 @@
 
 **บทบาทไฟล์นี้:** คอนเท็กซ์ปฏิบัติการหลักสำหรับ AI / ทีม (workspace rules) — ให้ความถูกต้องของ **คำสั่ง, auth/RBAC, เมนู, ข้อควรระวัง** ที่นี่ก่อน เรื่องเล่ายาว โดเมนละเอียด และ checklist ภาษาไทยอยู่ที่ **`Summary.md`** — เมื่อพฤติกรรมระบบเปลี่ยน ควรอัปเดตทั้งสองไฟล์ให้สอดคล้อง
 
-**ผลิตภัณฑ์:** CMMS + eForm แบบไดนามิกบน **Laravel 12** — Web: **Blade + Alpine.js + Tailwind v4** — API JSON: **Sanctum** (`backend/routes/api.php`) — **รันคำสั่ง shell/composer ทั้งหมดจากโฟลเดอร์ `backend/`** — ชื่อที่แสดงในระบบมาจาก **`APP_NAME`** (`backend/config/app.php` / `.env`)
+**ผลิตภัณฑ์:** แพลตฟอร์ม **eForm + workflow อนุมัติ** แบบไดนามิกบน **Laravel 12** (แจ้งซ่อม/ลา/จัดซื้อ/เบิก ฯลฯ เป็นฟอร์มในระบบ — CMMS asset/PM ถอดออกแล้ว) — Web: **Blade + Alpine.js + Tailwind v4** — API JSON: **Sanctum** (`backend/routes/api.php`) — **รันคำสั่ง shell/composer ทั้งหมดจากโฟลเดอร์ `backend/`** — ชื่อที่แสดงในระบบมาจาก **`APP_NAME`** (`backend/config/app.php` / `.env`)
 
 ---
 
@@ -29,8 +29,8 @@ composer test                     # รัน PHPUnit ทั้งชุด
 
 php artisan migrate:fresh --seed  # ล้าง DB แล้ว migrate + seed ใหม่ (โปรดักชันอย่าใช้)
 php artisan db:seed --class=NavigationMenuSeeder    # หลังแก้แถวเมนูใน NavigationMenuSeeder
-php artisan db:seed --class=IndustryTemplateSeeder   # เทมเพลตโรงเรียน eForm เท่านั้น (ไม่รวม CMMS)
-php artisan db:seed --class=FactoryCmmsTemplateSeeder # เทมเพลตโรงงาน CMMS แยกต่างหาก
+php artisan db:seed --class=IndustryTemplateSeeder   # เทมเพลตโรงเรียน eForm
+php artisan db:seed --class=FactoryCmmsTemplateSeeder # เทมเพลตโรงงาน eForm (แจ้งซ่อม) แยกต่างหาก
 php artisan forms:backfill-dedicated-table <form_key> # migrate payload เก่า → fdata_* (ใช้หลังเปิด dedicated table ทีหลัง)
 php artisan test --filter ExampleTest               # ตัวอย่าง: รันเทสเฉพาะคลาส (เปลี่ยนเป็นชื่อคลาสจริง)
 ```
@@ -74,7 +74,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 
 - **ชื่อ permission** เป็นสตริงธรรมดา (`user_access.read`, `manage_settings`, `approval.approve` หรือ `module.action`) — แค่สร้างแถวในเมนู Permissions **ยังไม่** ผูก route หรือเมนูจนกว่าโค้ดจะอ้างชื่อเดียวกัน (`@can`, `middleware('permission:…')`, policy, `navigation_menus.permission`)
 - **ลบ permission ไม่ได้** ถ้ายังผูกกับ **role** ใดๆ หรือ **model_has_permissions** — UI จะแสดงว่า **กำลังถูกใช้งาน**; role `admin` จาก seed มักได้สิทธิ์ครบ → หลายแถวลบไม่ได้จนกว่าจะปรับ role
-- **ฟอร์มเอกสาร:** flow ทั่วไป **`/forms`** ใช้การมองเห็นตามแผนกบน `DocumentForm` และแบบร่างเช็คเจ้าของ — **ไม่ใช่** รายการสร้าง–อ่าน–แก้–ลบเต็มรูปแบบ + สี่สิทธิ์ต่อฟอร์มโดยอัตโนมัติ ยกเว้นจะเพิ่ม controller/route และผูกเช็คเอง (ดูโมดูลเฉพาะ เช่น repair requests)
+- **ฟอร์มเอกสาร:** flow ทั่วไป **`/forms`** ใช้การมองเห็นตาม org_unit บน `DocumentForm` และแบบร่างเช็คเจ้าของ — **ไม่ใช่** รายการสร้าง–อ่าน–แก้–ลบเต็มรูปแบบ + สี่สิทธิ์ต่อฟอร์มโดยอัตโนมัติ ยกเว้นจะเพิ่ม controller/route และผูกเช็คเอง. แจ้งซ่อม/ลา/จัดซื้อ ทั้งหมดเป็น eForm ผ่าน /forms (procurement PR/PO มี controller แยก)
 
 ---
 
@@ -83,13 +83,12 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 | หัวข้อ | หมายเหตุ |
 |--------|----------|
 | **องค์กร** | Companies → branches → `users.company_id` / `branch_id` — หัวเอกสาร / lookup ใช้ FK เหล่านี้ |
-| **แผนก / ตำแหน่ง** | เลือก workflow (`department_workflow_bindings`, `approver_type: position`) |
-| **อนุมัติ** | `approval_workflows` → ขั้น → instances + `approval_instance_steps` — policy/range บนฟอร์ม: `ApprovalFlowService` |
-| **CMMS** | อุปกรณ์ + อะไหล่ + movement |
-| **ฟอร์มเอกสาร** | `document_forms` → `document_form_fields` (field-level permissions) → `document_form_submissions`; การมองเห็นผ่าน `document_form_departments`. **Field types** 23 แบบ รวม `group` (subform repeater), `page_break`, `qr_code` (template tokens ผ่าน `App\Support\QrTemplateResolver`), `signature`. **Field-level rules:** `editable_by` JSON tokens (`requester` / `step_N` / `user:{id}`), `visibility_rules` + `required_rules` (8 operators เหมือนกัน — visibility ชนะ required เสมอ). **Per-submission editors:** `assigned_editor_user_ids` JSON column ให้ owner/super-admin อนุญาตคนอื่นช่วยแก้ draft (lifecycle ยัง owner-only). **ยื่นแทน (on-behalf):** permission `submission.create_for_others` → เลือกเจ้าของใบตอนสร้าง; `user_id` = เจ้าของ (routing/exclusion/overlap/แจ้งเตือนตามเจ้าของ), `created_by_user_id` = คนกรอก (ได้สิทธิ์ lifecycle + editorRole requester + แจ้งเตือนผลคู่กับเจ้าของ); mobile ยังไม่รองรับ |
+| **หน่วยงาน / ตำแหน่ง** | org_units (tree) เลือก workflow (`org_unit_workflow_bindings`, `approver_type: position/org_head/org_parent_head`) — departments ถอดออกแล้ว (ดู doc/org-model-consolidation-spec.md) |
+| **อนุมัติ** | `approval_workflows` → ขั้น → instances + `approval_instance_steps` — policy/range บนฟอร์ม: `ApprovalFlowService`. ทุก document_type เป็น eForm (รวมแจ้งซ่อม `repair_request`) — detail อยู่ที่ submission |
+| **ฟอร์มเอกสาร** | `document_forms` → `document_form_fields` (field-level permissions) → `document_form_submissions`; การมองเห็นผ่าน `document_form_org_units`. **Field types** 23 แบบ รวม `group` (subform repeater), `page_break`, `qr_code` (template tokens ผ่าน `App\Support\QrTemplateResolver`), `signature`. **Field-level rules:** `editable_by` JSON tokens (`requester` / `step_N` / `user:{id}`), `visibility_rules` + `required_rules` (8 operators เหมือนกัน — visibility ชนะ required เสมอ). **Per-submission editors:** `assigned_editor_user_ids` JSON column ให้ owner/super-admin อนุญาตคนอื่นช่วยแก้ draft (lifecycle ยัง owner-only). **ยื่นแทน (on-behalf):** permission `submission.create_for_others` → เลือกเจ้าของใบตอนสร้าง; `user_id` = เจ้าของ (routing/exclusion/overlap/แจ้งเตือนตามเจ้าของ), `created_by_user_id` = คนกรอก (ได้สิทธิ์ lifecycle + editorRole requester + แจ้งเตือนผลคู่กับเจ้าของ); mobile ยังไม่รองรับ |
 | **ลายเซ็น approver** | `approval_workflow_stages.require_signature` toggle ต่อขั้น → propagate ไป `approval_instance_steps.require_signature` ตอน `start()`; `users.signature_path` (URL ของรูปลายเซ็นใน profile, ตามแบบ avatar); `ApprovalFlowService::act($id, $userId, $action, $comment, $signatureImage)` เก็บ signature ใน `approved_by[].signature` (approve) หรือ `signature_image` column (reject) — TEXT bumped เป็น MEDIUMTEXT (16MB); `<x-signature-pad>` component shared ระหว่าง requester signature field กับ approval pad |
 | **Password lifecycle** | `EnforcePasswordChange` middleware บังคับเปลี่ยนรหัส; `user_password_histories` เก็บประวัติ; `PasswordLifecycleService` + `PasswordCapabilityService` ควบคุม flow |
-| **Dashboard / Reports** | `DataSourceRegistry` กำหนด data sources (repair_requests, equipment, spare_parts ฯลฯ) สำหรับ widget; `DashboardWidgetDataController` ให้ API |
+| **Dashboard / Reports** | `DataSourceRegistry` กำหนด data sources (repair_requests, school_eforms, users, per-form `form:{key}` ฯลฯ) สำหรับ widget; `DashboardWidgetDataController` ให้ API |
 | **Branch scoping** | `navigation_menus` มี branch scoping; `BranchScopingController` จัดการ isolation ตามสาขา |
 | **วันหยุด / กะ** | `holidays` (org-wide, `/settings/holidays`, `HolidaySeeder` = วันหยุดไทย 2026) → `App\Support\WorkdayCalculator` (cache `holidays_active_dates` 3600s, bust ที่ Holiday model events) → ฟังก์ชัน `WORKDAYS()` ในฟอร์ม; `shifts` + `user_shift_schedules` (`/settings/shifts`, ผูกกะต่อ user มีช่วงวันที่ + work_days JSON, กันช่วงทับ) — `User::currentShift()`; roster รายวัน/rotation/business-day escalation ยังไม่ทำ (backlog) |
 | **ตั้งค่า** | ตาราง `settings` แบบ key-value — หลาย route `/settings/*` ใช้ middleware **`super-admin`** (ค่า DB) |
@@ -104,7 +103,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 3. **Sidebar:** spacer กว้างเท่าแถบเมนู; `<main>` **ไม่มี** `padding-left` เพิ่มสำหรับ sidebar
 4. **แปลภาษา:** ใช้ต้นไม้เดียว `backend/resources/lang/` (Laravel `lang_path()` ของโปรเจกต์ชี้ที่นี่) — ไฟล์ `lang/` ที่เคยอยู่ root ถูกลบเมื่อ 2026-04-20 เพราะเป็น orphan (Laravel ไม่เคยอ่าน) — school vertical overrides อยู่ที่ `resources/lang/verticals/school/{locale}/`
 5. **`ExampleTest`:** `GET /` redirect guest ไป `login`
-6. **`super-admin` middleware:** ยึด **`is_super_admin` ใน DB เท่านั้น** — flag ใน session ไม่ให้สิทธิ์เข้า route; sidebar ซ่อน `/settings/*` ส่วนใหญ่จากผู้ที่ไม่ใช่ super-admin จริง — ตัวอย่าง API: `/v1/departments`, `/v1/equipment-categories`, `/v1/equipment-locations` → 403 JSON `auth.super_admin_only`
+6. **`super-admin` middleware:** ยึด **`is_super_admin` ใน DB เท่านั้น** — flag ใน session ไม่ให้สิทธิ์เข้า route; sidebar ซ่อนเมนูตั้งค่าส่วนใหญ่จากผู้ที่ไม่ใช่ super-admin จริง (route ตั้งค่าส่วนใหญ่อยู่หลัง middleware super-admin)
 7. **ผู้ใช้ SSO:** มี `auth_provider`, `external_id`, `ldap_dn` — อย่าพึ่งพา `password`
 8. **ผู้ใช้:** ใช้ **`first_name` + `last_name`** — อย่าอ้าง `users.name`
 9. **`EnforcePasswordChange` middleware:** ถ้า user มี `password_change_required = true` หรือรหัสหมดอายุ จะ **redirect ไปหน้าเปลี่ยนรหัส** ก่อนเข้าหน้าอื่น — API มี `EnforcePasswordChangeForSanctum` คืน 403 JSON; ทดสอบ flow ต้องตั้งค่าฟิลด์เหล่านี้ด้วย
@@ -127,11 +126,9 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 | `Summary.md` | ภาพรวมไทย, seed, checklist — sync กับ Auth/RBAC และข้อควรระวังที่นี่ |
 | `doc/api-spec.md` | เส้นทาง REST + middleware สิทธิ์ |
 | `doc/erd.md` | ความสัมพันธ์ entity |
-| `doc/uat-repair-request.md` | UAT แจ้งซ่อม + workflow |
 | `doc/uat-reset-testing-layer.md` | รีเซ็ต user ทดสอบ (`testing:reset-user-layer`) |
 | `doc/uat-rbac-permissions.md` | ทดสอบ RBAC อย่างปลอดภัย |
 | `doc/backlog.md` | งาน Phase 2+ / out-of-scope ที่คุยแล้วแต่ยังไม่ได้ลุย |
-| `doc/example-maintenance-request-form.md` | Playbook ฟอร์มแจ้งซ่อม enterprise-grade (36 fields, 7 sections) — ใช้เป็น reference สำหรับสร้างฟอร์มแจ้งซ่อมใหม่ |
 | `doc/system-test-playbook.md` | ขั้นตอนทดสอบทั้งระบบก่อน merge — automated (`composer test`) + static (`composer analyse`/`lint`) + UAT 2 vertical |
 | `doc/uat-settings-menus.md` | UAT checklist สำหรับเมนูตั้งค่า 21 รายการ (access + CRUD + visual regression) |
 | `doc/uat-clean-slate-walkthrough.md` | UAT แบบ clean-slate — `migrate:fresh --seed` + ป้อนข้อมูลเองทุก entity ตามลำดับ dependency (ใช้ก่อน merge ก้อนใหญ่) |
