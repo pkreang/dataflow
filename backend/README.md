@@ -62,22 +62,23 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 |--------|----------|
 | `PermissionSeeder` / `RolePermissionSeeder` | สิทธิ์ + บทบาท + `admin@example.com` |
 | `SettingSeeder` / `NavigationMenuSeeder` | การตั้งค่า + เมนู |
-| `DocumentTypeSeeder` | ประเภทเอกสารจัดซื้อ (เบิกอะไหล่, PR, PO) |
+| `DocumentTypeSeeder` | ประเภทเอกสารจัดซื้อ (PR, PO) |
 | `PositionDemoSeeder` | (ไม่รันจาก `db:seed` หลัก — ย้ายไปอยู่ใน `IndustryTemplateSeeder` เท่านั้น) ตำแหน่งโรงเรียน (SCH\_TEACHER, SCH\_ACAD\_HEAD, SCH\_VICE\_PRINCIPAL, SCH\_ADMIN\_OFFICER, SCH\_FIN\_OFFICER) — โดน seed เมื่อ run `composer setup` หรือ `composer switch:school` เพราะ flow เหล่านั้นเรียก `IndustryTemplateSeeder` |
-| `FactoryPositionSeeder` | (ไม่รันจาก `db:seed` หลัก) ตำแหน่ง CMMS สำหรับ `FactoryCmmsTemplateSeeder` / `PurchaseWorkflowSeeder` / `ApprovalWorkflowDemoSeeder` / `NteqPolymerDemoSeeder` |
-| `IndustryTemplateSeeder` | **เทมเพลตสองกลุ่มลูกค้า:** โรงงาน (`FactoryCmmsTemplateSeeder`: แจ้งซ่อม + PM/AM, ฟอร์ม, workflow, policy) และโรงเรียน (`SchoolEFormTemplateSeeder`: แผนก SCH\_\*, ประเภท eForm ลา/ขอซื้อ/กิจกรรม, ฟอร์ม, workflow, policy) |
+| `FactoryPositionSeeder` | (ไม่รันจาก `db:seed` หลัก) ตำแหน่งสำหรับ `FactoryCmmsTemplateSeeder` / `PurchaseWorkflowSeeder` / `NteqPolymerDemoSeeder` |
+| `IndustryTemplateSeeder` | **เทมเพลตสองกลุ่มลูกค้า (ทั้งคู่ eForm):** โรงงาน (`FactoryCmmsTemplateSeeder`: แจ้งซ่อม eForm, ฟอร์ม, workflow, policy) และโรงเรียน (`SchoolEFormTemplateSeeder`: org_units SCH\_\*, ประเภท eForm ลา/ขอซื้อ/กิจกรรม, ฟอร์ม, workflow, policy) |
 | `DashboardSeeder` | แดชบอร์ดตัวอย่าง |
 | `PurchaseWorkflowSeeder` | workflow ใบขอซื้อ/สั่งซื้อ (ต้องมีฟอร์ม `purchase_request_default` / `purchase_order_default` ใน DB — สร้างจาก UI หรือ seeder แยก) |
 
 รันเฉพาะเทมเพลตอุตสาหกรรม: `php artisan db:seed --class=IndustryTemplateSeeder`  
-รันเฉพาะแผนกโรงเรียน + eForm: `php artisan db:seed --class=SchoolEFormTemplateSeeder`  
-ลบแผนกโรงงานตัวอย่างเก่า (MAINT, PROD, WH, …) ออกจาก DB: `php artisan db:seed --class=DepartmentSeeder` — คำสั่งนี้**ไม่สร้าง**แผนกใหม่ มีแค่ purge; การรัน `SchoolEFormTemplateSeeder` หรือ `IndustryTemplateSeeder` จะเรียก purge นี้ก่อนสร้างแผนก **SCH\_\*** เสมอ
+รันเฉพาะ org_units โรงเรียน + eForm: `php artisan db:seed --class=SchoolEFormTemplateSeeder` (สร้าง org tree SCH\_\* + ฟอร์ม)
 
-**`DevelopmentDemoSeeder`** — แผนกใน DB เป็น **SCH\_\*** จากเทมเพลตโรงเรียนเท่านั้น (แผนกโรงงานตัวอย่างถูกลบออกจากชุด seed แล้ว)
+> หมายเหตุ: departments ถอดออกแล้ว — โครงสร้างองค์กรเป็น `org_units` (tree) ทั้งหมด (ดู `doc/org-model-consolidation-spec.md`). CMMS asset/PM ก็ถอดแล้ว — แจ้งซ่อมเป็น eForm.
+
+**`DevelopmentDemoSeeder`** — org_units ใน DB เป็น **SCH\_\*** จากเทมเพลตโรงเรียนเท่านั้น
 
 รัน `php artisan db:seed --class=DevelopmentDemoSeeder` แล้วจะได้ผู้ใช้ทดสอบ eForm / workflow โรงเรียน (รหัส `demo1234`):
 
-| Email | แผนก | บทบาท | หมายเหตุ |
+| Email | หน่วยงาน | บทบาท | หมายเหตุ |
 |-------|------|--------|-----------|
 | `employee@demo.com` | ฝ่ายวิชาการ | employee | ผู้ยื่น |
 | `admin.staff@demo.com` | ฝ่ายธุรการ | employee | ผู้ยื่น |
@@ -103,8 +104,7 @@ Optional: `php artisan db:seed --class=RepairApprovalDemoSeeder` เพิ่ม
 - รันคำสั่ง: `php artisan user:reset-bootstrap-admin` (รีเซ็ตรหัสเป็น `password` และล้างฟิลด์ SSO/LDAP)  
 - หรือรัน seed ใหม่: `php artisan db:seed --class=RolePermissionSeeder` (ตอนนี้ใช้ `updateOrCreate` สำหรับ admin แล้ว)
 
-- **My Approvals** lives under **Repair Request** in the sidebar (not under Reports).
-- Placeholder menu items (maintenance, spare parts, equipment browse, report stubs) require `manage_settings` and are hidden from employee/approver.
+- **แจ้งซ่อม** เป็น eForm ผ่าน **เอกสาร (/forms)** เหมือนใบลา/memo; **รายการรออนุมัติ** อยู่เมนูแยก.
 
 After changing navigation or **Settings submenu order** in `NavigationMenuSeeder`, run: `php artisan db:seed --class=NavigationMenuSeeder`
 
