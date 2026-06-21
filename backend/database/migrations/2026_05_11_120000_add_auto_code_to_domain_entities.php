@@ -62,7 +62,6 @@ return new class extends Migration
             ['branches',                'BR'],
             ['document_types',          'DOCTYPE'],
             ['document_forms',          'FORM'],
-            ['equipment',               'EQ'],
             ['lookup_lists',            'LKLIST'],
             ['approval_workflows',      'WF'],
             ['running_number_configs',  'RNC'],

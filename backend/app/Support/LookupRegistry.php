@@ -4,9 +4,6 @@ namespace App\Support;
 
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\Equipment;
-use App\Models\EquipmentCategory;
-use App\Models\EquipmentLocation;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
 use App\Models\Position;
@@ -34,14 +31,6 @@ class LookupRegistry
                 'label_th' => 'ผู้ใช้',
                 'has_active' => true,
             ],
-            'equipment' => [
-                'model' => Equipment::class,
-                'value' => 'id',
-                'display' => 'code_name',
-                'label_en' => 'Equipment',
-                'label_th' => 'อุปกรณ์',
-                'has_active' => true,
-            ],
             'company' => [
                 'model' => Company::class,
                 'value' => 'id',
@@ -64,22 +53,6 @@ class LookupRegistry
                 'display' => 'name',
                 'label_en' => 'Position',
                 'label_th' => 'ตำแหน่ง',
-                'has_active' => true,
-            ],
-            'equipment_category' => [
-                'model' => EquipmentCategory::class,
-                'value' => 'id',
-                'display' => 'name',
-                'label_en' => 'Equipment Category',
-                'label_th' => 'หมวดอุปกรณ์',
-                'has_active' => true,
-            ],
-            'equipment_location' => [
-                'model' => EquipmentLocation::class,
-                'value' => 'id',
-                'display' => 'name',
-                'label_en' => 'Equipment Location',
-                'label_th' => 'สถานที่อุปกรณ์',
                 'has_active' => true,
             ],
         ];
@@ -203,20 +176,10 @@ class LookupRegistry
 
         $displayField = $config['display'];
 
-        // Eager-load location for equipment to show in display
-        if ($config['model'] === Equipment::class) {
-            $query->with('location');
-        }
-
         return $query->get()->map(function ($item) use ($config, $displayField) {
             $display = $displayField === 'code_name'
                 ? "[{$item->code}] {$item->name}"
                 : $item->{$displayField};
-
-            // Append location name for equipment
-            if ($config['model'] === Equipment::class && $item->relationLoaded('location') && $item->location) {
-                $display .= ' — '.$item->location->name;
-            }
 
             return [
                 'value' => $item->{$config['value']},
@@ -261,12 +224,6 @@ class LookupRegistry
     {
         return [
             'branch' => ['company' => 'company_id'],
-            'equipment' => [
-                'equipment_category' => 'equipment_category_id',
-                'equipment_location' => 'equipment_location_id',
-                'company' => 'company_id',
-                'branch' => 'branch_id',
-            ],
             'user' => [
                 'company' => 'company_id',
                 'branch' => 'branch_id',

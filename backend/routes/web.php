@@ -10,8 +10,6 @@ use App\Http\Controllers\Web\DocumentFormController;
 use App\Http\Controllers\Web\DocumentFormSubmissionController;
 use App\Http\Controllers\Web\DocumentFormWorkflowPolicyController;
 use App\Http\Controllers\Web\DocumentTypeController;
-use App\Http\Controllers\Web\EquipmentController;
-use App\Http\Controllers\Web\EquipmentLocationController;
 use App\Http\Controllers\Web\HolidayController;
 use App\Http\Controllers\Web\LookupController;
 use App\Http\Controllers\Web\LookupListController;
@@ -259,13 +257,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/settings/password-policy', [SettingController::class, 'passwordPolicy'])->name('settings.password-policy');
     Route::post('/settings/password-policy', [SettingController::class, 'savePasswordPolicy'])->name('settings.password-policy.save');
 
-    // CMMS: Equipment Registry (operational — not super-admin-only)
-    Route::get('/equipment-registry', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'index'])->name('equipment-registry.index');
-    Route::get('/equipment-registry/create', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'create'])->name('equipment-registry.create');
-    Route::post('/equipment-registry', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'store'])->name('equipment-registry.store');
-    Route::get('/equipment-registry/{equipment}/edit', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'edit'])->name('equipment-registry.edit');
-    Route::put('/equipment-registry/{equipment}', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'update'])->name('equipment-registry.update');
-    Route::delete('/equipment-registry/{equipment}', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'destroy'])->name('equipment-registry.destroy');
 
     Route::middleware('super-admin')->group(function () {
         Route::get('/settings/branding', [SettingController::class, 'branding'])->name('settings.branding');
@@ -313,21 +304,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::put('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'update'])->name('settings.org-units.update');
         Route::delete('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'destroy'])->name('settings.org-units.destroy');
 
-        // Equipment Categories
-        Route::get('/settings/equipment', [EquipmentController::class, 'index'])->name('settings.equipment.index');
-        Route::get('/settings/equipment/create', [EquipmentController::class, 'create'])->name('settings.equipment.create');
-        Route::post('/settings/equipment', [EquipmentController::class, 'store'])->name('settings.equipment.store');
-        Route::get('/settings/equipment/{equipmentCategory}/edit', [EquipmentController::class, 'edit'])->name('settings.equipment.edit');
-        Route::put('/settings/equipment/{equipmentCategory}', [EquipmentController::class, 'update'])->name('settings.equipment.update');
-        Route::delete('/settings/equipment/{equipmentCategory}', [EquipmentController::class, 'destroy'])->name('settings.equipment.destroy');
-
-        // Equipment Locations
-        Route::get('/settings/equipment-locations', [EquipmentLocationController::class, 'index'])->name('settings.equipment-locations.index');
-        Route::get('/settings/equipment-locations/create', [EquipmentLocationController::class, 'create'])->name('settings.equipment-locations.create');
-        Route::post('/settings/equipment-locations', [EquipmentLocationController::class, 'store'])->name('settings.equipment-locations.store');
-        Route::get('/settings/equipment-locations/{equipmentLocation}/edit', [EquipmentLocationController::class, 'edit'])->name('settings.equipment-locations.edit');
-        Route::put('/settings/equipment-locations/{equipmentLocation}', [EquipmentLocationController::class, 'update'])->name('settings.equipment-locations.update');
-        Route::delete('/settings/equipment-locations/{equipmentLocation}', [EquipmentLocationController::class, 'destroy'])->name('settings.equipment-locations.destroy');
 
         Route::get('/settings/workflow', [WorkflowController::class, 'index'])->name('settings.workflow.index');
         Route::get('/settings/workflow/create', [WorkflowController::class, 'create'])->name('settings.workflow.create');

@@ -6,7 +6,6 @@ use App\Models\ApprovalInstance;
 use App\Models\Company;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
-use App\Models\Equipment;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 
@@ -137,40 +136,6 @@ class DataSourceRegistry
                 ],
             ],
 
-
-            'equipment' => [
-                'label_en' => 'Equipment',
-                'label_th' => 'อุปกรณ์',
-                'model' => Equipment::class,
-                'base_query' => null,
-                'aggregate_fields' => [
-                    'id' => 'Count',
-                ],
-                'group_by_fields' => [
-                    'status' => 'Status',
-                    'equipment_category_id' => 'Category',
-                    'equipment_location_id' => 'Location',
-                    'company_id' => 'Company',
-                ],
-                'filter_fields' => [
-                    'status' => 'Status',
-                    'is_active' => 'Active',
-                    'equipment_category_id' => 'Category',
-                    'company_id' => 'Company',
-                ],
-                'date_fields' => [
-                    'created_at' => 'Created At',
-                    'installed_date' => 'Installed Date',
-                ],
-                'display_columns' => [
-                    'name' => 'Name',
-                    'code' => 'Code',
-                    'status' => 'Status',
-                    'equipment_category_id' => 'Category',
-                    'equipment_location_id' => 'Location',
-                    'created_at' => 'Created At',
-                ],
-            ],
 
             'users' => [
                 'label_en' => 'Users',

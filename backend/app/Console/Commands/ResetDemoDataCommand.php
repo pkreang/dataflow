@@ -21,7 +21,7 @@ class ResetDemoDataCommand extends Command
     public function handle(): int
     {
         if (! $this->option('force')) {
-            if (! $this->confirm('This will DELETE all org units, equipment, approval instances, and non-admin users. Continue?')) {
+            if (! $this->confirm('This will DELETE all org units, approval instances, and non-admin users. Continue?')) {
                 $this->info('Aborted.');
 
                 return 0;
@@ -34,9 +34,6 @@ class ResetDemoDataCommand extends Command
         $tables = [
             'approval_instance_steps',
             'approval_instances',
-            'equipment',
-            'equipment_locations',
-            'equipment_categories',
             'approval_workflow_stages',
             'approval_workflows',
             'org_unit_workflow_bindings',
