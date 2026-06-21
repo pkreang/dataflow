@@ -47,8 +47,6 @@ class SettingSeeder extends Seeder
             'branches.enabled' => '1',
             /** Branch scoping: filter lists by user.branch_id (super-admin & users without branch exempt) */
             'branch_scoping.enabled' => '0',
-            'branch_scoping.equipment' => '1',
-            'branch_scoping.spare_parts' => '1',
             /** Notification settings */
             'notifications.email_enabled' => '1',
             'notifications.approval_pending_email' => '1',
