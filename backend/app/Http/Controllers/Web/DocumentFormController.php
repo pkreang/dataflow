@@ -4,11 +4,9 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Concerns\HasPerPage;
 use App\Http\Controllers\Controller;
-use App\Models\ApprovalInstance;
-use App\Models\ApprovalWorkflow;
-use App\Models\OrgUnit;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
+use App\Models\OrgUnit;
 use App\Models\RunningNumberConfig;
 use App\Models\User;
 use App\Services\FormSchemaService;
@@ -68,7 +66,7 @@ class DocumentFormController extends Controller
             ->orderBy('name');
 
         if ($search !== '') {
-            $needle = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
+            $needle = '%'.str_replace(['%', '_'], ['\%', '\_'], $search).'%';
             $query->where(function ($q) use ($needle) {
                 $q->where('name', 'like', $needle)
                     ->orWhere('form_key', 'like', $needle)
@@ -241,8 +239,8 @@ class DocumentFormController extends Controller
             'target_document_types' => ['nullable', 'array'],
             'target_document_types.*' => ['string', 'max:50'],
             'layout_columns' => ['nullable', 'integer', Rule::in([1, 2, 3, 4])],
-            'allowed_org_units'     => ['nullable', 'array'],
-            'allowed_org_units.*'   => ['integer', 'exists:org_units,id'],
+            'allowed_org_units' => ['nullable', 'array'],
+            'allowed_org_units.*' => ['integer', 'exists:org_units,id'],
             'table_name' => [
                 'required', 'string', 'max:64',
                 'regex:/^[a-z][a-z0-9_]*$/',
@@ -483,7 +481,7 @@ class DocumentFormController extends Controller
 
         $message = __('common.saved');
         if ($warning = $this->autoNumberWarning($validated['fields'], $validated['document_type'])) {
-            $message .= ' — ' . $warning;
+            $message .= ' — '.$warning;
         }
 
         return redirect()->route('settings.document-forms.index')->with('success', $message);
@@ -493,6 +491,7 @@ class DocumentFormController extends Controller
     {
         if ($request->has('toggle_active')) {
             $documentForm->update(['is_active' => ! $documentForm->is_active]);
+
             return redirect()->route('settings.document-forms.index')->with('success', __('common.saved'));
         }
 
@@ -557,7 +556,7 @@ class DocumentFormController extends Controller
 
         $message = __('common.updated');
         if ($warning = $this->autoNumberWarning($validated['fields'], $validated['document_type'])) {
-            $message .= ' — ' . $warning;
+            $message .= ' — '.$warning;
         }
 
         return redirect()->route('settings.document-forms.edit', $documentForm)->with('success', $message);
@@ -649,18 +648,18 @@ class DocumentFormController extends Controller
 
     public function clone(DocumentForm $documentForm): RedirectResponse
     {
-        $baseKey = $documentForm->form_key . '_copy';
+        $baseKey = $documentForm->form_key.'_copy';
         $newKey = $baseKey;
         $counter = 1;
         while (DocumentForm::where('form_key', $newKey)->exists()) {
             $counter++;
-            $newKey = $baseKey . '_' . $counter;
+            $newKey = $baseKey.'_'.$counter;
         }
 
         $clone = DB::transaction(function () use ($documentForm, $newKey) {
             $clone = DocumentForm::create([
                 'form_key' => $newKey,
-                'name' => $documentForm->name . ' (copy)',
+                'name' => $documentForm->name.' (copy)',
                 'document_type' => $documentForm->document_type,
                 'description' => $documentForm->description,
                 'is_active' => false,
@@ -765,7 +764,7 @@ class DocumentFormController extends Controller
                 return null;
             }
             try {
-                (new \App\Support\FormulaEvaluator())->evaluate($expression, []);
+                (new \App\Support\FormulaEvaluator)->evaluate($expression, []);
             } catch (\InvalidArgumentException $e) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'formula' => __('common.formula_syntax_error', ['error' => $e->getMessage()]),
@@ -889,6 +888,7 @@ class DocumentFormController extends Controller
         if (! in_array($pos, ['above', 'below', 'none'], true)) {
             $pos = 'below';
         }
+
         return [
             'template' => mb_substr($template, 0, 1000),
             'size' => $size,
@@ -922,6 +922,7 @@ class DocumentFormController extends Controller
             if (in_array($lower, ['today', 'yesterday', 'tomorrow'], true)) {
                 return $lower;
             }
+
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) ? $raw : null;
         }
 
@@ -930,6 +931,7 @@ class DocumentFormController extends Controller
                 'trim',
                 explode("\n", (string) ($field['options_raw'] ?? ''))
             )));
+
             return in_array($raw, $options, true) ? $raw : null;
         }
 

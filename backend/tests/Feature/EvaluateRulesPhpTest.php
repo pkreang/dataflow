@@ -21,6 +21,7 @@ class EvaluateRulesPhpTest extends TestCase
     private function evaluate(array $rules, array $payload): bool
     {
         $method = new ReflectionMethod(DocumentFormSubmissionController::class, 'evaluateRulesPhp');
+
         // PHP 8.1+ allows invoking private static methods directly via reflection
         return (bool) $method->invoke(null, $rules, $payload);
     }
@@ -142,7 +143,7 @@ class EvaluateRulesPhpTest extends TestCase
         ));
     }
 
-    public function test_multi_rule_AND_passes_when_all_match(): void
+    public function test_multi_rule_an_d_passes_when_all_match(): void
     {
         $rules = [
             ['field' => 'a', 'operator' => 'equals', 'value' => 'x'],
@@ -151,7 +152,7 @@ class EvaluateRulesPhpTest extends TestCase
         $this->assertTrue($this->evaluate($rules, ['a' => 'x', 'b' => 10]));
     }
 
-    public function test_multi_rule_AND_fails_when_one_fails(): void
+    public function test_multi_rule_an_d_fails_when_one_fails(): void
     {
         $rules = [
             ['field' => 'a', 'operator' => 'equals', 'value' => 'x'],

@@ -23,7 +23,7 @@ class RequesterPickApproverTest extends TestCase
         if (Permission::query()->where('name', 'approval.approve')->where('guard_name', 'web')->exists()) {
             return;
         }
-        $p = new Permission();
+        $p = new Permission;
         $p->name = 'approval.approve';
         $p->guard_name = 'web';
         $p->module = 'approval';

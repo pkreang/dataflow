@@ -22,8 +22,8 @@ class ReportDashboardWidget extends Model
     protected function casts(): array
     {
         return [
-            'config'    => 'array',
-            'col_span'  => 'integer',
+            'config' => 'array',
+            'col_span' => 'integer',
             'sort_order' => 'integer',
         ];
     }

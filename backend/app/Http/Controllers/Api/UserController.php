@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Position;
 use App\Models\Setting;
 use App\Models\User;
 use App\Rules\PasswordNotReused;

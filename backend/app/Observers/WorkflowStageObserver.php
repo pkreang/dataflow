@@ -59,6 +59,7 @@ class WorkflowStageObserver
                 'to' => $newValue,
             ];
         }
+
         return $changes;
     }
 }

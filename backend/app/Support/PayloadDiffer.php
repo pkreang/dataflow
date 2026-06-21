@@ -25,6 +25,7 @@ use App\Models\DocumentFormField;
 class PayloadDiffer
 {
     private const FILE_LIKE_TYPES = ['file', 'multi_file', 'image', 'signature'];
+
     private const MAX_DIFF_BYTES = 10240; // 10 KB
 
     /**
@@ -48,6 +49,7 @@ class PayloadDiffer
                 if (self::valuesDiffer($old, $new)) {
                     $changes[$key] = ['from' => self::fileMarker($old), 'to' => self::fileMarker($new)];
                 }
+
                 continue;
             }
 
@@ -57,6 +59,7 @@ class PayloadDiffer
                 if ($diff !== null) {
                     $changes[$key] = $diff;
                 }
+
                 continue;
             }
 
@@ -90,11 +93,13 @@ class PayloadDiffer
         if (is_array($old) && is_array($new)) {
             sort($old);
             sort($new);
+
             return $old !== $new;
         }
         if ($old === null && $new === null) {
             return false;
         }
+
         return (string) ($old ?? '') !== (string) ($new ?? '');
     }
 
@@ -106,13 +111,14 @@ class PayloadDiffer
         if (is_array($value)) {
             return 'files:'.count($value);
         }
+
         return 'file:set';
     }
 
     /**
      * @param  list<array<string, mixed>>  $old
      * @param  list<array<string, mixed>>  $new
-     * @return array<string, mixed>|null  null when no change
+     * @return array<string, mixed>|null null when no change
      */
     private static function diffGroup(array $old, array $new): ?array
     {
@@ -175,6 +181,7 @@ class PayloadDiffer
                 break;
             }
         }
+
         return $changes;
     }
 }

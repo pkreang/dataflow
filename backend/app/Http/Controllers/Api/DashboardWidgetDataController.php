@@ -76,7 +76,7 @@ class DashboardWidgetDataController extends Controller
         }
 
         $tmpZip = tempnam(sys_get_temp_dir(), 'dash-export-');
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($tmpZip, ZipArchive::OVERWRITE) !== true) {
             return response()->json(['error' => 'zip-create-failed'], 500);
         }
@@ -264,7 +264,7 @@ class DashboardWidgetDataController extends Controller
             case 'this_year':
                 $query->whereYear($dateField, $now->year);
                 break;
-            // unknown preset → silently ignored
+                // unknown preset → silently ignored
         }
     }
 
@@ -471,7 +471,10 @@ class DashboardWidgetDataController extends Controller
         }
 
         return array_map(function ($v) use ($map) {
-            if ($v === null) return 'N/A';
+            if ($v === null) {
+                return 'N/A';
+            }
+
             return (string) ($map[$v] ?? $v);
         }, $rawLabels);
     }
@@ -532,6 +535,7 @@ class DashboardWidgetDataController extends Controller
                 $arr = is_object($row) && method_exists($row, 'only')
                     ? $row->only($selectColumns)
                     : array_intersect_key((array) $row, array_flip($selectColumns));
+
                 return $arr;
             })
             ->toArray();

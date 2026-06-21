@@ -57,6 +57,7 @@ class GeneratePmWorkOrdersCommandTest extends TestCase
     {
         $plan = $this->makePlan(['frequency_type' => 'date', 'interval_days' => 30, 'next_due_at' => Carbon::yesterday()]);
         $plan->taskItems()->create(['step_no' => 1, 'description' => 'X', 'task_type' => 'visual']);
+
         return $plan;
     }
 
@@ -70,6 +71,7 @@ class GeneratePmWorkOrdersCommandTest extends TestCase
             'equipment_location_id' => $loc->id,
             'status' => 'active', 'is_active' => true,
         ]);
+
         return PmPlan::create(array_merge([
             'equipment_id' => $eq->id,
             'name' => 'Plan',

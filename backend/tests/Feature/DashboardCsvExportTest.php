@@ -87,7 +87,7 @@ class DashboardCsvExportTest extends TestCase
         $tmp = tempnam(sys_get_temp_dir(), 'test-zip-');
         file_put_contents($tmp, $body);
 
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $this->assertTrue($zip->open($tmp) === true);
         $names = [];
         for ($i = 0; $i < $zip->numFiles; $i++) {

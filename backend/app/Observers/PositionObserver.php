@@ -28,7 +28,7 @@ class PositionObserver
             }
             $changes[$key] = [
                 'from' => $position->getOriginal($key),
-                'to'   => $newValue,
+                'to' => $newValue,
             ];
         }
         if (! $changes) {

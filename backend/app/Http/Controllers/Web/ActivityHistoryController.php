@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Concerns\HasPerPage;
+use App\Http\Controllers\Controller;
 use App\Models\SystemChangeLog;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -27,7 +27,7 @@ class ActivityHistoryController extends Controller
             ->when($request->search, function ($q, $v) {
                 $q->whereHas('actor', function ($u) use ($v) {
                     $u->where('first_name', 'like', '%'.$v.'%')
-                      ->orWhere('last_name', 'like', '%'.$v.'%');
+                        ->orWhere('last_name', 'like', '%'.$v.'%');
                 });
             })
             ->orderByDesc('created_at');
@@ -58,7 +58,7 @@ class ActivityHistoryController extends Controller
             ->when($request->search, function ($q, $v) {
                 $q->whereHas('actor', function ($u) use ($v) {
                     $u->where('first_name', 'like', '%'.$v.'%')
-                      ->orWhere('last_name', 'like', '%'.$v.'%');
+                        ->orWhere('last_name', 'like', '%'.$v.'%');
                 });
             })
             ->orderByDesc('created_at');

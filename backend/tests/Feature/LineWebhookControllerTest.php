@@ -7,7 +7,6 @@ use App\Models\ApprovalInstanceStep;
 use App\Models\ApprovalWorkflow;
 use App\Models\Setting;
 use App\Models\User;
-use App\Services\ApprovalFlowService;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\SettingSeeder;
@@ -21,7 +20,8 @@ class LineWebhookControllerTest extends TestCase
     use RefreshDatabase;
 
     private const ENDPOINT = '/api/line/webhook';
-    private const SECRET   = 'test-channel-secret-xyz';
+
+    private const SECRET = 'test-channel-secret-xyz';
 
     protected function setUp(): void
     {
@@ -103,8 +103,8 @@ class LineWebhookControllerTest extends TestCase
 
         // Then: message reply with reason completes the rejection
         $msgData = ['events' => [[
-            'type'    => 'message',
-            'source'  => ['userId' => $lineUserId],
+            'type' => 'message',
+            'source' => ['userId' => $lineUserId],
             'message' => ['type' => 'text', 'text' => 'ข้อมูลไม่ครบถ้วน'],
         ]]];
 
@@ -119,8 +119,8 @@ class LineWebhookControllerTest extends TestCase
         [$instance, $step, $approver] = $this->makePendingInstance();
 
         $msgData = ['events' => [[
-            'type'    => 'message',
-            'source'  => ['userId' => $approver->line_user_id],
+            'type' => 'message',
+            'source' => ['userId' => $approver->line_user_id],
             'message' => ['type' => 'text', 'text' => 'สวัสดี'],
         ]]];
 
@@ -179,6 +179,7 @@ class LineWebhookControllerTest extends TestCase
     private function postSigned(array $data): \Illuminate\Testing\TestResponse
     {
         $sig = $this->makeSignature($data);
+
         return $this->withHeaders(['X-Line-Signature' => $sig])
             ->postJson(self::ENDPOINT, $data);
     }
@@ -186,8 +187,8 @@ class LineWebhookControllerTest extends TestCase
     private function buildPostbackData(string $lineUserId, string $action, int $instanceId, int $stepNo): array
     {
         return ['events' => [[
-            'type'     => 'postback',
-            'source'   => ['userId' => $lineUserId],
+            'type' => 'postback',
+            'source' => ['userId' => $lineUserId],
             'postback' => ['data' => "a={$action}&i={$instanceId}&s={$stepNo}"],
         ]]];
     }

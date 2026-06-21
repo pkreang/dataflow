@@ -45,11 +45,11 @@ class MobileStatsController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'pending_approvals'    => $pendingApprovals,
+                'pending_approvals' => $pendingApprovals,
                 'my_submissions_total' => $mySubmissionsTotal,
                 'my_submissions_pending' => $mySubmissionsPending,
-                'my_drafts'            => $myDrafts,
-                'forms_available'      => $formsAvailable,
+                'my_drafts' => $myDrafts,
+                'forms_available' => $formsAvailable,
             ],
         ]);
     }

@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Position extends Model
 {
-    use HasFactory;
     use HasAutoCode;
+    use HasFactory;
 
     protected $fillable = [
         'auto_code',

@@ -132,9 +132,9 @@ class SchoolEFormTemplateSeeder extends Seeder
 
         // Leave form: global fallback → tier1; position-specific → tier2/tier3
         $this->syncPolicy($leaveForm, null, null, $wLeave1);
-        $headPos  = Position::query()->where('code', 'SCH_ACAD_HEAD')->first();
-        $vicePos  = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
-        $dirPos   = Position::query()->where('code', 'SCH_DIRECTOR')->first();
+        $headPos = Position::query()->where('code', 'SCH_ACAD_HEAD')->first();
+        $vicePos = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
+        $dirPos = Position::query()->where('code', 'SCH_DIRECTOR')->first();
         if ($headPos) {
             $this->syncPolicy($leaveForm, null, $headPos->id, $wLeave2);
         }
@@ -301,13 +301,13 @@ class SchoolEFormTemplateSeeder extends Seeder
     {
         DocumentFormWorkflowPolicy::query()->updateOrCreate(
             [
-                'form_id'     => $form->id,
+                'form_id' => $form->id,
                 'org_unit_id' => $orgUnitId,
                 'position_id' => $positionId,
             ],
             [
                 'use_amount_condition' => false,
-                'workflow_id'          => $workflow->id,
+                'workflow_id' => $workflow->id,
             ]
         );
     }
@@ -335,7 +335,7 @@ class SchoolEFormTemplateSeeder extends Seeder
     /** @return array<int, array<string, mixed>> */
     private function headApprovalStages(): array
     {
-        $vice     = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
+        $vice = Position::query()->where('code', 'SCH_VICE_PRINCIPAL')->first();
         $director = Position::query()->where('code', 'SCH_DIRECTOR')->first();
 
         if ($vice && $director) {
@@ -367,8 +367,8 @@ class SchoolEFormTemplateSeeder extends Seeder
         $company = \App\Models\Company::updateOrCreate(
             ['code' => 'SCH_DEMO'],
             [
-                'name'      => 'โรงเรียนสาธิต (Demo)',
-                'tax_id'    => '0000000000000',
+                'name' => 'โรงเรียนสาธิต (Demo)',
+                'tax_id' => '0000000000000',
                 'is_active' => true,
             ]
         );
@@ -377,8 +377,8 @@ class SchoolEFormTemplateSeeder extends Seeder
             ['code' => 'SCH_MAIN'],
             [
                 'company_id' => $company->id,
-                'name'       => 'สาขาหลัก',
-                'is_active'  => true,
+                'name' => 'สาขาหลัก',
+                'is_active' => true,
             ]
         );
     }

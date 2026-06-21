@@ -21,6 +21,7 @@ class WebhookController extends Controller
     {
         $perPage = $this->resolvePerPage($request, 'webhooks_per_page');
         $webhooks = Webhook::query()->orderBy('name')->paginate($perPage)->withQueryString();
+
         return view('settings.webhooks.index', compact('webhooks', 'perPage'));
     }
 
@@ -38,13 +39,13 @@ class WebhookController extends Controller
         $validated = $this->validateRequest($request);
 
         Webhook::create([
-            'name'             => $validated['name'],
-            'url'              => $validated['url'],
-            'secret'           => $validated['secret'] ?: Webhook::generateSecret(),
-            'events'           => $validated['events'] ?? [],
+            'name' => $validated['name'],
+            'url' => $validated['url'],
+            'secret' => $validated['secret'] ?: Webhook::generateSecret(),
+            'events' => $validated['events'] ?? [],
             'field_allowlists' => $this->normalizeAllowlists($validated['field_allowlists'] ?? null),
-            'is_active'        => (bool) ($validated['is_active'] ?? true),
-            'created_by'       => $request->user()?->id,
+            'is_active' => (bool) ($validated['is_active'] ?? true),
+            'created_by' => $request->user()?->id,
         ]);
 
         return redirect()->route('settings.webhooks.index')->with('success', __('common.saved'));
@@ -114,12 +115,12 @@ class WebhookController extends Controller
         $validated = $this->validateRequest($request);
 
         $webhook->update([
-            'name'             => $validated['name'],
-            'url'              => $validated['url'],
-            'secret'           => $validated['secret'] ?: $webhook->secret,
-            'events'           => $validated['events'] ?? [],
+            'name' => $validated['name'],
+            'url' => $validated['url'],
+            'secret' => $validated['secret'] ?: $webhook->secret,
+            'events' => $validated['events'] ?? [],
             'field_allowlists' => $this->normalizeAllowlists($validated['field_allowlists'] ?? null),
-            'is_active'        => (bool) ($validated['is_active'] ?? true),
+            'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
 
         return redirect()->route('settings.webhooks.edit', $webhook)->with('success', __('common.updated'));
@@ -128,17 +129,18 @@ class WebhookController extends Controller
     public function destroy(Webhook $webhook): RedirectResponse
     {
         $webhook->delete();
+
         return redirect()->route('settings.webhooks.index')->with('success', __('common.deleted'));
     }
 
     public function testSend(Webhook $webhook): JsonResponse
     {
         $payload = [
-            'event'      => 'test',
+            'event' => 'test',
             'webhook_id' => $webhook->id,
-            'sent_at'    => now()->toIso8601String(),
-            'sample'     => true,
-            'message'    => 'Test ping from Data Flow webhook hub.',
+            'sent_at' => now()->toIso8601String(),
+            'sample' => true,
+            'message' => 'Test ping from Data Flow webhook hub.',
         ];
 
         $signature = hash_hmac('sha256', json_encode($payload), $webhook->secret);
@@ -146,28 +148,29 @@ class WebhookController extends Controller
         try {
             $response = Http::timeout(8)
                 ->withHeaders([
-                    'X-Webhook-Event'     => 'test',
+                    'X-Webhook-Event' => 'test',
                     'X-Webhook-Signature' => $signature,
                 ])
                 ->post($webhook->url, $payload);
 
             $webhook->update([
-                'last_triggered_at'    => now(),
+                'last_triggered_at' => now(),
                 'last_response_status' => $response->status(),
             ]);
 
             return response()->json([
-                'ok'     => $response->successful(),
+                'ok' => $response->successful(),
                 'status' => $response->status(),
-                'body'   => mb_substr((string) $response->body(), 0, 500),
+                'body' => mb_substr((string) $response->body(), 0, 500),
             ]);
         } catch (\Throwable $e) {
             $webhook->update([
-                'last_triggered_at'    => now(),
+                'last_triggered_at' => now(),
                 'last_response_status' => 0,
             ]);
+
             return response()->json([
-                'ok'    => false,
+                'ok' => false,
                 'error' => $e->getMessage(),
             ], 200);
         }
@@ -178,15 +181,15 @@ class WebhookController extends Controller
         $allowedEvents = implode(',', Webhook::EVENTS);
 
         return $request->validate([
-            'name'                    => 'required|string|max:255',
-            'url'                     => 'required|url|max:2048',
-            'secret'                  => 'nullable|string|min:16|max:128',
-            'events'                  => 'nullable|array',
-            'events.*'                => "string|in:{$allowedEvents}",
-            'field_allowlists'        => 'nullable|array',
-            'field_allowlists.*'      => 'array',
-            'field_allowlists.*.*'    => 'string|max:120',
-            'is_active'               => 'nullable|boolean',
+            'name' => 'required|string|max:255',
+            'url' => 'required|url|max:2048',
+            'secret' => 'nullable|string|min:16|max:128',
+            'events' => 'nullable|array',
+            'events.*' => "string|in:{$allowedEvents}",
+            'field_allowlists' => 'nullable|array',
+            'field_allowlists.*' => 'array',
+            'field_allowlists.*.*' => 'string|max:120',
+            'is_active' => 'nullable|boolean',
         ]);
     }
 
@@ -201,13 +204,18 @@ class WebhookController extends Controller
         }
         $clean = [];
         foreach ($allowlists as $formKey => $fields) {
-            if (! is_string($formKey) || $formKey === '') continue;
-            if (! is_array($fields)) continue;
+            if (! is_string($formKey) || $formKey === '') {
+                continue;
+            }
+            if (! is_array($fields)) {
+                continue;
+            }
             $fields = array_values(array_unique(array_filter($fields, fn ($f) => is_string($f) && $f !== '')));
             if (count($fields) > 0) {
                 $clean[$formKey] = $fields;
             }
         }
+
         return count($clean) > 0 ? $clean : null;
     }
 }

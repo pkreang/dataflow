@@ -65,6 +65,7 @@ class RunningNumberController extends Controller
     {
         if ($request->has('toggle_active')) {
             $runningNumberConfig->update(['is_active' => ! $runningNumberConfig->is_active]);
+
             return redirect()->route('settings.running-numbers.index')->with('success', __('common.saved'));
         }
 

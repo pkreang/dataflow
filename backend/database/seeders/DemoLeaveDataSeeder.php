@@ -18,21 +18,24 @@ class DemoLeaveDataSeeder extends Seeder
         $form = DocumentForm::where('form_key', 'leave_request_default')->first();
         if (! $form) {
             $this->command?->warn('leave_request_default form not found.');
+
             return;
         }
 
         $existing = DocumentFormSubmission::where('form_id', $form->id)->count();
         if ($existing > 20) {
             $this->command?->info("Skipping leave submissions — already has {$existing} rows.");
+
             return;
         }
 
-        $userIds     = User::pluck('id')->all();
-        $orgUnitIds  = OrgUnit::where('type', 'department')->pluck('id')->all();
-        $workflowId  = ApprovalWorkflow::orderBy('id')->value('id');
+        $userIds = User::pluck('id')->all();
+        $orgUnitIds = OrgUnit::where('type', 'department')->pluck('id')->all();
+        $workflowId = ApprovalWorkflow::orderBy('id')->value('id');
 
         if (empty($userIds) || empty($orgUnitIds)) {
             $this->command?->warn('Users or org units missing.');
+
             return;
         }
 
@@ -50,46 +53,46 @@ class DemoLeaveDataSeeder extends Seeder
         foreach ($batches as $batch) {
             for ($i = 0; $i < $batch['count']; $i++) {
                 $seq++;
-                $daysAgo   = random_int(0, 90);
+                $daysAgo = random_int(0, 90);
                 $createdAt = Carbon::now()->subDays($daysAgo)->subHours(random_int(0, 23));
-                $userId    = $userIds[array_rand($userIds)];
+                $userId = $userIds[array_rand($userIds)];
                 $orgUnitId = $orgUnitIds[array_rand($orgUnitIds)];
                 $leaveType = $leaveTypes[array_rand($leaveTypes)];
-                $dateFrom  = Carbon::now()->addDays(random_int(1, 30))->format('Y-m-d');
-                $dateTo    = Carbon::parse($dateFrom)->addDays(random_int(0, 4))->format('Y-m-d');
+                $dateFrom = Carbon::now()->addDays(random_int(1, 30))->format('Y-m-d');
+                $dateTo = Carbon::parse($dateFrom)->addDays(random_int(0, 4))->format('Y-m-d');
                 $totalDays = Carbon::parse($dateFrom)->diffInDays(Carbon::parse($dateTo)) + 1;
-                $refNo     = 'LV' . $createdAt->format('ym') . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
+                $refNo = 'LV'.$createdAt->format('ym').'-'.str_pad($seq, 4, '0', STR_PAD_LEFT);
 
                 $instanceId = null;
                 if ($batch['instanceStatus'] && $workflowId) {
                     $instance = ApprovalInstance::create([
-                        'workflow_id'       => $workflowId,
-                        'org_unit_id'       => $orgUnitId,
+                        'workflow_id' => $workflowId,
+                        'org_unit_id' => $orgUnitId,
                         'requester_user_id' => $userId,
-                        'document_type'     => 'leave_request',
-                        'reference_no'      => $refNo,
-                        'payload'           => [],
-                        'current_step_no'   => 1,
-                        'status'            => $batch['instanceStatus'],
-                        'created_at'        => $createdAt,
-                        'updated_at'        => $createdAt->copy()->addHours(random_int(1, 24)),
+                        'document_type' => 'leave_request',
+                        'reference_no' => $refNo,
+                        'payload' => [],
+                        'current_step_no' => 1,
+                        'status' => $batch['instanceStatus'],
+                        'created_at' => $createdAt,
+                        'updated_at' => $createdAt->copy()->addHours(random_int(1, 24)),
                     ]);
                     $instanceId = $instance->id;
                 }
 
                 DocumentFormSubmission::create([
-                    'form_id'               => $form->id,
-                    'user_id'               => $userId,
-                    'org_unit_id'           => $orgUnitId,
-                    'status'                => $batch['status'],
-                    'reference_no'          => $refNo,
-                    'approval_instance_id'  => $instanceId,
-                    'payload'               => [
+                    'form_id' => $form->id,
+                    'user_id' => $userId,
+                    'org_unit_id' => $orgUnitId,
+                    'status' => $batch['status'],
+                    'reference_no' => $refNo,
+                    'approval_instance_id' => $instanceId,
+                    'payload' => [
                         'leave_type' => $leaveType,
-                        'date_from'  => $dateFrom,
-                        'date_to'    => $dateTo,
+                        'date_from' => $dateFrom,
+                        'date_to' => $dateTo,
                         'total_days' => $totalDays,
-                        'reason'     => null,
+                        'reason' => null,
                     ],
                     'created_at' => $createdAt,
                     'updated_at' => $createdAt->copy()->addMinutes(random_int(1, 30)),

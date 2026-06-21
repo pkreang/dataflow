@@ -66,7 +66,7 @@ class QrTemplateResolverTest extends TestCase
     {
         $submission = $this->makeSubmission(['ref' => null]);
         $resolved = QrTemplateResolver::resolve('{ref_no}', $submission);
-        $this->assertSame('#' . $submission->id, $resolved);
+        $this->assertSame('#'.$submission->id, $resolved);
     }
 
     public function test_resolves_date_to_iso_format(): void
@@ -98,7 +98,7 @@ class QrTemplateResolverTest extends TestCase
         ]);
         $user = User::create([
             'first_name' => 'QR', 'last_name' => 'Test',
-            'email' => 'qr_test_' . uniqid() . '@example.test',
+            'email' => 'qr_test_'.uniqid().'@example.test',
             'password' => 'password', 'is_active' => true, 'is_super_admin' => false,
         ]);
 

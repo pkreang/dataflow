@@ -146,9 +146,10 @@ class PayloadDifferTest extends TestCase
     private function makeFieldDef(string $key, string $type): DocumentFormField
     {
         // Hydrate without persisting — the differ only reads $field->field_type
-        $field = new DocumentFormField();
+        $field = new DocumentFormField;
         $field->field_key = $key;
         $field->field_type = $type;
+
         return $field;
     }
 }

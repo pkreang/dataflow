@@ -16,7 +16,9 @@ class KpiCycleAssignment extends Model
     use HasFactory;
 
     public const ROLE_SELF = 'self';
+
     public const ROLE_SUPERVISOR = 'supervisor';
+
     public const ROLE_PEER = 'peer';
 
     protected $fillable = [

@@ -68,17 +68,17 @@ class WorkflowRejectedNotification extends Notification implements ShouldQueue
         $ref = $this->instance->reference_no ?? "#{$this->instance->id}";
 
         $msg = "\n"
-            . "❌ " . __('notifications.workflow_rejected_title') . "\n"
-            . __('notifications.workflow_rejected_body', [
+            .'❌ '.__('notifications.workflow_rejected_title')."\n"
+            .__('notifications.workflow_rejected_body', [
                 'document_type' => $this->documentTypeLabel(),
                 'reference' => $ref,
             ]);
 
         if ($this->comment) {
-            $msg .= "\n" . __('notifications.rejection_comment', ['comment' => $this->comment]);
+            $msg .= "\n".__('notifications.rejection_comment', ['comment' => $this->comment]);
         }
 
-        return $msg . "\n" . url($this->documentUrl());
+        return $msg."\n".url($this->documentUrl());
     }
 
     private function documentTypeLabel(): string
@@ -90,6 +90,7 @@ class WorkflowRejectedNotification extends Notification implements ShouldQueue
         $formName = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
             ->with('form:id,name')
             ->first()?->form?->name;
+
         return $formName ?? $this->instance->document_type;
     }
 
@@ -107,6 +108,7 @@ class WorkflowRejectedNotification extends Notification implements ShouldQueue
     {
         $submissionId = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
             ->value('id');
+
         return $submissionId
             ? route('forms.submission.show', $submissionId, false)
             : '/approvals/my-approvals';

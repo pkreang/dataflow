@@ -6,7 +6,6 @@ use App\Models\Equipment;
 use App\Models\EquipmentCategory;
 use App\Models\EquipmentLocation;
 use App\Models\PmPlan;
-use App\Models\PmTaskItem;
 use App\Models\PmWorkOrder;
 use App\Services\Cmms\PmWorkOrderGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;

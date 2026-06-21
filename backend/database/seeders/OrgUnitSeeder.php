@@ -16,18 +16,18 @@ class OrgUnitSeeder extends Seeder
 {
     public function run(): void
     {
-        $gm       = User::where('email', 'gm@demo.com')->first();
-        $manager  = User::where('email', 'manager@demo.com')->first();
+        $gm = User::where('email', 'gm@demo.com')->first();
+        $manager = User::where('email', 'manager@demo.com')->first();
 
         // Root: โรงเรียนตัวอย่าง
         $root = OrgUnit::updateOrCreate(
             ['name' => 'โรงเรียนตัวอย่าง'],
             [
-                'type'         => 'company',
-                'parent_id'    => null,
+                'type' => 'company',
+                'parent_id' => null,
                 'head_user_id' => $gm?->id,
-                'sort_order'   => 1,
-                'is_active'    => true,
+                'sort_order' => 1,
+                'is_active' => true,
             ]
         );
 
@@ -35,11 +35,11 @@ class OrgUnitSeeder extends Seeder
         $acad = OrgUnit::updateOrCreate(
             ['name' => 'ฝ่ายวิชาการ'],
             [
-                'type'         => 'department',
-                'parent_id'    => $root->id,
+                'type' => 'department',
+                'parent_id' => $root->id,
                 'head_user_id' => $manager?->id,
-                'sort_order'   => 1,
-                'is_active'    => true,
+                'sort_order' => 1,
+                'is_active' => true,
             ]
         );
 
@@ -47,22 +47,22 @@ class OrgUnitSeeder extends Seeder
         $admin = OrgUnit::updateOrCreate(
             ['name' => 'ฝ่ายธุรการ'],
             [
-                'type'         => 'department',
-                'parent_id'    => $root->id,
+                'type' => 'department',
+                'parent_id' => $root->id,
                 'head_user_id' => null,
-                'sort_order'   => 2,
-                'is_active'    => true,
+                'sort_order' => 2,
+                'is_active' => true,
             ]
         );
 
         // Assign org_unit_id to demo users
         $assignments = [
-            'employee@demo.com'       => $acad->id,
-            'manager@demo.com'        => $acad->id,
-            'gm@demo.com'             => $root->id,
-            'admin.staff@demo.com'    => $admin->id,
-            'finance@demo.com'        => $admin->id,
-            'facility@demo.com'       => $admin->id,
+            'employee@demo.com' => $acad->id,
+            'manager@demo.com' => $acad->id,
+            'gm@demo.com' => $root->id,
+            'admin.staff@demo.com' => $admin->id,
+            'finance@demo.com' => $admin->id,
+            'facility@demo.com' => $admin->id,
         ];
 
         foreach ($assignments as $email => $orgUnitId) {

@@ -224,7 +224,7 @@ class LookupRegistry
 
             // Append location name for equipment
             if ($config['model'] === Equipment::class && $item->relationLoaded('location') && $item->location) {
-                $display .= ' — ' . $item->location->name;
+                $display .= ' — '.$item->location->name;
             }
 
             return [

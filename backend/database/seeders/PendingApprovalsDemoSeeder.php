@@ -24,6 +24,7 @@ class PendingApprovalsDemoSeeder extends Seeder
 
         if (! $admin) {
             $this->command?->warn('No admin user found — skip.');
+
             return;
         }
 
@@ -36,6 +37,7 @@ class PendingApprovalsDemoSeeder extends Seeder
 
         if (! $form || ! $workflowId) {
             $this->command?->warn('Missing form or workflow — skip.');
+
             return;
         }
 

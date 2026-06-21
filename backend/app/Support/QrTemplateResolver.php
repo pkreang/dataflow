@@ -35,7 +35,7 @@ class QrTemplateResolver
         $dateSource = $submittedAt ?? $submission->created_at;
 
         $tokens = [
-            '{ref_no}' => (string) ($submission->reference_no ?? ('#' . $submission->id)),
+            '{ref_no}' => (string) ($submission->reference_no ?? ('#'.$submission->id)),
             '{id}' => (string) $submission->id,
             '{url}' => route('forms.submission.show', $submission),
             '{date}' => $dateSource ? $dateSource->format('Y-m-d') : '',
@@ -48,6 +48,7 @@ class QrTemplateResolver
             if (is_array($val)) {
                 $val = implode(', ', array_map('strval', $val));
             }
+
             return (string) $val;
         }, $resolved);
     }

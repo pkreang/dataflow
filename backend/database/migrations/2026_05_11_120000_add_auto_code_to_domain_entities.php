@@ -27,7 +27,7 @@ return new class extends Migration
             $i = 1;
             DB::table($table)->orderBy('id')->cursor()->each(function ($row) use ($table, $prefix, &$i) {
                 DB::table($table)->where('id', $row->id)->update([
-                    'auto_code' => $prefix . '-' . str_pad((string) $i++, 3, '0', STR_PAD_LEFT),
+                    'auto_code' => $prefix.'-'.str_pad((string) $i++, 3, '0', STR_PAD_LEFT),
                 ]);
             });
 
@@ -41,7 +41,7 @@ return new class extends Migration
     {
         foreach ($this->tables() as [$table, $_prefix]) {
             Schema::table($table, function (Blueprint $t) use ($table) {
-                $t->dropUnique($table . '_auto_code_unique');
+                $t->dropUnique($table.'_auto_code_unique');
                 $t->dropColumn('auto_code');
             });
         }

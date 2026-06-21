@@ -197,14 +197,15 @@ class NotificationSettingController extends Controller
                 ->with('error', __('notifications.line_test_send_no_user_id'));
         }
 
-        $notification = new class extends Notification {
+        $notification = new class extends Notification
+        {
             public function toLineMessage(object $notifiable): string
             {
                 return __('notifications.line_test_send_message', ['app' => config('app.name')]);
             }
         };
 
-        (new LineMessagingChannel())->send($admin, $notification);
+        (new LineMessagingChannel)->send($admin, $notification);
 
         return redirect()->route('settings.notifications.index')
             ->with('success', __('notifications.line_test_send_dispatched'));

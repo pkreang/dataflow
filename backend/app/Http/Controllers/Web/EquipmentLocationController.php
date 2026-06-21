@@ -83,6 +83,7 @@ class EquipmentLocationController extends Controller
     {
         if ($request->has('toggle_active')) {
             $equipmentLocation->update(['is_active' => ! $equipmentLocation->is_active]);
+
             return redirect()->route('settings.equipment-locations.index')->with('success', __('common.saved'));
         }
 

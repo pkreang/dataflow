@@ -135,7 +135,7 @@ class FormSchemaService
      * Insert a row into the fdata_* table. Returns the inserted row ID, or null if no table.
      *
      * @param  array<string, mixed>  $fieldPayload  Field key → value pairs from the form submission
-     * @param  array<string, mixed>  $meta           Reserved column values (user_id, org_unit_id, status, etc.)
+     * @param  array<string, mixed>  $meta  Reserved column values (user_id, org_unit_id, status, etc.)
      */
     public function insertRow(DocumentForm $form, array $fieldPayload, array $meta = []): ?int
     {
@@ -161,7 +161,7 @@ class FormSchemaService
      * Update an existing row in the fdata_* table.
      *
      * @param  array<string, mixed>  $fieldPayload  Field key → value pairs
-     * @param  array<string, mixed>  $meta           Reserved column overrides
+     * @param  array<string, mixed>  $meta  Reserved column overrides
      */
     public function updateRow(DocumentForm $form, int $rowId, array $fieldPayload, array $meta = []): void
     {

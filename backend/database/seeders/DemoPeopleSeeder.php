@@ -59,12 +59,13 @@ class DemoPeopleSeeder extends Seeder
         // Map SCH_ department code → org unit name (only ฝ่ายวิชาการ / ฝ่ายธุรการ exist).
         $orgUnitNameByCode = [
             'SCH_ACAD' => 'ฝ่ายวิชาการ',
-            'SCH_ADM'  => 'ฝ่ายธุรการ',
-            'SCH_FIN'  => 'ฝ่ายการเงิน',
-            'SCH_FAC'  => 'ฝ่ายอาคารและสถานที่',
+            'SCH_ADM' => 'ฝ่ายธุรการ',
+            'SCH_FIN' => 'ฝ่ายการเงิน',
+            'SCH_FAC' => 'ฝ่ายอาคารและสถานที่',
         ];
         $orgUnitIdForCode = function (string $code) use ($orgUnitsByName, $orgUnitNameByCode): ?int {
             $name = $orgUnitNameByCode[$code] ?? null;
+
             return $name ? $orgUnitsByName->get($name)?->id : null;
         };
 

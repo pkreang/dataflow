@@ -21,9 +21,13 @@ use Illuminate\Support\Str;
 class LineLoginService
 {
     private const AUTHORIZE_URL = 'https://access.line.me/oauth2/v2.1/authorize';
+
     private const TOKEN_URL = 'https://api.line.me/oauth2/v2.1/token';
+
     private const PROFILE_URL = 'https://api.line.me/v2/profile';
+
     private const SCOPES = 'profile openid';
+
     private const SESSION_STATE_KEY = 'oauth_line_login_state';
 
     public function authorizationUrl(): string

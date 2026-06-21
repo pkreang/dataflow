@@ -6,7 +6,6 @@ use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
 use App\Models\KpiCycle;
 use App\Models\KpiCycleAssignment;
-use App\Models\User;
 use App\Services\Kpi\KpiCycleOpener;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;

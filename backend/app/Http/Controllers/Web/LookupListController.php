@@ -70,6 +70,7 @@ class LookupListController extends Controller
     {
         if ($request->has('toggle_active')) {
             $lookup->update(['is_active' => ! $lookup->is_active]);
+
             return redirect()->route('settings.lookups.index')->with('success', __('common.saved'));
         }
 

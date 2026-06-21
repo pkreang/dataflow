@@ -17,7 +17,7 @@ class UserObserver
             action: 'created',
             changedFields: [
                 'email' => ['from' => null, 'to' => $user->email],
-                'name'  => ['from' => null, 'to' => $user->first_name.' '.$user->last_name],
+                'name' => ['from' => null, 'to' => $user->first_name.' '.$user->last_name],
             ],
         );
     }
@@ -31,7 +31,7 @@ class UserObserver
             }
             $changes[$key] = [
                 'from' => $user->getOriginal($key),
-                'to'   => $newValue,
+                'to' => $newValue,
             ];
         }
         if (! $changes) {
@@ -53,7 +53,7 @@ class UserObserver
             action: 'deleted',
             changedFields: [
                 'email' => ['from' => $user->email, 'to' => null],
-                'name'  => ['from' => $user->first_name.' '.$user->last_name, 'to' => null],
+                'name' => ['from' => $user->first_name.' '.$user->last_name, 'to' => null],
             ],
         );
     }

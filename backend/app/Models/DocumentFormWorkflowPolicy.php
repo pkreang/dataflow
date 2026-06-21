@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Position;
 
 class DocumentFormWorkflowPolicy extends Model
 {
@@ -24,7 +23,7 @@ class DocumentFormWorkflowPolicy extends Model
     {
         return [
             'use_amount_condition' => 'boolean',
-            'field_conditions'     => 'array',
+            'field_conditions' => 'array',
         ];
     }
 

@@ -21,6 +21,7 @@ class SettingObserver
                 action: 'created',
                 changedFields: ['value' => ['from' => null, 'to' => $new]],
             );
+
             return;
         }
 

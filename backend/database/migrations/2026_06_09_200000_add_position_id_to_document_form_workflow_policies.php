@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     private const TABLE = 'document_form_workflow_policies';
+
     private const OLD_UNIQUE = 'document_form_workflow_policies_form_id_department_id_unique';
+
     private const NEW_UNIQUE = 'dfwp_form_dept_pos_unique';
+
     private const DEPT_FK = 'document_form_workflow_policies_department_id_foreign';
 
     public function up(): void

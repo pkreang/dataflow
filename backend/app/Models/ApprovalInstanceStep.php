@@ -67,10 +67,10 @@ class ApprovalInstanceStep extends Model
             foreach ($approvedBy as $ab) {
                 $u = User::find($ab['user_id']);
                 $matches = match ($rule['type'] ?? '') {
-                    'user'     => (int) ($rule['ref'] ?? 0) === (int) $ab['user_id'],
+                    'user' => (int) ($rule['ref'] ?? 0) === (int) $ab['user_id'],
                     'position' => $u && $u->position_id && (string) $u->position_id === (string) ($rule['ref'] ?? ''),
-                    'role'     => $u && $u->hasRole($rule['ref'] ?? ''),
-                    default    => false,
+                    'role' => $u && $u->hasRole($rule['ref'] ?? ''),
+                    default => false,
                 };
                 if ($matches) {
                     $satisfied++;
@@ -78,6 +78,7 @@ class ApprovalInstanceStep extends Model
                 }
             }
         }
+
         return $satisfied;
     }
 

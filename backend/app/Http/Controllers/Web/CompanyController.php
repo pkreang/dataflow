@@ -219,6 +219,7 @@ class CompanyController extends Controller
     {
         if ($request->has('toggle_active')) {
             $company->update(['is_active' => ! $company->is_active]);
+
             return redirect()->route('companies.index')->with('success', __('common.saved'));
         }
 

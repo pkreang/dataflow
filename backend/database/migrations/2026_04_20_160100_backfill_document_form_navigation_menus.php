@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\DocumentForm;
-use App\Models\NavigationMenu;
 use Illuminate\Database\Migrations\Migration;
 
 /**

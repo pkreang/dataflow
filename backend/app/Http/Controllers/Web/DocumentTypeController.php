@@ -72,6 +72,7 @@ class DocumentTypeController extends Controller
     {
         if ($request->has('toggle_active')) {
             $documentType->update(['is_active' => ! $documentType->is_active]);
+
             return redirect()->route('settings.document-types.index')->with('success', __('common.saved'));
         }
 

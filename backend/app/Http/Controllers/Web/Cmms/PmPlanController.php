@@ -12,7 +12,6 @@ use App\Models\SparePart;
 use App\Services\Cmms\PmWorkOrderGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -84,6 +83,7 @@ class PmPlanController extends Controller
     {
         if ($request->has('toggle_active')) {
             $plan->update(['is_active' => ! $plan->is_active]);
+
             return redirect()->route('cmms.pm.plans.index')->with('success', __('common.saved'));
         }
 

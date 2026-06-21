@@ -31,6 +31,7 @@ class SignatureWorkflowDemoSeeder extends Seeder
 
         if (! $admin) {
             $this->command?->warn('No admin user found — skip SignatureWorkflowDemo.');
+
             return;
         }
 

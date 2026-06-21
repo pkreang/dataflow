@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\ApprovalInstance;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -21,6 +19,7 @@ class EvaluationDemoSeeder extends Seeder
         $evalForm = DocumentForm::where('form_key', 'evaluation_default')->first();
         if (! $evalForm) {
             $this->command?->warn('evaluation_default form missing — run EvaluationFormSeeder first.');
+
             return;
         }
 
@@ -33,6 +32,7 @@ class EvaluationDemoSeeder extends Seeder
 
         if ($pending->isEmpty()) {
             $this->command?->warn('No pending submissions to approve — run PendingApprovalsDemoSeeder first.');
+
             return;
         }
 

@@ -16,7 +16,7 @@ class LookupController extends Controller
         $accessibleKeys = array_keys(LookupRegistry::accessibleSources($userPerms, $isSuperAdmin));
 
         $validated = $request->validate([
-            'source' => 'required|string|in:' . implode(',', $accessibleKeys),
+            'source' => 'required|string|in:'.implode(',', $accessibleKeys),
             'filters' => 'nullable|array',
             'filters.*' => 'nullable|string|max:100',
         ]);

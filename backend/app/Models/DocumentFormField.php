@@ -70,7 +70,8 @@ class DocumentFormField extends Model
     public function getLocalizedLabelAttribute(): string
     {
         $locale = app()->getLocale();
-        $key = 'label_' . $locale;
+        $key = 'label_'.$locale;
+
         return (string) (
             (! empty($this->{$key}) ? $this->{$key} : null)
             ?? (! empty($this->label_en) ? $this->label_en : null)

@@ -45,6 +45,7 @@ class IncomingWebhook extends Model
     public static function generateSlug(string $name): string
     {
         $base = Str::slug($name) ?: 'webhook';
+
         return $base.'-'.Str::lower(Str::random(6));
     }
 }

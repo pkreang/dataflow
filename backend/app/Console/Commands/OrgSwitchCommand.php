@@ -15,7 +15,7 @@ class OrgSwitchCommand extends Command
 
     private const CREDS = [
         'factory' => ['email' => 'somchai@nteq.test',       'password' => 'Nteq1234!',  'label' => 'NTEQ Polymer (โรงงาน)'],
-        'school'  => ['email' => 'teacher.thai@bodin.test', 'password' => 'Bodin1234!', 'label' => 'Bodindecha (โรงเรียน)'],
+        'school' => ['email' => 'teacher.thai@bodin.test', 'password' => 'Bodin1234!', 'label' => 'Bodindecha (โรงเรียน)'],
     ];
 
     public function handle(): int

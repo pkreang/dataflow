@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EquipmentCategory extends Model
 {
-    use HasFactory;
     use HasAutoCode;
+    use HasFactory;
 
     protected $fillable = [
         'auto_code',

@@ -30,12 +30,12 @@ class DocumentFormCalendarController extends Controller
     public function events(Request $request): JsonResponse
     {
         $user = $request->user();
-        $year  = (int) $request->input('year',  now()->year);
+        $year = (int) $request->input('year', now()->year);
         $month = (int) $request->input('month', now()->month);
         $formKey = $request->input('form_key', '');
 
         $start = Carbon::create($year, $month, 1)->startOfDay();
-        $end   = $start->copy()->endOfMonth()->endOfDay();
+        $end = $start->copy()->endOfMonth()->endOfDay();
 
         $query = DocumentFormSubmission::query()
             ->with(['form:id,name,form_key', 'user:id,first_name,last_name', 'instance:id,status'])
@@ -80,21 +80,21 @@ class DocumentFormCalendarController extends Controller
                 continue;
             }
 
-            $userName = trim(($sub->user?->first_name ?? '') . ' ' . ($sub->user?->last_name ?? ''));
+            $userName = trim(($sub->user?->first_name ?? '').' '.($sub->user?->last_name ?? ''));
             $eventData = [
-                'id'        => $sub->id,
-                'ref_no'    => $sub->reference_no ?? ('#' . $sub->id),
+                'id' => $sub->id,
+                'ref_no' => $sub->reference_no ?? ('#'.$sub->id),
                 'form_name' => $sub->form?->name ?? '—',
                 'user_name' => $userName,
-                'status'    => $effectiveStatus,
-                'url'       => route('forms.submission.show', $sub->id),
+                'status' => $effectiveStatus,
+                'url' => route('forms.submission.show', $sub->id),
             ];
 
             if (isset($payload['date_from']) && $payload['date_from']) {
                 // Smart date: use leave period dates from payload
                 try {
                     $evStart = Carbon::parse($payload['date_from'])->startOfDay();
-                    $evEnd   = isset($payload['date_to']) && $payload['date_to']
+                    $evEnd = isset($payload['date_to']) && $payload['date_to']
                         ? Carbon::parse($payload['date_to'])->startOfDay()
                         : $evStart->copy();
 
@@ -104,7 +104,7 @@ class DocumentFormCalendarController extends Controller
                     }
 
                     $eventData['start_date'] = $evStart->toDateString();
-                    $eventData['end_date']   = $evEnd->toDateString();
+                    $eventData['end_date'] = $evEnd->toDateString();
 
                     $cur = $evStart->copy();
                     while ($cur->lte($evEnd)) {

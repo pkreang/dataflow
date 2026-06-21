@@ -12,8 +12,8 @@ class DevicePushTokenController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'token'       => 'required|string|max:512',
-            'platform'    => 'required|in:ios,android',
+            'token' => 'required|string|max:512',
+            'platform' => 'required|in:ios,android',
             'device_name' => 'nullable|string|max:255',
         ]);
 
@@ -22,9 +22,9 @@ class DevicePushTokenController extends Controller
         DevicePushToken::updateOrCreate(
             ['token' => $validated['token']],
             [
-                'user_id'      => $user->id,
-                'platform'     => $validated['platform'],
-                'device_name'  => $validated['device_name'] ?? null,
+                'user_id' => $user->id,
+                'platform' => $validated['platform'],
+                'device_name' => $validated['device_name'] ?? null,
                 'last_seen_at' => now(),
             ]
         );

@@ -127,6 +127,7 @@ class PmWorkOrderGenerator
                 return false;
             }
             $current = (float) ($plan->equipment->runtime_hours ?? 0);
+
             return $current >= (float) $plan->next_due_runtime;
         }
 
@@ -145,16 +146,18 @@ class PmWorkOrderGenerator
         if ($plan->next_due_at) {
             return $plan->next_due_at->copy();
         }
+
         return now()->startOfDay();
     }
 
     private function nextCode(): string
     {
-        $prefix = 'WO-PM-' . now()->format('Ym') . '-';
-        $latest = PmWorkOrder::where('code', 'like', $prefix . '%')
+        $prefix = 'WO-PM-'.now()->format('Ym').'-';
+        $latest = PmWorkOrder::where('code', 'like', $prefix.'%')
             ->orderByDesc('code')
             ->value('code');
         $seq = $latest ? ((int) substr($latest, strlen($prefix)) + 1) : 1;
-        return $prefix . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+
+        return $prefix.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
     }
 }

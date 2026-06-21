@@ -185,6 +185,7 @@ class PmControllerTest extends TestCase
     {
         $cat = EquipmentCategory::create(['name' => 'Pump', 'code' => 'PUMP-'.uniqid(), 'is_active' => true]);
         $loc = EquipmentLocation::create(['name' => 'Plant', 'code' => 'P-'.uniqid(), 'is_active' => true]);
+
         return Equipment::create([
             'name' => 'Pump A',
             'code' => 'EQ-'.uniqid(),
@@ -198,6 +199,7 @@ class PmControllerTest extends TestCase
     private function makePlan(array $overrides = []): PmPlan
     {
         $eq = $this->makeEquipment();
+
         return PmPlan::create(array_merge([
             'equipment_id' => $eq->id,
             'name' => 'Plan',
@@ -210,6 +212,7 @@ class PmControllerTest extends TestCase
     private function makeWorkOrder(string $status): PmWorkOrder
     {
         $plan = $this->makePlan();
+
         return PmWorkOrder::create([
             'pm_plan_id' => $plan->id,
             'equipment_id' => $plan->equipment_id,
@@ -223,6 +226,7 @@ class PmControllerTest extends TestCase
     private function actingAsPlanner(): self
     {
         $user = $this->makeUserWith(['pm.view', 'pm.plan']);
+
         return $this->actingAsWebSession($user);
     }
 
@@ -246,12 +250,14 @@ class PmControllerTest extends TestCase
         foreach ($perms as $p) {
             $user->givePermissionTo(Permission::findByName($p));
         }
+
         return $user;
     }
 
     private function actingAsWebSession(User $user): self
     {
         $token = $user->createToken('phpunit-pm')->plainTextToken;
+
         return $this->withSession([
             'api_token' => $token,
             'user' => [

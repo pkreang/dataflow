@@ -24,16 +24,17 @@ trait HasAutoCode
 
         return DB::transaction(function () use ($prefix, $table) {
             $rows = DB::table($table)
-                ->where('auto_code', 'like', $prefix . '-%')
+                ->where('auto_code', 'like', $prefix.'-%')
                 ->lockForUpdate()
                 ->pluck('auto_code');
 
             $max = $rows->reduce(function ($carry, $code) use ($prefix) {
                 $n = (int) substr((string) $code, strlen($prefix) + 1);
+
                 return max($carry, $n);
             }, 0);
 
-            return $prefix . '-' . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
+            return $prefix.'-'.str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
         });
     }
 }

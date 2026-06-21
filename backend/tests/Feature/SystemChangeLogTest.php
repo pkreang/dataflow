@@ -144,6 +144,7 @@ class SystemChangeLogTest extends TestCase
     private function actingAsWebSession(User $user): self
     {
         $token = $user->createToken('phpunit-scl')->plainTextToken;
+
         return $this->withSession([
             'api_token' => $token,
             'user' => [

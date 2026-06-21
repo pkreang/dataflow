@@ -26,7 +26,7 @@ class ReportDashboard extends Model
     protected function casts(): array
     {
         return [
-            'is_active'      => 'boolean',
+            'is_active' => 'boolean',
             'layout_columns' => 'integer',
         ];
     }

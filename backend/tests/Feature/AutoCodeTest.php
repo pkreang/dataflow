@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\ApprovalWorkflow;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\OrgUnit;
 use App\Models\DocumentForm;
 use App\Models\DocumentType;
 use App\Models\Equipment;
@@ -13,6 +12,7 @@ use App\Models\EquipmentCategory;
 use App\Models\EquipmentLocation;
 use App\Models\LookupList;
 use App\Models\NavigationMenu;
+use App\Models\OrgUnit;
 use App\Models\PmPlan;
 use App\Models\Position;
 use App\Models\ReportDashboard;
@@ -31,9 +31,9 @@ class AutoCodeTest extends TestCase
     public function test_auto_code_generated_on_create_for_each_entity(): void
     {
         $dept = OrgUnit::create(['name' => 'IT', 'type' => 'department']);
-        $pos  = Position::create(['name' => 'Manager', 'code' => 'MGR']);
-        $cat  = EquipmentCategory::create(['name' => 'Pump', 'code' => 'PUMP']);
-        $loc  = EquipmentLocation::create(['name' => 'Bldg A', 'code' => 'BLDA']);
+        $pos = Position::create(['name' => 'Manager', 'code' => 'MGR']);
+        $cat = EquipmentCategory::create(['name' => 'Pump', 'code' => 'PUMP']);
+        $loc = EquipmentLocation::create(['name' => 'Bldg A', 'code' => 'BLDA']);
 
         $this->assertSame('ORG-001', $dept->auto_code);
         $this->assertSame('POS-001', $pos->auto_code);

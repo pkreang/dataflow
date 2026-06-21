@@ -38,6 +38,7 @@ class DocumentFormColumnAnnotation extends Model
     public function label(?string $locale = null): string
     {
         $locale ??= app()->getLocale();
+
         return $locale === 'th'
             ? ($this->label_th ?: $this->label_en ?: $this->column_name)
             : ($this->label_en ?: $this->label_th ?: $this->column_name);

@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ApprovalInstance;
 use App\Models\ApprovalInstanceStep;
 use App\Models\User;
 use App\Notifications\ApprovalEscalationReminder;
@@ -26,8 +25,7 @@ class SendApprovalEscalationReminders extends Command
             ->whereHas('approvalInstance', fn ($q) => $q->where('status', 'pending'))
             ->with(['approvalInstance'])
             ->get()
-            ->filter(fn (ApprovalInstanceStep $step) =>
-                $step->approvalInstance->current_step_no === $step->step_no
+            ->filter(fn (ApprovalInstanceStep $step) => $step->approvalInstance->current_step_no === $step->step_no
                 && $step->created_at->copy()->addDays($step->escalation_after_days)->lte($now)
             );
 

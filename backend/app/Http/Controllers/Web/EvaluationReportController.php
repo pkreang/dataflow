@@ -28,6 +28,7 @@ class EvaluationReportController extends Controller
             if (preg_match('/^\s*([1-5])/', (string) $raw, $m)) {
                 return (int) $m[1];
             }
+
             return null;
         };
 
@@ -44,6 +45,7 @@ class EvaluationReportController extends Controller
             ->groupBy(fn ($e) => $e->originalSubmission?->form?->name ?? '—')
             ->map(function ($group) use ($extractRating) {
                 $ratings = $group->map(fn ($e) => $extractRating($e->payload['overall_rating'] ?? null))->filter()->values();
+
                 return [
                     'name' => $group->first()->originalSubmission?->form?->name ?? '—',
                     'count' => $group->count(),

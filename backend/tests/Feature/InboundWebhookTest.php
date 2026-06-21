@@ -38,6 +38,7 @@ class InboundWebhookTest extends TestCase
             'form_id' => $form->id, 'field_key' => 'location', 'label' => 'Location',
             'field_type' => 'text', 'is_required' => false, 'sort_order' => 2,
         ]);
+
         return $form;
     }
 

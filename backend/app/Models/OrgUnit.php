@@ -71,6 +71,7 @@ class OrgUnit extends Model
             $ancestors->prepend($unit);
             $unit = $unit->parent;
         }
+
         return $ancestors;
     }
 
@@ -84,6 +85,7 @@ class OrgUnit extends Model
                 return null;
             }
         }
+
         return $unit;
     }
 }

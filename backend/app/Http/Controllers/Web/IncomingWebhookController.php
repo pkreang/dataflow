@@ -72,6 +72,7 @@ class IncomingWebhookController extends Controller
     {
         if ($request->has('toggle_active')) {
             $inbound_webhook->update(['is_active' => ! $inbound_webhook->is_active]);
+
             return redirect()->route('settings.inbound-webhooks.index')->with('success', __('common.saved'));
         }
 
@@ -91,6 +92,7 @@ class IncomingWebhookController extends Controller
     public function destroy(IncomingWebhook $inbound_webhook): RedirectResponse
     {
         $inbound_webhook->delete();
+
         return redirect()->route('settings.inbound-webhooks.index')->with('success', __('common.deleted'));
     }
 

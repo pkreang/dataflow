@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ApprovalInstance;
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStage;
 use App\Models\DocumentForm;
@@ -19,6 +18,7 @@ class AttributeBasedRoutingTest extends TestCase
     use RefreshDatabase;
 
     private ApprovalFlowService $svc;
+
     private ReflectionMethod $evalMethod;
 
     protected function setUp(): void
@@ -124,10 +124,10 @@ class AttributeBasedRoutingTest extends TestCase
     {
         return User::create([
             'first_name' => 'Test',
-            'last_name'  => 'Requester',
-            'email'      => 'requester-attr@example.com',
-            'password'   => 'password',
-            'is_active'  => true,
+            'last_name' => 'Requester',
+            'email' => 'requester-attr@example.com',
+            'password' => 'password',
+            'is_active' => true,
             'is_super_admin' => false,
         ]);
     }
@@ -136,10 +136,10 @@ class AttributeBasedRoutingTest extends TestCase
     {
         return User::create([
             'first_name' => 'App',
-            'last_name'  => 'Rover',
-            'email'      => $email,
-            'password'   => 'password',
-            'is_active'  => true,
+            'last_name' => 'Rover',
+            'email' => $email,
+            'password' => 'password',
+            'is_active' => true,
             'is_super_admin' => false,
         ]);
     }
@@ -147,19 +147,20 @@ class AttributeBasedRoutingTest extends TestCase
     private function makeWorkflow(string $docType, User $approver): ApprovalWorkflow
     {
         $wf = ApprovalWorkflow::create([
-            'name'          => 'WF-' . uniqid(),
+            'name' => 'WF-'.uniqid(),
             'document_type' => $docType,
-            'is_active'     => true,
+            'is_active' => true,
         ]);
         ApprovalWorkflowStage::create([
-            'workflow_id'    => $wf->id,
-            'step_no'        => 1,
-            'name'           => 'Approve',
-            'approver_type'  => 'user',
-            'approver_ref'   => (string) $approver->id,
-            'min_approvals'  => 1,
-            'is_active'      => true,
+            'workflow_id' => $wf->id,
+            'step_no' => 1,
+            'name' => 'Approve',
+            'approver_type' => 'user',
+            'approver_ref' => (string) $approver->id,
+            'min_approvals' => 1,
+            'is_active' => true,
         ]);
+
         return $wf;
     }
 
@@ -170,17 +171,17 @@ class AttributeBasedRoutingTest extends TestCase
         bool $useAmountCondition = false
     ): void {
         $form = DocumentForm::create([
-            'form_key'      => 'test_attr_form_' . uniqid(),
-            'name'          => 'Test Attr Form',
+            'form_key' => 'test_attr_form_'.uniqid(),
+            'name' => 'Test Attr Form',
             'document_type' => $docType,
-            'is_active'     => true,
+            'is_active' => true,
         ]);
 
         DocumentFormWorkflowPolicy::create([
-            'form_id'              => $form->id,
+            'form_id' => $form->id,
             'use_amount_condition' => $useAmountCondition,
-            'field_conditions'     => $fieldConditions,
-            'workflow_id'          => $defaultWorkflowId,
+            'field_conditions' => $fieldConditions,
+            'workflow_id' => $defaultWorkflowId,
         ]);
 
         // store form_key so caller can use it
@@ -191,7 +192,7 @@ class AttributeBasedRoutingTest extends TestCase
 
     public function test_field_condition_routes_to_matching_workflow(): void
     {
-        $docType  = 'attr_test_' . uniqid();
+        $docType = 'attr_test_'.uniqid();
         $approver = $this->makeApprover();
         $requester = $this->makeRequester();
 
@@ -214,8 +215,8 @@ class AttributeBasedRoutingTest extends TestCase
 
     public function test_no_field_match_falls_back_to_default_workflow(): void
     {
-        $docType   = 'attr_test_' . uniqid();
-        $approver  = $this->makeApprover('approver2@example.com');
+        $docType = 'attr_test_'.uniqid();
+        $approver = $this->makeApprover('approver2@example.com');
         $requester = $this->makeRequester();
 
         $wfA = $this->makeWorkflow($docType, $approver);
@@ -237,11 +238,11 @@ class AttributeBasedRoutingTest extends TestCase
 
     public function test_priority_lower_number_wins(): void
     {
-        $docType   = 'attr_test_' . uniqid();
-        $approver  = $this->makeApprover('approver3@example.com');
+        $docType = 'attr_test_'.uniqid();
+        $approver = $this->makeApprover('approver3@example.com');
         $requester = $this->makeRequester();
 
-        $wfFirst  = $this->makeWorkflow($docType, $approver);
+        $wfFirst = $this->makeWorkflow($docType, $approver);
         $wfSecond = $this->makeWorkflow($docType, $approver);
 
         $this->makeFormAndPolicy($docType, [
@@ -262,31 +263,31 @@ class AttributeBasedRoutingTest extends TestCase
 
     public function test_field_conditions_take_priority_over_amount_ranges(): void
     {
-        $docType   = 'attr_test_' . uniqid();
-        $approver  = $this->makeApprover('approver4@example.com');
+        $docType = 'attr_test_'.uniqid();
+        $approver = $this->makeApprover('approver4@example.com');
         $requester = $this->makeRequester();
 
-        $wfField  = $this->makeWorkflow($docType, $approver);
+        $wfField = $this->makeWorkflow($docType, $approver);
         $wfAmount = $this->makeWorkflow($docType, $approver);
 
         $form = DocumentForm::create([
-            'form_key'      => 'test_field_amount_' . uniqid(),
-            'name'          => 'Test FA Form',
+            'form_key' => 'test_field_amount_'.uniqid(),
+            'name' => 'Test FA Form',
             'document_type' => $docType,
-            'is_active'     => true,
+            'is_active' => true,
         ]);
 
         $policy = DocumentFormWorkflowPolicy::create([
-            'form_id'              => $form->id,
+            'form_id' => $form->id,
             'use_amount_condition' => true,
-            'amount_field_key'     => 'total',
-            'field_conditions'     => [
+            'amount_field_key' => 'total',
+            'field_conditions' => [
                 ['field_key' => 'category', 'operator' => '=', 'value' => 'urgent', 'workflow_id' => $wfField->id, 'priority' => 1],
             ],
         ]);
 
         DocumentFormWorkflowRange::create([
-            'policy_id'  => $policy->id,
+            'policy_id' => $policy->id,
             'min_amount' => 0,
             'max_amount' => null,
             'workflow_id' => $wfAmount->id,
@@ -307,8 +308,8 @@ class AttributeBasedRoutingTest extends TestCase
 
     public function test_missing_field_in_payload_skips_condition_and_uses_next(): void
     {
-        $docType   = 'attr_test_' . uniqid();
-        $approver  = $this->makeApprover('approver5@example.com');
+        $docType = 'attr_test_'.uniqid();
+        $approver = $this->makeApprover('approver5@example.com');
         $requester = $this->makeRequester();
 
         $wfMissing = $this->makeWorkflow($docType, $approver);

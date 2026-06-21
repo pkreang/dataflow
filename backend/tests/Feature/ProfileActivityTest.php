@@ -108,6 +108,7 @@ class ProfileActivityTest extends TestCase
             'email' => 'pa_other_'.uniqid().'@example.test',
             'password' => 'password', 'is_active' => true, 'is_super_admin' => false,
         ]);
+
         return [$me, $other];
     }
 

@@ -36,16 +36,16 @@ class UserSubstitutionController extends Controller
     {
         $validated = $request->validate([
             'from_user_id' => 'required|exists:users,id',
-            'to_user_id'   => 'required|exists:users,id|different:from_user_id',
-            'starts_at'    => 'required|date',
-            'ends_at'      => 'nullable|date|after:starts_at',
-            'reason'       => 'nullable|string|max:500',
+            'to_user_id' => 'required|exists:users,id|different:from_user_id',
+            'starts_at' => 'required|date',
+            'ends_at' => 'nullable|date|after:starts_at',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         $substitution = UserSubstitution::create([
             ...$validated,
-            'is_active'           => true,
-            'created_by_user_id'  => $request->user()?->id,
+            'is_active' => true,
+            'created_by_user_id' => $request->user()?->id,
         ]);
 
         $substitute = User::find($substitution->to_user_id);

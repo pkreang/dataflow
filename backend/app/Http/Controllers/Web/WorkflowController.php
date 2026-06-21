@@ -175,6 +175,7 @@ class WorkflowController extends Controller
     {
         if ($request->has('toggle_active')) {
             $workflow->update(['is_active' => ! $workflow->is_active]);
+
             return redirect()->route('settings.workflow.index')->with('success', __('common.saved'));
         }
 
@@ -287,8 +288,10 @@ class WorkflowController extends Controller
         if (! $rules) {
             return null;
         }
+
         return array_map(function (array $rule) {
             $rule['min_count'] = max(1, (int) ($rule['min_count'] ?? 1));
+
             return $rule;
         }, $rules);
     }

@@ -58,74 +58,74 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
 
     public function toLineMessages(object $notifiable): array
     {
-        $ref   = $this->instance->reference_no ?? "#{$this->instance->id}";
-        $type  = $this->documentTypeLabel();
+        $ref = $this->instance->reference_no ?? "#{$this->instance->id}";
+        $type = $this->documentTypeLabel();
         $stage = $this->step->stage_name ?? '';
-        $data  = "a=approve&i={$this->instance->id}&s={$this->step->step_no}";
+        $data = "a=approve&i={$this->instance->id}&s={$this->step->step_no}";
         $rdata = "a=reject&i={$this->instance->id}&s={$this->step->step_no}";
 
         $bodyContents = array_merge(
             [
-                ['type'=>'text','text'=>$ref,'weight'=>'bold','size'=>'xl','wrap'=>true],
-                ['type'=>'text','text'=>$type,'color'=>'#6B7280','size'=>'sm'],
-                ['type'=>'text','text'=>"ขั้นตอน: {$stage}",'size'=>'sm','color'=>'#374151'],
+                ['type' => 'text', 'text' => $ref, 'weight' => 'bold', 'size' => 'xl', 'wrap' => true],
+                ['type' => 'text', 'text' => $type, 'color' => '#6B7280', 'size' => 'sm'],
+                ['type' => 'text', 'text' => "ขั้นตอน: {$stage}", 'size' => 'sm', 'color' => '#374151'],
             ],
             $this->submissionDetailRows(),
         );
 
         return [[
-            'type'     => 'flex',
-            'altText'  => "รออนุมัติ {$ref}",
+            'type' => 'flex',
+            'altText' => "รออนุมัติ {$ref}",
             'contents' => [
                 'type' => 'bubble',
                 'size' => 'mega',
                 'header' => [
-                    'type'            => 'box',
-                    'layout'          => 'vertical',
+                    'type' => 'box',
+                    'layout' => 'vertical',
                     'backgroundColor' => '#2563EB',
-                    'paddingAll'      => 'lg',
-                    'contents'        => [[
-                        'type'   => 'text',
-                        'text'   => 'รออนุมัติเอกสาร',
-                        'color'  => '#FFFFFF',
+                    'paddingAll' => 'lg',
+                    'contents' => [[
+                        'type' => 'text',
+                        'text' => 'รออนุมัติเอกสาร',
+                        'color' => '#FFFFFF',
                         'weight' => 'bold',
-                        'size'   => 'md',
+                        'size' => 'md',
                     ]],
                 ],
                 'body' => [
-                    'type'     => 'box',
-                    'layout'   => 'vertical',
-                    'spacing'  => 'sm',
+                    'type' => 'box',
+                    'layout' => 'vertical',
+                    'spacing' => 'sm',
                     'paddingAll' => 'lg',
                     'contents' => $bodyContents,
                 ],
                 'footer' => [
-                    'type'     => 'box',
-                    'layout'   => 'horizontal',
-                    'spacing'  => 'sm',
+                    'type' => 'box',
+                    'layout' => 'horizontal',
+                    'spacing' => 'sm',
                     'paddingAll' => 'lg',
                     'contents' => [
                         [
-                            'type'   => 'button',
-                            'style'  => 'primary',
-                            'color'  => '#10B981',
+                            'type' => 'button',
+                            'style' => 'primary',
+                            'color' => '#10B981',
                             'height' => 'sm',
                             'action' => [
-                                'type'        => 'postback',
-                                'label'       => 'อนุมัติ',
-                                'data'        => $data,
+                                'type' => 'postback',
+                                'label' => 'อนุมัติ',
+                                'data' => $data,
                                 'displayText' => 'อนุมัติแล้ว',
                             ],
                         ],
                         [
-                            'type'   => 'button',
-                            'style'  => 'primary',
-                            'color'  => '#EF4444',
+                            'type' => 'button',
+                            'style' => 'primary',
+                            'color' => '#EF4444',
                             'height' => 'sm',
                             'action' => [
-                                'type'        => 'postback',
-                                'label'       => 'ไม่อนุมัติ',
-                                'data'        => $rdata,
+                                'type' => 'postback',
+                                'label' => 'ไม่อนุมัติ',
+                                'data' => $rdata,
                                 'displayText' => 'ไม่อนุมัติ',
                             ],
                         ],
@@ -140,13 +140,13 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
         $ref = $this->instance->reference_no ?? "#{$this->instance->id}";
 
         return "\n"
-            . "รออนุมัติ: " . __('notifications.approval_pending_title') . "\n"
-            . __('notifications.approval_pending_body', [
+            .'รออนุมัติ: '.__('notifications.approval_pending_title')."\n"
+            .__('notifications.approval_pending_body', [
                 'document_type' => $this->documentTypeLabel(),
                 'reference' => $ref,
                 'step' => $this->step->stage_name,
-            ]) . "\n"
-            . url($this->documentUrl());
+            ])."\n"
+            .url($this->documentUrl());
     }
 
     private function submissionDetailRows(): array
@@ -160,7 +160,7 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
         }
 
         $payload = is_array($submission->payload) ? $submission->payload : [];
-        $rows    = [];
+        $rows = [];
 
         // requester name
         $user = \App\Models\User::find($submission->user_id, ['id', 'first_name', 'last_name']);
@@ -179,10 +179,10 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
 
         // date range
         $from = $payload['date_from'] ?? null;
-        $to   = $payload['date_to'] ?? null;
+        $to = $payload['date_to'] ?? null;
         if ($from) {
             $dateText = $to && $to !== $from
-                ? $this->formatDate($from) . ' - ' . $this->formatDate($to)
+                ? $this->formatDate($from).' - '.$this->formatDate($to)
                 : $this->formatDate($from);
             $rows[] = $this->detailRow('วันที่', $dateText);
         }
@@ -206,24 +206,24 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
     private function detailRow(string $label, string $value): array
     {
         return [
-            'type'     => 'box',
-            'layout'   => 'horizontal',
-            'spacing'  => 'sm',
+            'type' => 'box',
+            'layout' => 'horizontal',
+            'spacing' => 'sm',
             'contents' => [
                 [
-                    'type'  => 'text',
-                    'text'  => $label,
-                    'size'  => 'sm',
+                    'type' => 'text',
+                    'text' => $label,
+                    'size' => 'sm',
                     'color' => '#6B7280',
-                    'flex'  => 3,
+                    'flex' => 3,
                 ],
                 [
-                    'type'  => 'text',
-                    'text'  => $value,
-                    'size'  => 'sm',
+                    'type' => 'text',
+                    'text' => $value,
+                    'size' => 'sm',
                     'color' => '#111827',
-                    'flex'  => 5,
-                    'wrap'  => true,
+                    'flex' => 5,
+                    'wrap' => true,
                 ],
             ],
         ];
@@ -247,6 +247,7 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
         $formName = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
             ->with('form:id,name')
             ->first()?->form?->name;
+
         return $formName ?? $this->instance->document_type;
     }
 
@@ -264,6 +265,7 @@ class ApprovalPendingNotification extends Notification implements ShouldQueue
     {
         $submissionId = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
             ->value('id');
+
         return $submissionId
             ? route('forms.submission.show', $submissionId, false)
             : '/approvals/my-approvals';

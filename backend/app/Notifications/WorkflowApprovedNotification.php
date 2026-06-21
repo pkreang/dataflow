@@ -56,12 +56,12 @@ class WorkflowApprovedNotification extends Notification implements ShouldQueue
         $ref = $this->instance->reference_no ?? "#{$this->instance->id}";
 
         return "\n"
-            . "✅ " . __('notifications.workflow_approved_title') . "\n"
-            . __('notifications.workflow_approved_body', [
+            .'✅ '.__('notifications.workflow_approved_title')."\n"
+            .__('notifications.workflow_approved_body', [
                 'document_type' => $this->documentTypeLabel(),
                 'reference' => $ref,
-            ]) . "\n"
-            . url($this->documentUrl());
+            ])."\n"
+            .url($this->documentUrl());
     }
 
     private function documentTypeLabel(): string
@@ -73,6 +73,7 @@ class WorkflowApprovedNotification extends Notification implements ShouldQueue
         $formName = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
             ->with('form:id,name')
             ->first()?->form?->name;
+
         return $formName ?? $this->instance->document_type;
     }
 
@@ -90,6 +91,7 @@ class WorkflowApprovedNotification extends Notification implements ShouldQueue
     {
         $submissionId = \App\Models\DocumentFormSubmission::where('approval_instance_id', $this->instance->id)
             ->value('id');
+
         return $submissionId
             ? route('forms.submission.show', $submissionId, false)
             : '/approvals/my-approvals';

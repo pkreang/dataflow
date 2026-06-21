@@ -65,6 +65,7 @@ class EquipmentController extends Controller
     {
         if ($request->has('toggle_active')) {
             $equipmentCategory->update(['is_active' => ! $equipmentCategory->is_active]);
+
             return redirect()->route('settings.equipment.index')->with('success', __('common.saved'));
         }
 

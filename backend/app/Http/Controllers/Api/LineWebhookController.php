@@ -18,13 +18,14 @@ use Illuminate\Support\Facades\Http;
 class LineWebhookController extends Controller
 {
     private const REJECT_PENDING_TTL = 600;
+
     private const PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push';
 
     public function handle(Request $request, ApprovalFlowService $service): JsonResponse
     {
-        $secret   = Setting::get('line_messaging.channel_secret', '');
-        $body     = $request->getContent();
-        $sig      = $request->header('X-Line-Signature', '');
+        $secret = Setting::get('line_messaging.channel_secret', '');
+        $body = $request->getContent();
+        $sig = $request->header('X-Line-Signature', '');
         $expected = base64_encode(hash_hmac('sha256', $body, $secret, true));
 
         if (! $secret || ! hash_equals($expected, $sig)) {
@@ -32,7 +33,7 @@ class LineWebhookController extends Controller
         }
 
         foreach ($request->input('events', []) as $event) {
-            $type       = $event['type'] ?? '';
+            $type = $event['type'] ?? '';
             $lineUserId = $event['source']['userId'] ?? null;
             if (! $lineUserId) {
                 continue;
@@ -51,15 +52,15 @@ class LineWebhookController extends Controller
     private function handlePostback(array $event, string $lineUserId, ApprovalFlowService $service): void
     {
         parse_str($event['postback']['data'] ?? '', $pb);
-        $action     = $pb['a'] ?? null;
+        $action = $pb['a'] ?? null;
         $instanceId = (int) ($pb['i'] ?? 0);
-        $stepNo     = (int) ($pb['s'] ?? 0);
+        $stepNo = (int) ($pb['s'] ?? 0);
 
         if (! in_array($action, ['approve', 'reject'], true) || ! $instanceId) {
             return;
         }
 
-        $user     = User::where('line_user_id', $lineUserId)->first();
+        $user = User::where('line_user_id', $lineUserId)->first();
         $instance = ApprovalInstance::with('steps')->find($instanceId);
 
         if (! $user || ! $instance) {
@@ -81,6 +82,7 @@ class LineWebhookController extends Controller
             $service->act($instanceId, $user->id, 'approved', null, null);
             $this->logActivity($instanceId, $user->id, 'approved');
             $user->notify(new LineConfirmationNotification("อนุมัติสำเร็จ -- {$ref}"));
+
             return;
         }
 
@@ -97,19 +99,19 @@ class LineWebhookController extends Controller
     private function handleMessage(array $event, string $lineUserId, ApprovalFlowService $service): void
     {
         $cacheKey = "line_reject_pending:{$lineUserId}";
-        $pending  = Cache::get($cacheKey);
+        $pending = Cache::get($cacheKey);
 
         if (! $pending) {
             return;
         }
 
-        $comment    = trim($event['message']['text'] ?? '');
+        $comment = trim($event['message']['text'] ?? '');
         $instanceId = (int) $pending['instance_id'];
-        $ref        = $pending['ref'] ?? "#{$instanceId}";
+        $ref = $pending['ref'] ?? "#{$instanceId}";
 
         Cache::forget($cacheKey);
 
-        $user     = User::where('line_user_id', $lineUserId)->first();
+        $user = User::where('line_user_id', $lineUserId)->first();
         $instance = ApprovalInstance::with('steps')->find($instanceId);
 
         if (! $user || ! $instance) {
@@ -117,9 +119,10 @@ class LineWebhookController extends Controller
         }
 
         $stepNo = (int) $pending['step_no'];
-        $step   = $instance->steps->firstWhere('step_no', $stepNo);
+        $step = $instance->steps->firstWhere('step_no', $stepNo);
         if (! $step || $step->action !== 'pending') {
             $this->pushText($lineUserId, "เอกสาร {$ref} ถูกดำเนินการไปแล้ว");
+
             return;
         }
 
@@ -151,7 +154,7 @@ class LineWebhookController extends Controller
             ->acceptJson()
             ->asJson()
             ->post(self::PUSH_ENDPOINT, [
-                'to'       => $lineUserId,
+                'to' => $lineUserId,
                 'messages' => [['type' => 'text', 'text' => $text]],
             ]);
     }

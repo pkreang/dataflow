@@ -29,9 +29,9 @@ class LineMessagingChannelTest extends TestCase
         $user = $this->makeUser(['line_user_id' => 'U1234567890abcdef']);
         $notification = $this->fakeNotification('Hello from test');
 
-        (new LineMessagingChannel())->send($user, $notification);
+        (new LineMessagingChannel)->send($user, $notification);
 
-        Http::assertSent(function ($req) use ($user) {
+        Http::assertSent(function ($req) {
             return $req->url() === 'https://api.line.me/v2/bot/message/push'
                 && $req->method() === 'POST'
                 && $req->hasHeader('Authorization', 'Bearer test-token-xyz')
@@ -50,7 +50,7 @@ class LineMessagingChannelTest extends TestCase
         Http::fake();
 
         $user = $this->makeUser(['line_user_id' => null]);
-        (new LineMessagingChannel())->send($user, $this->fakeNotification('msg'));
+        (new LineMessagingChannel)->send($user, $this->fakeNotification('msg'));
 
         Http::assertNothingSent();
     }
@@ -62,7 +62,7 @@ class LineMessagingChannelTest extends TestCase
         Http::fake();
 
         $user = $this->makeUser(['line_user_id' => 'U1234567890abcdef']);
-        (new LineMessagingChannel())->send($user, $this->fakeNotification('msg'));
+        (new LineMessagingChannel)->send($user, $this->fakeNotification('msg'));
 
         Http::assertNothingSent();
     }
@@ -95,7 +95,8 @@ class LineMessagingChannelTest extends TestCase
 
         $user = $this->makeUser(['line_user_id' => 'U1234567890abcdef']);
 
-        $notification = new class extends Notification {
+        $notification = new class extends Notification
+        {
             public function toLineMessages(object $notifiable): array
             {
                 return [['type' => 'flex', 'altText' => 'Test Flex', 'contents' => ['type' => 'bubble']]];
@@ -107,10 +108,11 @@ class LineMessagingChannelTest extends TestCase
             }
         };
 
-        (new LineMessagingChannel())->send($user, $notification);
+        (new LineMessagingChannel)->send($user, $notification);
 
         Http::assertSent(function ($req) {
             $data = $req->data();
+
             return $req->url() === 'https://api.line.me/v2/bot/message/push'
                 && isset($data['messages'][0]['type'])
                 && $data['messages'][0]['type'] === 'flex';
@@ -128,10 +130,11 @@ class LineMessagingChannelTest extends TestCase
 
         $user = $this->makeUser(['line_user_id' => 'U1234567890abcdef']);
 
-        (new LineMessagingChannel())->send($user, $this->fakeNotification('plain text'));
+        (new LineMessagingChannel)->send($user, $this->fakeNotification('plain text'));
 
         Http::assertSent(function ($req) {
             $data = $req->data();
+
             return $data['messages'][0]['type'] === 'text'
                 && $data['messages'][0]['text'] === 'plain text';
         });
@@ -139,7 +142,8 @@ class LineMessagingChannelTest extends TestCase
 
     private function fakeNotification(string $text): Notification
     {
-        return new class($text) extends Notification {
+        return new class($text) extends Notification
+        {
             public function __construct(public string $text) {}
 
             public function toLineMessage(object $notifiable): string

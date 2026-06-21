@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalInstance;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
-use App\Models\Setting;
 use App\Models\User;
 use App\Services\ApproverIdentity;
 use App\Services\Auth\AuthModeService;
@@ -230,6 +229,7 @@ class MobileController extends Controller
     public function requestDetail(DocumentFormSubmission $submission): View
     {
         $view = app(DocumentFormSubmissionController::class)->showSubmission($submission);
+
         return $view->with('layout', 'layouts.mobile');
     }
 
@@ -242,6 +242,7 @@ class MobileController extends Controller
         if ($response instanceof \Illuminate\Http\RedirectResponse) {
             return $response;
         }
+
         return $response
             ->with('layout', 'layouts.mobile')
             ->with('storeAction', route('mobile.request.evaluate.store', $submission));
@@ -253,6 +254,7 @@ class MobileController extends Controller
     public function reports(): View
     {
         $view = app(ReportController::class)->index();
+
         return $view->with('layout', 'layouts.mobile');
     }
 }
