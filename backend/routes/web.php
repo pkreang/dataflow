@@ -55,11 +55,23 @@ Route::get('/__deploy/{token}/{cmd}', function (string $token, string $cmd) {
     $expected = config('app.deploy_token');
     abort_unless(filled($expected) && is_string($expected) && hash_equals($expected, $token), 404);
 
+    abort_unless(in_array($cmd, ['link', 'clear', 'migrate', 'seed'], true), 404);
+
+    // 'seed' = สร้าง schema + ข้อมูล demo ใหม่ทั้งหมด (host ไม่มี shell/phpMyAdmin).
+    // อันตราย: migrate:fresh DROP ทุกตารางใน DB ที่ตั้งใน .env — ใช้กับ DB demo เฉพาะ.
+    if ($cmd === 'seed') {
+        Artisan::call('migrate:fresh', ['--force' => true, '--seed' => true]);
+        $out = Artisan::output();
+        Artisan::call('db:seed', ['--class' => 'GenericDemoSeeder', '--force' => true]);
+
+        return response('<pre>'.e($out."\n".Artisan::output()).'</pre>');
+    }
+
     $command = [
         'link' => 'storage:link',
         'clear' => 'optimize:clear',
         'migrate' => 'migrate',
-    ][$cmd] ?? abort(404);
+    ][$cmd];
 
     Artisan::call($command, $command === 'migrate' ? ['--force' => true] : []);
 
