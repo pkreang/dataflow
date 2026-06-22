@@ -15,7 +15,7 @@ use Illuminate\Database\Seeder;
  *     never land on the school-flavoured Home (Default) that ships from the
  *     base HomeDashboardSeeder)
  *
- * Both data sources point at repair_requests/equipment/spare_parts so a fresh
+ * Both data sources point at repair_requests so a fresh
  * `composer switch:factory` lands the user on a populated home — not the
  * school KPI grid that returns zero for everything in factory deployments.
  */
@@ -29,7 +29,7 @@ class FactoryDashboardSeeder extends Seeder
         $dashboard = ReportDashboard::updateOrCreate(
             ['name' => 'CMMS — Repair Requests Overview'],
             [
-                'description' => 'ภาพรวมใบแจ้งซ่อม + เครื่องจักรยอดแจ้ง',
+                'description' => 'ภาพรวมใบแจ้งซ่อม',
                 'layout_columns' => 2,
                 'visibility' => 'all',
                 'required_permission' => null,
@@ -124,18 +124,6 @@ class FactoryDashboardSeeder extends Seeder
                 ],
                 'col_span' => 1,
                 'sort_order' => 2,
-            ],
-            [
-                'title' => 'อุปกรณ์ทั้งหมด',
-                'widget_type' => 'metric',
-                'data_source' => 'equipment',
-                'config' => [
-                    'aggregation' => 'count',
-                    'field' => 'id',
-                    'filters' => ['is_active' => 1],
-                ],
-                'col_span' => 1,
-                'sort_order' => 3,
             ],
         ];
 

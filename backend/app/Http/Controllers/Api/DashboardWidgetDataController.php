@@ -107,7 +107,9 @@ class DashboardWidgetDataController extends Controller
      */
     private function prepareContext(Request $request, ReportDashboard $dashboard, ReportDashboardWidget $widget)
     {
-        if ($widget->dashboard_id !== $dashboard->id) {
+        // Cast both sides — PDO อาจคืน id เป็น string หรือ int ต่างกันตาม driver/config
+        // (local vs production MySQL) ทำให้ strict !== พังแล้ว abort(404) ทุก widget
+        if ((int) $widget->dashboard_id !== (int) $dashboard->id) {
             abort(404);
         }
 
@@ -336,6 +338,11 @@ class DashboardWidgetDataController extends Controller
             return $out;
         }
 
+        // Month bucketing parity with chartData() — time-series CSV (period, value)
+        if (str_ends_with($groupBy, ':month')) {
+            return $this->buildMonthChartCsv($query, $groupBy, $aggregation, $field, $source);
+        }
+
         $results = $query
             ->select($groupBy, DB::raw(match ($aggregation) {
                 'sum' => "SUM({$field}) as agg_value",
@@ -361,6 +368,50 @@ class DashboardWidgetDataController extends Controller
                 $this->csvCell($row->{$groupBy} ?? 'N/A'),
                 (float) $row->agg_value,
             ]);
+        }
+        rewind($fh);
+        $out = stream_get_contents($fh);
+        fclose($fh);
+
+        return $out;
+    }
+
+    private function buildMonthChartCsv($query, string $groupBy, string $aggregation, string $field, array $source): string
+    {
+        $baseCol = substr($groupBy, 0, -strlen(':month'));
+
+        $fh = fopen('php://temp', 'r+');
+
+        if (! in_array($baseCol, array_keys($source['date_fields'] ?? []), true)) {
+            fputcsv($fh, ['Period', 'Value']);
+            rewind($fh);
+            $out = stream_get_contents($fh);
+            fclose($fh);
+
+            return $out;
+        }
+
+        $expr = $this->monthBucketSql($query, $baseCol);
+        $results = $query
+            ->select(DB::raw("{$expr} as period"), DB::raw(match ($aggregation) {
+                'sum' => "SUM({$field}) as agg_value",
+                'avg' => "AVG({$field}) as agg_value",
+                default => 'COUNT(*) as agg_value',
+            }))
+            ->groupBy(DB::raw($expr))
+            ->orderBy(DB::raw($expr))
+            ->limit(1000)
+            ->get();
+
+        $valueHeader = match ($aggregation) {
+            'sum' => 'Sum',
+            'avg' => 'Avg',
+            default => 'Count',
+        };
+
+        fputcsv($fh, [(string) ($source['group_by_fields'][$groupBy] ?? 'Period'), $valueHeader]);
+        foreach ($results as $row) {
+            fputcsv($fh, [$this->csvCell($row->period ?? 'N/A'), (float) $row->agg_value]);
         }
         rewind($fh);
         $out = stream_get_contents($fh);
@@ -436,6 +487,11 @@ class DashboardWidgetDataController extends Controller
             return response()->json(['labels' => [], 'datasets' => [['data' => []]]]);
         }
 
+        // Month bucketing: group_by like "created_at:month" → time-series by YYYY-MM
+        if (str_ends_with($groupBy, ':month')) {
+            return $this->monthChartData($query, $groupBy, $aggregation, $field, $source);
+        }
+
         $results = $query
             ->select($groupBy, DB::raw(match ($aggregation) {
                 'sum' => "SUM({$field}) as agg_value",
@@ -455,6 +511,48 @@ class DashboardWidgetDataController extends Controller
             'labels' => $labels,
             'datasets' => [['data' => $data]],
         ]);
+    }
+
+    /**
+     * Time-series chart: bucket a date column ("created_at:month") into YYYY-MM
+     * and return points ordered chronologically (oldest → newest) for line/area.
+     */
+    private function monthChartData($query, string $groupBy, string $aggregation, string $field, array $source): JsonResponse
+    {
+        $baseCol = substr($groupBy, 0, -strlen(':month'));
+        if (! in_array($baseCol, array_keys($source['date_fields'] ?? []), true)) {
+            return response()->json(['labels' => [], 'datasets' => [['data' => []]]]);
+        }
+
+        $expr = $this->monthBucketSql($query, $baseCol);
+
+        $results = $query
+            ->select(DB::raw("{$expr} as period"), DB::raw(match ($aggregation) {
+                'sum' => "SUM({$field}) as agg_value",
+                'avg' => "AVG({$field}) as agg_value",
+                default => 'COUNT(*) as agg_value',
+            }))
+            ->groupBy(DB::raw($expr))
+            ->orderBy(DB::raw($expr))
+            ->limit(24)
+            ->get();
+
+        return response()->json([
+            'labels' => $results->pluck('period')->map(fn ($v) => (string) ($v ?? 'N/A'))->toArray(),
+            'datasets' => [['data' => $results->pluck('agg_value')->map(fn ($v) => (float) $v)->toArray()]],
+        ]);
+    }
+
+    /**
+     * Driver-agnostic SQL expression bucketing a date column into "YYYY-MM".
+     * Base column is whitelisted against the source's date_fields by the caller,
+     * so it is safe to interpolate into the raw expression.
+     */
+    private function monthBucketSql($query, string $col): string
+    {
+        return $query->getConnection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', {$col})"
+            : "DATE_FORMAT({$col}, '%Y-%m')";
     }
 
     /**

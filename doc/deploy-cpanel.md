@@ -10,9 +10,9 @@
 
 | เช็ค | ที่ไหน | ต้องได้ |
 |------|--------|---------|
-| PHP version | MultiPHP Manager | **8.2 ขึ้นไป** (Laravel 12 บังคับ — ถ้าไม่มี ทำต่อไม่ได้) |
+| PHP version | MultiPHP Manager **หรือ** "Select PHP Version" (CloudLinux) | **8.4 ขึ้นไปบังคับ** (spatie/laravel-permission + deps require ≥8.4 — 8.2/8.3 รันไม่ได้). host CloudLinux ที่ปิด MultiPHP: ตั้งผ่าน **"Select PHP Version"** (.htaccess handler ใช้ไม่ได้กับ mod_lsapi) |
 | MySQL | MySQL Databases | สร้าง DB + user + grant ALL → จด `dbname / user / pass` |
-| Subdomain | Domains / Subdomains | สร้าง `demo.<domain>` **Document Root = `/home/<user>/dataflow-app/public`** |
+| Subdomain | Domains / Subdomains | สร้าง `demo.<domain>` **Document Root = `/home/<user>/dataflow-app/public`**. ถ้าเปลี่ยน docroot ไม่ได้ ใช้ split layout (ดู `doc/git-deploy-workflow.md`) |
 
 > ทำไมต้อง subdomain ชี้ `…/public`: โค้ด Laravel อยู่นอก web root (ปลอดภัย) และไม่ต้องแก้ `index.php` paths.
 
@@ -22,7 +22,8 @@
 
 ```bash
 cd backend
-deploy/build-demo.sh factory      # หรือ school  (default: factory)
+deploy/build-demo.sh demo         # บริษัทกลางๆ + 6 eForm workflow ขั้นสูง + dashboard กราฟ (GenericDemoSeeder)
+# deploy/build-demo.sh factory    # หรือ school  (default: factory)
 ```
 
 สคริปต์ทำให้ครบ: `composer install --no-dev` → `npm run build` → seed **build DB แยก** (ไม่แตะ dev DB `dataflow_uat`) → dump → zip. ได้ใน `backend/deploy/dist/`:
@@ -63,6 +64,9 @@ SESSION_DRIVER=database
 CACHE_STORE=database
 QUEUE_CONNECTION=sync
 
+# vertical: demo (บริษัทกลางๆ) — ถ้าไม่ใส่ จะ default=factory ซึ่งก็เป็นคำกลางๆ เหมือนกัน
+ORG_VERTICAL=demo
+
 DEPLOY_TOKEN=<สุ่มยาวๆ เช่น openssl rand -hex 16>
 
 # ตามที่จะโชว์ (ไม่ใส่ก็ได้):
@@ -89,7 +93,9 @@ phpMyAdmin → เลือก DB ที่สร้างไว้ → **Import
    ```
    ควรได้ output `The [public/storage] link has been connected…`. ถ้า cache เพี้ยน เปิด `…/<DEPLOY_TOKEN>/clear` ด้วย.
 
-> route นี้ปิดสนิทถ้าไม่ตั้ง `DEPLOY_TOKEN` (404). หลัง demo จริงจัง แนะนำลบ `DEPLOY_TOKEN` ออกจาก `.env` เพื่อปิด.
+> escape-hatch รองรับ: `/link` (storage symlink), `/clear` (optimize:clear), `/migrate` (migrate เฉพาะที่ใหม่ — ไม่ลบข้อมูล), **`/seed`** (migrate:fresh + seed demo ใหม่หมด — **DROP ทุกตารางใน DB** ใช้กับ DB demo เท่านั้น). route นี้ปิดสนิทถ้าไม่ตั้ง `DEPLOY_TOKEN` (404). หลัง demo จริงจัง แนะนำลบ `DEPLOY_TOKEN` ออกจาก `.env` เพื่อปิด.
+
+> หมายเหตุ: build `demo` (ตั้งแต่ 2026-06) พก `storage/framework/{views,cache,sessions}` + `bootstrap/cache` (เปล่า) ไปใน zip แล้ว — extract เสร็จไม่ต้อง mkdir เอง (กัน error "Please provide a valid cache path").
 
 ---
 
@@ -100,7 +106,7 @@ phpMyAdmin → เลือก DB ที่สร้างไว้ → **Import
 3. เซ็น signature / อัปไฟล์ → แสดงผลกลับ (storage symlink ใช้ได้)
 4. `/quote-request` ส่งคำขอ → ได้เลข RFQ (ถ้า demo รวมฟีเจอร์ RFQ)
 
-demo user: ดู `backend/README.md` (เช่น `somchai@…` ฯลฯ, password `password`).
+demo user (build `demo`): `staff@demo.test` (ผู้ยื่น), `head@` / `manager@` / `director@` / `finance@` / `hr@demo.test` (ผู้อนุมัติ) — รหัสทุกคน `password`. (build `factory`/`school` ดู `backend/README.md`)
 
 ---
 

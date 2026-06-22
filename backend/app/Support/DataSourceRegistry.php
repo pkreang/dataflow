@@ -6,9 +6,6 @@ use App\Models\ApprovalInstance;
 use App\Models\Company;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormSubmission;
-use App\Models\Equipment;
-use App\Models\SparePart;
-use App\Models\SparePartTransaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 
@@ -53,6 +50,7 @@ class DataSourceRegistry
                     'status' => 'Status',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
+                    'created_at:month' => 'ตามเดือน (รายเดือน)',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
@@ -139,136 +137,6 @@ class DataSourceRegistry
                 ],
             ],
 
-            'pm_am_plans' => [
-                'label_en' => 'PM/AM Plans',
-                'label_th' => 'แผน PM/AM',
-                'model' => null,
-                'base_query' => fn () => ApprovalInstance::where('document_type', 'pm_am_plan'),
-                'aggregate_fields' => [
-                    'id' => 'Count',
-                ],
-                'group_by_fields' => [
-                    'status' => 'Status',
-                    'org_unit_id' => 'Org Unit',
-                    'requester_user_id' => 'Requester',
-                ],
-                'filter_fields' => [
-                    'status' => 'Status',
-                    'org_unit_id' => 'Org Unit',
-                    'requester_user_id' => 'Requester',
-                ],
-                'date_fields' => [
-                    'created_at' => 'Created At',
-                    'updated_at' => 'Updated At',
-                ],
-                'display_columns' => [
-                    'reference_no' => 'Ref No',
-                    'status' => 'Status',
-                    'org_unit_id' => 'Org Unit',
-                    'requester_user_id' => 'Requester',
-                    'created_at' => 'Created At',
-                ],
-            ],
-
-            'equipment' => [
-                'label_en' => 'Equipment',
-                'label_th' => 'อุปกรณ์',
-                'model' => Equipment::class,
-                'base_query' => null,
-                'aggregate_fields' => [
-                    'id' => 'Count',
-                ],
-                'group_by_fields' => [
-                    'status' => 'Status',
-                    'equipment_category_id' => 'Category',
-                    'equipment_location_id' => 'Location',
-                    'company_id' => 'Company',
-                ],
-                'filter_fields' => [
-                    'status' => 'Status',
-                    'is_active' => 'Active',
-                    'equipment_category_id' => 'Category',
-                    'company_id' => 'Company',
-                ],
-                'date_fields' => [
-                    'created_at' => 'Created At',
-                    'installed_date' => 'Installed Date',
-                ],
-                'display_columns' => [
-                    'name' => 'Name',
-                    'code' => 'Code',
-                    'status' => 'Status',
-                    'equipment_category_id' => 'Category',
-                    'equipment_location_id' => 'Location',
-                    'created_at' => 'Created At',
-                ],
-            ],
-
-            'spare_parts' => [
-                'label_en' => 'Spare Parts',
-                'label_th' => 'อะไหล่',
-                'model' => SparePart::class,
-                'base_query' => null,
-                'aggregate_fields' => [
-                    'id' => 'Count',
-                    'current_stock' => 'Current Stock',
-                    'unit_cost' => 'Unit Cost',
-                    'min_stock' => 'Min Stock',
-                ],
-                'group_by_fields' => [
-                    'equipment_category_id' => 'Category',
-                    'company_id' => 'Company',
-                ],
-                'filter_fields' => [
-                    'is_active' => 'Active',
-                    'equipment_category_id' => 'Category',
-                    'company_id' => 'Company',
-                ],
-                'date_fields' => [
-                    'created_at' => 'Created At',
-                ],
-                'display_columns' => [
-                    'code' => 'Code',
-                    'name' => 'Name',
-                    'current_stock' => 'Stock',
-                    'min_stock' => 'Min Stock',
-                    'unit_cost' => 'Unit Cost',
-                    'created_at' => 'Created At',
-                ],
-            ],
-
-            'spare_part_transactions' => [
-                'label_en' => 'Spare Part Transactions',
-                'label_th' => 'รายการอะไหล่',
-                'model' => SparePartTransaction::class,
-                'base_query' => null,
-                'aggregate_fields' => [
-                    'id' => 'Count',
-                    'quantity' => 'Quantity',
-                    'unit_cost' => 'Unit Cost',
-                ],
-                'group_by_fields' => [
-                    'transaction_type' => 'Transaction Type',
-                    'spare_part_id' => 'Spare Part',
-                    'performed_by_user_id' => 'Performed By',
-                ],
-                'filter_fields' => [
-                    'transaction_type' => 'Transaction Type',
-                    'spare_part_id' => 'Spare Part',
-                    'performed_by_user_id' => 'Performed By',
-                ],
-                'date_fields' => [
-                    'created_at' => 'Created At',
-                ],
-                'display_columns' => [
-                    'spare_part_id' => 'Spare Part',
-                    'transaction_type' => 'Type',
-                    'quantity' => 'Quantity',
-                    'unit_cost' => 'Unit Cost',
-                    'created_at' => 'Date',
-                ],
-            ],
-
             'users' => [
                 'label_en' => 'Users',
                 'label_th' => 'ผู้ใช้',
@@ -334,6 +202,7 @@ class DataSourceRegistry
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
                     'org_unit_id' => 'Org Unit',
+                    'created_at:month' => 'ตามเดือน (รายเดือน)',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',

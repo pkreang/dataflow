@@ -20,6 +20,9 @@ return new class extends Migration
     public function up(): void
     {
         foreach ($this->tables() as [$table, $prefix]) {
+            if (! Schema::hasTable($table)) {
+                continue; // table removed by a later product change (e.g. CMMS teardown)
+            }
             Schema::table($table, function (Blueprint $t) {
                 $t->string('auto_code', 20)->nullable()->after('id');
             });
@@ -40,6 +43,9 @@ return new class extends Migration
     public function down(): void
     {
         foreach ($this->tables() as [$table, $_prefix]) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
             Schema::table($table, function (Blueprint $t) use ($table) {
                 $t->dropUnique($table.'_auto_code_unique');
                 $t->dropColumn('auto_code');
@@ -56,14 +62,11 @@ return new class extends Migration
             ['branches',                'BR'],
             ['document_types',          'DOCTYPE'],
             ['document_forms',          'FORM'],
-            ['equipment',               'EQ'],
-            ['spare_parts',             'SP'],
             ['lookup_lists',            'LKLIST'],
             ['approval_workflows',      'WF'],
             ['running_number_configs',  'RNC'],
             ['report_dashboards',       'DASH'],
             ['navigation_menus',        'NAV'],
-            ['pm_plans',                'PMPLAN'],
         ];
     }
 };

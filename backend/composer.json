@@ -77,6 +77,13 @@
             "@php artisan db:seed --class=BodindechaDemoSeeder --force",
             "@php artisan org:switch school"
         ],
+        "switch:demo": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php artisan migrate:fresh --force",
+            "@php artisan db:seed --force",
+            "@php artisan db:seed --class=GenericDemoSeeder --force",
+            "@php artisan org:switch demo"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",

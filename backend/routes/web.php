@@ -10,12 +10,9 @@ use App\Http\Controllers\Web\DocumentFormController;
 use App\Http\Controllers\Web\DocumentFormSubmissionController;
 use App\Http\Controllers\Web\DocumentFormWorkflowPolicyController;
 use App\Http\Controllers\Web\DocumentTypeController;
-use App\Http\Controllers\Web\EquipmentController;
-use App\Http\Controllers\Web\EquipmentLocationController;
 use App\Http\Controllers\Web\HolidayController;
 use App\Http\Controllers\Web\LookupController;
 use App\Http\Controllers\Web\LookupListController;
-use App\Http\Controllers\Web\MaintenanceController;
 use App\Http\Controllers\Web\MobileController;
 use App\Http\Controllers\Web\MyReportController;
 use App\Http\Controllers\Web\NavigationMenuController;
@@ -29,14 +26,12 @@ use App\Http\Controllers\Web\PositionController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\PurchaseOrderController;
 use App\Http\Controllers\Web\PurchaseRequestController;
-use App\Http\Controllers\Web\RepairRequestController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\ReportDashboardController;
 use App\Http\Controllers\Web\RoleController;
 use App\Http\Controllers\Web\RunningNumberController;
 use App\Http\Controllers\Web\SettingController;
 use App\Http\Controllers\Web\ShiftController;
-use App\Http\Controllers\Web\SparePartsController;
 use App\Http\Controllers\Web\SystemChangeLogController;
 use App\Http\Controllers\Web\ThailandAddressSearchController;
 use App\Http\Controllers\Web\UserController;
@@ -60,11 +55,23 @@ Route::get('/__deploy/{token}/{cmd}', function (string $token, string $cmd) {
     $expected = config('app.deploy_token');
     abort_unless(filled($expected) && is_string($expected) && hash_equals($expected, $token), 404);
 
+    abort_unless(in_array($cmd, ['link', 'clear', 'migrate', 'seed'], true), 404);
+
+    // 'seed' = สร้าง schema + ข้อมูล demo ใหม่ทั้งหมด (host ไม่มี shell/phpMyAdmin).
+    // อันตราย: migrate:fresh DROP ทุกตารางใน DB ที่ตั้งใน .env — ใช้กับ DB demo เฉพาะ.
+    if ($cmd === 'seed') {
+        Artisan::call('migrate:fresh', ['--force' => true, '--seed' => true]);
+        $out = Artisan::output();
+        Artisan::call('db:seed', ['--class' => 'GenericDemoSeeder', '--force' => true]);
+
+        return response('<pre>'.e($out."\n".Artisan::output()).'</pre>');
+    }
+
     $command = [
         'link' => 'storage:link',
         'clear' => 'optimize:clear',
         'migrate' => 'migrate',
-    ][$cmd] ?? abort(404);
+    ][$cmd];
 
     Artisan::call($command, $command === 'migrate' ? ['--force' => true] : []);
 
@@ -161,38 +168,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/forms/{documentForm:form_key}', [DocumentFormSubmissionController::class, 'create'])->name('forms.create');
     Route::post('/forms/{documentForm:form_key}/drafts', [DocumentFormSubmissionController::class, 'storeDraft'])->name('forms.draft.store');
 
-    // CMMS — repair requests (`document_type` = repair_request)
-    Route::get('/repair-requests/my-jobs', [RepairRequestController::class, 'myJobs'])->name('repair-requests.my-jobs');
-    Route::get('/repair-requests/assign', [RepairRequestController::class, 'assign'])->name('repair-requests.assign');
-    Route::get('/repair-requests/evaluate', [RepairRequestController::class, 'evaluate'])->name('repair-requests.evaluate');
-    Route::get('/repair-requests', [RepairRequestController::class, 'index'])->name('repair-requests.index');
-    Route::post('/repair-requests', [RepairRequestController::class, 'submit'])->name('repair-requests.submit');
-    Route::get('/repair-requests/{instance}', [RepairRequestController::class, 'show'])
-        ->name('repair-requests.show')
-        ->whereNumber('instance');
-
-    // CMMS — maintenance (`document_type` = pm_am_plan)
-    Route::get('/maintenance/auto-assign', [MaintenanceController::class, 'autoAssign'])->name('maintenance.auto-assign');
-    Route::get('/maintenance/create-plan', [MaintenanceController::class, 'createPlan'])->name('maintenance.create-plan');
-    Route::post('/maintenance', [MaintenanceController::class, 'submitPlan'])->name('maintenance.create-plan.submit');
-    Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
-    Route::get('/maintenance/{instance}', [MaintenanceController::class, 'show'])
-        ->name('maintenance.show')
-        ->whereNumber('instance');
-
-    // CMMS — spare parts (`document_type` = spare_parts_requisition)
-    Route::get('/spare-parts/stock', [SparePartsController::class, 'stock'])->name('spare-parts.stock');
-    Route::get('/spare-parts/withdrawal-history', [SparePartsController::class, 'withdrawalHistory'])->name('spare-parts.withdrawal-history');
-    Route::get('/spare-parts/requisitions/create', [SparePartsController::class, 'requisitionCreate'])->name('spare-parts.requisition.create');
-    Route::post('/spare-parts/requisitions', [SparePartsController::class, 'requisitionSubmit'])->name('spare-parts.requisition.submit');
-    Route::get('/spare-parts/requisitions', [SparePartsController::class, 'requisitionIndex'])->name('spare-parts.requisition.index');
-    Route::get('/spare-parts/requisitions/{instance}', [SparePartsController::class, 'requisitionShow'])
-        ->name('spare-parts.requisition.show')
-        ->whereNumber('instance');
-    Route::post('/spare-parts/requisitions/{instance}/issue', [SparePartsController::class, 'issueItems'])
-        ->name('spare-parts.requisition.issue')
-        ->whereNumber('instance');
-
     Route::get('/purchase-requests', [PurchaseRequestController::class, 'index'])->name('purchase-requests.index');
     Route::get('/purchase-requests/create', [PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
     Route::post('/purchase-requests', [PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
@@ -283,43 +258,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
     Route::get('/settings/password-policy', [SettingController::class, 'passwordPolicy'])->name('settings.password-policy');
     Route::post('/settings/password-policy', [SettingController::class, 'savePasswordPolicy'])->name('settings.password-policy.save');
 
-    // CMMS: Equipment Registry (operational — not super-admin-only)
-    Route::get('/equipment-registry', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'index'])->name('equipment-registry.index');
-    Route::get('/equipment-registry/create', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'create'])->name('equipment-registry.create');
-    Route::post('/equipment-registry', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'store'])->name('equipment-registry.store');
-    Route::get('/equipment-registry/{equipment}/edit', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'edit'])->name('equipment-registry.edit');
-    Route::put('/equipment-registry/{equipment}', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'update'])->name('equipment-registry.update');
-    Route::delete('/equipment-registry/{equipment}', [\App\Http\Controllers\Web\EquipmentRegistryController::class, 'destroy'])->name('equipment-registry.destroy');
-
-    // CMMS: PM Plans (Phase 2A)
-    Route::prefix('cmms/pm')->name('cmms.pm.')->group(function () {
-        Route::get('plans', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'index'])->name('plans.index')
-            ->middleware('permission:pm.view');
-        Route::get('plans/create', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'create'])->name('plans.create')
-            ->middleware('permission:pm.plan');
-        Route::post('plans', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'store'])->name('plans.store')
-            ->middleware('permission:pm.plan');
-        Route::get('plans/{plan}/edit', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'edit'])->name('plans.edit')
-            ->middleware('permission:pm.plan');
-        Route::put('plans/{plan}', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'update'])->name('plans.update')
-            ->middleware('permission:pm.plan');
-        Route::delete('plans/{plan}', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'destroy'])->name('plans.destroy')
-            ->middleware('permission:pm.plan');
-        Route::post('plans/{plan}/generate-work-order', [\App\Http\Controllers\Web\Cmms\PmPlanController::class, 'generateWorkOrder'])->name('plans.generate-wo')
-            ->middleware('permission:pm.plan');
-
-        Route::get('work-orders', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'index'])->name('work-orders.index')
-            ->middleware('permission:pm.view');
-        Route::get('work-orders/{workOrder}', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'show'])->name('work-orders.show')
-            ->middleware('permission:pm.view');
-        Route::post('work-orders/{workOrder}/start', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'start'])->name('work-orders.start')
-            ->middleware('permission:pm.execute');
-        Route::post('work-orders/{workOrder}/complete', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'complete'])->name('work-orders.complete')
-            ->middleware('permission:pm.execute');
-        Route::post('work-orders/{workOrder}/cancel', [\App\Http\Controllers\Web\Cmms\PmWorkOrderController::class, 'cancel'])->name('work-orders.cancel')
-            ->middleware('permission:pm.plan');
-    });
-
     Route::middleware('super-admin')->group(function () {
         Route::get('/settings/branding', [SettingController::class, 'branding'])->name('settings.branding');
         Route::post('/settings/branding', [SettingController::class, 'saveBranding'])->name('settings.branding.save');
@@ -365,22 +303,6 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         Route::get('/settings/org-units/{orgUnit}/edit', [OrgUnitController::class, 'edit'])->name('settings.org-units.edit');
         Route::put('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'update'])->name('settings.org-units.update');
         Route::delete('/settings/org-units/{orgUnit}', [OrgUnitController::class, 'destroy'])->name('settings.org-units.destroy');
-
-        // Equipment Categories
-        Route::get('/settings/equipment', [EquipmentController::class, 'index'])->name('settings.equipment.index');
-        Route::get('/settings/equipment/create', [EquipmentController::class, 'create'])->name('settings.equipment.create');
-        Route::post('/settings/equipment', [EquipmentController::class, 'store'])->name('settings.equipment.store');
-        Route::get('/settings/equipment/{equipmentCategory}/edit', [EquipmentController::class, 'edit'])->name('settings.equipment.edit');
-        Route::put('/settings/equipment/{equipmentCategory}', [EquipmentController::class, 'update'])->name('settings.equipment.update');
-        Route::delete('/settings/equipment/{equipmentCategory}', [EquipmentController::class, 'destroy'])->name('settings.equipment.destroy');
-
-        // Equipment Locations
-        Route::get('/settings/equipment-locations', [EquipmentLocationController::class, 'index'])->name('settings.equipment-locations.index');
-        Route::get('/settings/equipment-locations/create', [EquipmentLocationController::class, 'create'])->name('settings.equipment-locations.create');
-        Route::post('/settings/equipment-locations', [EquipmentLocationController::class, 'store'])->name('settings.equipment-locations.store');
-        Route::get('/settings/equipment-locations/{equipmentLocation}/edit', [EquipmentLocationController::class, 'edit'])->name('settings.equipment-locations.edit');
-        Route::put('/settings/equipment-locations/{equipmentLocation}', [EquipmentLocationController::class, 'update'])->name('settings.equipment-locations.update');
-        Route::delete('/settings/equipment-locations/{equipmentLocation}', [EquipmentLocationController::class, 'destroy'])->name('settings.equipment-locations.destroy');
 
         Route::get('/settings/workflow', [WorkflowController::class, 'index'])->name('settings.workflow.index');
         Route::get('/settings/workflow/create', [WorkflowController::class, 'create'])->name('settings.workflow.create');

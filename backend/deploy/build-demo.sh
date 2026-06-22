@@ -5,15 +5,16 @@
 #   - dataflow-demo.zip  (โค้ด + vendor/ + public/build/ พร้อมอัป)
 #   - demo.sql           (DB ที่ seed แล้ว สำหรับ import ผ่าน phpMyAdmin)
 #
-# Usage:  deploy/build-demo.sh [factory|school]      (default: factory)
+# Usage:  deploy/build-demo.sh [factory|school|demo]   (default: factory)
+#   demo = บริษัทกลางๆ (GenericDemoSeeder) — 6 eForm workflow ขั้นสูง + dashboard กราฟ
 # ดูขั้นตอนเต็มที่ doc/deploy-cpanel.md
 #
 set -euo pipefail
 
 VERTICAL="${1:-factory}"
 case "$VERTICAL" in
-    factory|school) ;;
-    *) echo "vertical ต้องเป็น factory หรือ school (ได้รับ: $VERTICAL)"; exit 1 ;;
+    factory|school|demo) ;;
+    *) echo "vertical ต้องเป็น factory, school หรือ demo (ได้รับ: $VERTICAL)"; exit 1 ;;
 esac
 
 cd "$(dirname "$0")/.."          # → backend/
@@ -37,12 +38,18 @@ mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" \
     -e "CREATE DATABASE IF NOT EXISTS \`$BUILD_DB\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 export DB_DATABASE="$BUILD_DB"      # Dotenv ไม่ override env ที่ export แล้ว → artisan ใช้ build DB
 php artisan migrate:fresh --force --seed
-if [ "$VERTICAL" = "factory" ]; then
-    php artisan db:seed --class=NteqPolymerDemoSeeder --force
-else
-    php artisan db:seed --class=IndustryTemplateSeeder --force
-    php artisan db:seed --class=BodindechaDemoSeeder --force
-fi
+case "$VERTICAL" in
+    factory)
+        php artisan db:seed --class=NteqPolymerDemoSeeder --force
+        ;;
+    school)
+        php artisan db:seed --class=IndustryTemplateSeeder --force
+        php artisan db:seed --class=BodindechaDemoSeeder --force
+        ;;
+    demo)
+        php artisan db:seed --class=GenericDemoSeeder --force
+        ;;
+esac
 php artisan org:switch "$VERTICAL"
 unset DB_DATABASE
 
@@ -51,6 +58,11 @@ mysqldump -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" \
     --no-tablespaces --default-character-set=utf8mb4 "$BUILD_DB" > "$DIST/demo.sql"
 
 echo "==> [5/5] zip artifact → deploy/dist/dataflow-demo.zip"
+# ให้ artifact พก runtime dirs (ว่าง + .gitkeep) ไปด้วย — กัน "Please provide a valid
+# cache path" บน server (host ที่ extract zip ไม่สร้าง dir เปล่าให้เอง)
+RUNTIME_DIRS="storage/framework/views storage/framework/cache/data storage/framework/sessions storage/app/public bootstrap/cache"
+for d in $RUNTIME_DIRS; do mkdir -p "$d"; touch "$d/.gitkeep"; done
+
 rm -f "$DIST/dataflow-demo.zip"
 zip -rq "$DIST/dataflow-demo.zip" . \
     -x './node_modules/*' './.git/*' './tests/*' './deploy/dist/*' \
@@ -58,6 +70,9 @@ zip -rq "$DIST/dataflow-demo.zip" . \
        './storage/framework/cache/data/*' './storage/framework/sessions/*' \
        './storage/framework/views/*' './public/storage/*' './public/storage' \
        './.env' './.env.bak' './database/database.sqlite'
+
+# explicit-add .gitkeep (zip -g ข้าม -x exclude) → dir โครงสร้างติดไปใน artifact
+for d in $RUNTIME_DIRS; do zip -gq "$DIST/dataflow-demo.zip" "$d/.gitkeep"; done
 
 echo
 echo "เสร็จ → $DIST/"

@@ -22,8 +22,6 @@ class SettingsMenuAccessTest extends TestCase
         return [
             'branding' => ['settings.branding'],
             'positions index' => ['settings.positions.index'],
-            'equipment categories index' => ['settings.equipment.index'],
-            'equipment locations index' => ['settings.equipment-locations.index'],
             'workflow index' => ['settings.workflow.index'],
             'approval routing' => ['settings.approval-routing'],
             'system change log' => ['settings.system-change-log'],

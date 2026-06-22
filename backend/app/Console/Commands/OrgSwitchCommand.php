@@ -7,15 +7,19 @@ use Illuminate\Support\Facades\Artisan;
 
 class OrgSwitchCommand extends Command
 {
-    protected $signature = 'org:switch {vertical : factory|school}';
+    protected $signature = 'org:switch {vertical : factory|school|demo}';
 
-    protected $description = 'Set ORG_VERTICAL in .env and clear config cache. Use composer switch:factory / switch:school for a full demo reset.';
+    protected $description = 'Set ORG_VERTICAL in .env and clear config cache. Use composer switch:factory / switch:school / switch:demo for a full demo reset.';
 
-    private const ALLOWED = ['factory', 'school'];
+    // 'demo' = neutral company demo (GenericDemoSeeder). ORG_VERTICAL=demo loads no
+    // vertical override (overrides apply only when value is 'school'), so labels stay
+    // neutral (องค์กร/สาขา) — same base copy as 'factory'.
+    private const ALLOWED = ['factory', 'school', 'demo'];
 
     private const CREDS = [
         'factory' => ['email' => 'somchai@nteq.test',       'password' => 'Nteq1234!',  'label' => 'NTEQ Polymer (โรงงาน)'],
         'school' => ['email' => 'teacher.thai@bodin.test', 'password' => 'Bodin1234!', 'label' => 'Bodindecha (โรงเรียน)'],
+        'demo' => ['email' => 'staff@demo.test',        'password' => 'password',   'label' => 'บริษัท เดโม จำกัด (กลางๆ)'],
     ];
 
     public function handle(): int

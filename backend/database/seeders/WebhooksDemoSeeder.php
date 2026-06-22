@@ -24,7 +24,6 @@ class WebhooksDemoSeeder extends Seeder
                 'events' => ['form.submitted', 'approval.completed'],
                 'field_allowlists' => [
                     'repair_request_default' => ['title', 'location', 'detail'],
-                    'pm_am_plan_default' => ['title', 'equipment_id'],
                 ],
                 'is_active' => true,
                 'created_by' => $adminId,

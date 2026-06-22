@@ -13,7 +13,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
- * Factory / CMMS playbook: document types repair_request + pm_am_plan, default forms,
+ * Factory / CMMS playbook: document type repair_request, default form,
  * single-step approval (MAINT_SUP from FactoryPositionSeeder if seeded, else first position or admin user), global workflow policy.
  *
  * Idempotent (updateOrCreate). Safe to re-run.
@@ -29,14 +29,6 @@ class FactoryCmmsTemplateSeeder extends Seeder
                 'label_th' => 'แจ้งซ่อม',
                 'icon' => 'wrench-screwdriver',
                 'sort_order' => 10,
-                'routing_mode' => 'hybrid',
-            ],
-            [
-                'code' => 'pm_am_plan',
-                'label_en' => 'PM / AM plan',
-                'label_th' => 'แผนบำรุงรักษา PM/AM',
-                'icon' => 'clipboard-document-list',
-                'sort_order' => 11,
                 'routing_mode' => 'hybrid',
             ],
         ] as $type) {
@@ -65,27 +57,13 @@ class FactoryCmmsTemplateSeeder extends Seeder
             ]
         );
 
-        $pmForm = $this->syncForm(
-            'pm_am_plan_default',
-            'แผน PM/AM (ค่าเริ่มต้น)',
-            'pm_am_plan',
-            'เทมเพลตโรงงาน: แผน PM/AM — ฟิลด์ equipment_id ใช้ร่วมกับหน้าสร้างแผน (เลือกจากรายการอุปกรณ์)',
-            [
-                ['field_key' => 'title', 'label' => 'หัวข้อแผน', 'field_type' => 'text', 'is_required' => true, 'is_searchable' => true, 'sort_order' => 1],
-                ['field_key' => 'detail', 'label' => 'รายละเอียด', 'field_type' => 'textarea', 'is_required' => false, 'sort_order' => 2],
-                ['field_key' => 'equipment_id', 'label' => 'อุปกรณ์', 'field_type' => 'text', 'is_required' => false, 'is_searchable' => true, 'sort_order' => 3],
-            ]
-        );
-
         $stage = $this->defaultApproverStage();
 
         $repairWf = $this->syncWorkflow('CMMS — อนุมัติแจ้งซ่อม', 'repair_request', 'เทมเพลตโรงงาน (ขั้นเดียว)', [$stage]);
-        $pmWf = $this->syncWorkflow('CMMS — อนุมัติแผน PM/AM', 'pm_am_plan', 'เทมเพลตโรงงาน (ขั้นเดียว)', [$stage]);
 
         $this->syncGlobalPolicy($repairForm, $repairWf);
-        $this->syncGlobalPolicy($pmForm, $pmWf);
 
-        $this->command?->info('FactoryCmmsTemplateSeeder: repair_request + pm_am_plan types, default forms, workflows, policies.');
+        $this->command?->info('FactoryCmmsTemplateSeeder: repair_request type, default form, workflow, policy.');
     }
 
     private function defaultApproverStage(): array
@@ -161,7 +139,7 @@ class FactoryCmmsTemplateSeeder extends Seeder
     {
         // Service-type forms (repair, maintenance, PM) are good candidates for
         // post-action evaluation — enable by default. Non-service types stay off.
-        $shouldEnableEval = in_array($documentType, ['repair_request', 'maintenance_request', 'pm_am_plan'], true);
+        $shouldEnableEval = in_array($documentType, ['repair_request', 'maintenance_request'], true);
 
         $form = DocumentForm::query()->updateOrCreate(
             ['form_key' => $formKey],

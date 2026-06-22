@@ -2,11 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Equipment;
 use App\Models\Setting;
-use App\Models\SparePart;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Branch-level list filtering driven by settings (see Settings → Branch scoping).
@@ -14,10 +11,6 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final class BranchScopeService
 {
-    public const MODULE_EQUIPMENT = 'equipment';
-
-    public const MODULE_SPARE_PARTS = 'spare_parts';
-
     public static function masterEnabled(): bool
     {
         return Setting::getBool('branch_scoping.enabled', false);
@@ -48,60 +41,6 @@ final class BranchScopeService
         }
 
         return true;
-    }
-
-    /**
-     * Rows with null branch_id are treated as organization-wide (visible to all branches).
-     *
-     * @param  Builder<\App\Models\Equipment>  $query
-     */
-    public static function constrainEquipmentQuery(Builder $query, ?User $user): void
-    {
-        if (! self::applies($user, self::MODULE_EQUIPMENT)) {
-            return;
-        }
-        $bid = (int) $user->branch_id;
-        $query->where(function ($q) use ($bid) {
-            $q->where('branch_id', $bid)->orWhereNull('branch_id');
-        });
-    }
-
-    /**
-     * @param  Builder<\App\Models\SparePart>  $query
-     */
-    public static function constrainSparePartQuery(Builder $query, ?User $user): void
-    {
-        if (! self::applies($user, self::MODULE_SPARE_PARTS)) {
-            return;
-        }
-        $bid = (int) $user->branch_id;
-        $query->where(function ($q) use ($bid) {
-            $q->where('branch_id', $bid)->orWhereNull('branch_id');
-        });
-    }
-
-    public static function userCanAccessEquipment(?User $user, Equipment $equipment): bool
-    {
-        if (! self::applies($user, self::MODULE_EQUIPMENT)) {
-            return true;
-        }
-        if ($equipment->branch_id === null) {
-            return true;
-        }
-
-        return (int) $equipment->branch_id === (int) $user->branch_id;
-    }
-
-    public static function userCanAccessSparePart(?User $user, SparePart $part): bool
-    {
-        if (! self::applies($user, self::MODULE_SPARE_PARTS)) {
-            return true;
-        }
-        if ($part->branch_id === null) {
-            return true;
-        }
-
-        return (int) $part->branch_id === (int) $user->branch_id;
     }
 
     /**

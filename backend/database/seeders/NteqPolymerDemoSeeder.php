@@ -8,18 +8,12 @@ use App\Models\Company;
 use App\Models\DocumentForm;
 use App\Models\DocumentFormWorkflowPolicy;
 use App\Models\DocumentType;
-use App\Models\Equipment;
-use App\Models\EquipmentCategory;
-use App\Models\EquipmentLocation;
 use App\Models\LookupList;
 use App\Models\LookupListItem;
 use App\Models\OrgUnit;
 use App\Models\OrgUnitWorkflowBinding;
-use App\Models\PmPlan;
-use App\Models\PmTaskItem;
 use App\Models\Position;
 use App\Models\RunningNumberConfig;
-use App\Models\SparePart;
 use App\Models\User;
 use App\Services\FormSchemaService;
 use Illuminate\Database\Seeder;
@@ -30,9 +24,8 @@ use Spatie\Permission\Models\Role;
  * NTEQ Polymer Co., Ltd. — โรงงานแปรรูปยางพารา จ.มุกดาหาร
  *
  * Seeds: company, org units (root + 7 departments), positions (8), users (8+admin),
- * equipment categories + locations + equipment, document type (maintenance_request),
- * 3-step approval workflow, maintenance form with 18 fields (visibility rules + validation),
- * and org unit workflow bindings.
+ * document type (maintenance_request), 3-step approval workflow, maintenance eForm
+ * (visibility rules + validation), maintenance lookup lists, and org unit workflow bindings.
  *
  * Idempotent (updateOrCreate). Safe to re-run.
  *
@@ -175,182 +168,6 @@ class NteqPolymerDemoSeeder extends Seeder
                 $orgUnit->update(['head_user_id' => $head->id]);
             }
         }
-
-        // ── 6. Equipment Categories ─────────────────────────
-        $categories = [
-            ['code' => 'SHRED',   'name' => 'Shredder / เครื่องสับยาง',        'description' => 'เครื่องสับย่อยยางก้อน'],
-            ['code' => 'CREPER',  'name' => 'Creper / เครื่องรีดยาง',          'description' => 'เครื่องรีดแผ่นยาง'],
-            ['code' => 'DRYER',   'name' => 'Dryer / เตาอบยาง',              'description' => 'เตาอบยางแท่ง STR'],
-            ['code' => 'BALER',   'name' => 'Baling Press / เครื่องอัดก้อน',    'description' => 'เครื่องอัดยางเป็นก้อน 35 kg'],
-            ['code' => 'CONV',    'name' => 'Conveyor / สายพานลำเลียง',       'description' => 'สายพานลำเลียงวัตถุดิบ/สินค้า'],
-            ['code' => 'BOILER',  'name' => 'Boiler / หม้อไอน้ำ',             'description' => 'หม้อไอน้ำสำหรับเตาอบ'],
-            ['code' => 'WWT',     'name' => 'Wastewater Treatment / ระบบบำบัดน้ำเสีย', 'description' => 'ระบบบำบัดน้ำเสียจากกระบวนการผลิต'],
-            ['code' => 'FKLIFT',  'name' => 'Forklift / รถยก',               'description' => 'รถยกคลังสินค้า'],
-            ['code' => 'LABINST', 'name' => 'Lab Instrument / เครื่องมือแล็บ',  'description' => 'Mooney Viscometer, Plasticity Tester'],
-        ];
-
-        $catMap = [];
-        foreach ($categories as $c) {
-            $cat = EquipmentCategory::updateOrCreate(['code' => $c['code']], ['name' => $c['name'], 'description' => $c['description'], 'is_active' => true]);
-            $catMap[$c['code']] = $cat;
-        }
-
-        // ── 7. Equipment Locations ──────────────────────────
-        $locations = [
-            ['code' => 'PROD_A1', 'name' => 'อาคาร A สายผลิต 1',    'building' => 'อาคาร A', 'floor' => '1', 'zone' => 'สายผลิต STR10'],
-            ['code' => 'PROD_A2', 'name' => 'อาคาร A สายผลิต 2',    'building' => 'อาคาร A', 'floor' => '1', 'zone' => 'สายผลิต STR20'],
-            ['code' => 'DRY_B',   'name' => 'อาคาร B เครื่องอบ',     'building' => 'อาคาร B', 'floor' => '1', 'zone' => 'Drying'],
-            ['code' => 'PACK_C',  'name' => 'อาคาร C บรรจุ',        'building' => 'อาคาร C', 'floor' => '1', 'zone' => 'Packing/Baling'],
-            ['code' => 'WH_D',    'name' => 'คลังสินค้า D',          'building' => 'อาคาร D', 'floor' => '1', 'zone' => 'Warehouse'],
-            ['code' => 'WWT_OUT', 'name' => 'บ่อบำบัดน้ำเสีย',       'building' => 'Outdoor', 'floor' => null, 'zone' => 'Wastewater'],
-            ['code' => 'UTIL',    'name' => 'โรงไฟฟ้า/หม้อไอน้ำ',     'building' => 'Utility', 'floor' => null, 'zone' => 'Utilities'],
-            ['code' => 'LAB',     'name' => 'ห้องปฏิบัติการ QC',       'building' => 'อาคาร A', 'floor' => '2', 'zone' => 'Laboratory'],
-        ];
-
-        $locMap = [];
-        foreach ($locations as $l) {
-            $loc = EquipmentLocation::updateOrCreate(['code' => $l['code']], ['name' => $l['name'], 'building' => $l['building'], 'floor' => $l['floor'], 'zone' => $l['zone'], 'is_active' => true]);
-            $locMap[$l['code']] = $loc;
-        }
-
-        // ── 8. Equipment (sample) ───────────────────────────
-        $equipmentList = [
-            ['code' => 'SHRED-001', 'name' => 'Shredder #1',        'cat' => 'SHRED',   'loc' => 'PROD_A1', 'serial' => 'SH-2018-001', 'manufacturer' => 'Weiler',            'model' => 'WEL-200XL',    'criticality' => 'A', 'purchase_date' => '2018-03-15', 'runtime_hours' => 38240.50],
-            ['code' => 'SHRED-002', 'name' => 'Shredder #2',        'cat' => 'SHRED',   'loc' => 'PROD_A2', 'serial' => 'SH-2018-002', 'manufacturer' => 'Weiler',            'model' => 'WEL-200XL',    'criticality' => 'A', 'purchase_date' => '2018-09-01', 'runtime_hours' => 35120.00],
-            ['code' => 'CREP-001',  'name' => 'Creper Line 1',      'cat' => 'CREPER',  'loc' => 'PROD_A1', 'serial' => 'CR-2018-001', 'manufacturer' => 'Siam Rubber Eng.',  'model' => 'SRE-CREP-75',  'criticality' => 'A', 'purchase_date' => '2018-06-10', 'runtime_hours' => 36990.75],
-            ['code' => 'DRY-001',   'name' => 'Dryer Oven #1',      'cat' => 'DRYER',   'loc' => 'DRY_B',   'serial' => 'DR-2019-001', 'manufacturer' => 'Tecnocoque',         'model' => 'TC-DRY-1200',  'criticality' => 'A', 'purchase_date' => '2019-02-20', 'runtime_hours' => 29880.00],
-            ['code' => 'DRY-002',   'name' => 'Dryer Oven #2',      'cat' => 'DRYER',   'loc' => 'DRY_B',   'serial' => 'DR-2019-002', 'manufacturer' => 'Tecnocoque',         'model' => 'TC-DRY-1200',  'criticality' => 'A', 'purchase_date' => '2019-08-05', 'runtime_hours' => 27540.25],
-            ['code' => 'BALER-001', 'name' => 'Baling Press #1',    'cat' => 'BALER',   'loc' => 'PACK_C',  'serial' => 'BP-2018-001', 'manufacturer' => 'Bollegraaf',        'model' => 'HBC-50',       'criticality' => 'B', 'purchase_date' => '2018-07-22', 'runtime_hours' => 31200.00],
-            ['code' => 'CONV-001',  'name' => 'Conveyor Belt A1',   'cat' => 'CONV',    'loc' => 'PROD_A1', 'serial' => 'CB-2018-001', 'manufacturer' => 'Thai Conveyor Co.', 'model' => 'TCC-BLT-600',  'criticality' => 'B', 'purchase_date' => '2018-04-01', 'runtime_hours' => 42360.00],
-            ['code' => 'CONV-002',  'name' => 'Conveyor Belt A2',   'cat' => 'CONV',    'loc' => 'PROD_A2', 'serial' => 'CB-2018-002', 'manufacturer' => 'Thai Conveyor Co.', 'model' => 'TCC-BLT-600',  'criticality' => 'B', 'purchase_date' => '2018-10-15', 'runtime_hours' => 40120.50],
-            ['code' => 'BOIL-001',  'name' => 'Boiler #1',          'cat' => 'BOILER',  'loc' => 'UTIL',    'serial' => 'BL-2017-001', 'manufacturer' => 'Bosch Thermotechnik', 'model' => 'BTH-STM-5T',  'criticality' => 'A', 'purchase_date' => '2017-11-30', 'runtime_hours' => 48790.00],
-            ['code' => 'WWT-001',   'name' => 'Aeration Tank #1',   'cat' => 'WWT',     'loc' => 'WWT_OUT', 'serial' => 'WT-2018-001', 'manufacturer' => 'Siemens',           'model' => 'AER-AT-200',   'criticality' => 'B', 'purchase_date' => '2018-05-18', 'runtime_hours' => 39860.25],
-            ['code' => 'FK-001',    'name' => 'Forklift Toyota 3T', 'cat' => 'FKLIFT',  'loc' => 'WH_D',    'serial' => 'FL-2020-001', 'manufacturer' => 'Toyota',            'model' => '8FGU30',       'criticality' => 'C', 'purchase_date' => '2020-01-10', 'runtime_hours' => 8420.75],
-            ['code' => 'MV-001',    'name' => 'Mooney Viscometer',  'cat' => 'LABINST', 'loc' => 'LAB',     'serial' => 'MV-2019-001', 'manufacturer' => 'Alpha Technologies', 'model' => 'MV2000VS',     'criticality' => 'C', 'purchase_date' => '2019-04-25', 'runtime_hours' => 6150.00],
-        ];
-
-        foreach ($equipmentList as $eq) {
-            Equipment::updateOrCreate(
-                ['code' => $eq['code']],
-                [
-                    'name' => $eq['name'],
-                    'equipment_category_id' => $catMap[$eq['cat']]->id,
-                    'equipment_location_id' => $locMap[$eq['loc']]->id,
-                    'company_id' => $company->id,
-                    'serial_number' => $eq['serial'],
-                    'manufacturer' => $eq['manufacturer'],
-                    'model' => $eq['model'],
-                    'status' => 'active',
-                    'criticality' => $eq['criticality'],
-                    'purchase_date' => $eq['purchase_date'],
-                    'runtime_hours' => $eq['runtime_hours'],
-                ]
-            );
-        }
-        $this->command?->info('Equipment: '.count($equipmentList).' items');
-
-        // ── 8b. Spare Parts ─────────────────────────────────
-        $spareParts = [
-            ['code' => 'CB-001',   'name' => 'สายพาน Conveyor Belt 500mm', 'unit_cost' => 8500,  'current_stock' => 5,  'min_stock' => 2],
-            ['code' => 'BRG-6205', 'name' => 'ลูกปืนแบริ่ง 6205-2RS',      'unit_cost' => 350,   'current_stock' => 20, 'min_stock' => 10],
-            ['code' => 'BRG-6208', 'name' => 'ลูกปืนแบริ่ง 6208-2RS',      'unit_cost' => 550,   'current_stock' => 15, 'min_stock' => 5],
-            ['code' => 'SEAL-001', 'name' => 'ซีลกันน้ำมัน Oil Seal',       'unit_cost' => 180,   'current_stock' => 30, 'min_stock' => 10],
-            ['code' => 'BLD-001',  'name' => 'ใบมีด Shredder Blade',       'unit_cost' => 2500,  'current_stock' => 8,  'min_stock' => 4],
-            ['code' => 'FLT-001',  'name' => 'ไส้กรองน้ำมันไฮดรอลิก',       'unit_cost' => 450,   'current_stock' => 12, 'min_stock' => 5],
-            ['code' => 'VBT-001',  'name' => 'สายพาน V-Belt B68',         'unit_cost' => 320,   'current_stock' => 10, 'min_stock' => 5],
-            ['code' => 'GRS-001',  'name' => 'จาระบี Grease EP2 (15kg)',   'unit_cost' => 1200,  'current_stock' => 6,  'min_stock' => 3],
-        ];
-
-        foreach ($spareParts as $sp) {
-            SparePart::updateOrCreate(
-                ['code' => $sp['code']],
-                ['name' => $sp['name'], 'unit_cost' => $sp['unit_cost'], 'current_stock' => $sp['current_stock'], 'min_stock' => $sp['min_stock'], 'is_active' => true]
-            );
-        }
-        $this->command?->info('Spare Parts: '.count($spareParts).' items');
-
-        // ── 8c. PM Plans (Phase 2A demo) ────────────────────
-        $eqMap = Equipment::whereIn('code', ['BOIL-001', 'SHRED-001', 'DRY-001'])->pluck('id', 'code');
-        $spMap = SparePart::whereIn('code', ['GRS-001', 'BLD-001', 'VBT-001'])->pluck('id', 'code');
-
-        $pmPlans = [
-            [
-                'equipment' => 'BOIL-001', 'name' => 'ตรวจเช็ค Boiler รายเดือน',
-                'description' => 'ตรวจประจำเดือนตามมาตรฐานความปลอดภัยของหม้อไอน้ำ',
-                'frequency_type' => 'date', 'interval_days' => 30, 'estimated_duration_minutes' => 60,
-                'tasks' => [
-                    ['description' => 'ตรวจ pressure gauge', 'task_type' => 'measurement', 'expected_value' => '8-12', 'unit' => 'bar', 'requires_photo' => true, 'estimated_minutes' => 5, 'is_critical' => true],
-                    ['description' => 'ตรวจ safety valve ไม่รั่วและ release ได้ปกติ', 'task_type' => 'visual', 'requires_photo' => true, 'estimated_minutes' => 10, 'is_critical' => true],
-                    ['description' => 'หล่อลื่น bearing ของ fire pump', 'task_type' => 'lubrication', 'spare_part_code' => 'GRS-001', 'estimated_minutes' => 15, 'loto_required' => true],
-                    ['description' => 'ทำความสะอาด strainer น้ำเข้า', 'task_type' => 'cleaning', 'estimated_minutes' => 20, 'loto_required' => true],
-                    ['description' => 'บันทึกชั่วโมงใช้งาน', 'task_type' => 'measurement', 'unit' => 'hr', 'estimated_minutes' => 2],
-                ],
-            ],
-            [
-                'equipment' => 'SHRED-001', 'name' => 'เปลี่ยนใบมีด Shredder ทุก 500 ชม.',
-                'description' => 'เปลี่ยนใบมีดเมื่อสะสม runtime ครบ 500 ชั่วโมง — ถ้าใบสึกผิดปกติก่อนครบรอบ ให้เปลี่ยนก่อนกำหนด',
-                'frequency_type' => 'runtime', 'interval_hours' => 500, 'estimated_duration_minutes' => 90,
-                'tasks' => [
-                    ['description' => 'ตรวจสภาพใบมีดและวัดระดับสึก', 'task_type' => 'visual', 'requires_photo' => true, 'estimated_minutes' => 10, 'is_critical' => true],
-                    ['description' => 'เปลี่ยนใบมีด (ชุดครบ)', 'task_type' => 'replacement', 'spare_part_code' => 'BLD-001', 'estimated_minutes' => 45, 'loto_required' => true, 'requires_photo' => true, 'requires_signature' => true, 'is_critical' => true],
-                    ['description' => 'ทดสอบเดินเครื่องเปล่า วัดเสียงรบกวน', 'task_type' => 'measurement', 'expected_value' => '< 70', 'unit' => 'dB', 'estimated_minutes' => 10],
-                    ['description' => 'บันทึกรอบใบมีดใหม่', 'task_type' => 'measurement', 'unit' => 'rpm', 'estimated_minutes' => 5],
-                ],
-            ],
-            [
-                'equipment' => 'DRY-001', 'name' => 'Overhaul Dryer ทุกไตรมาส',
-                'description' => 'งานใหญ่รายไตรมาส — หยุดสายผลิต 4-6 ชั่วโมง',
-                'frequency_type' => 'date', 'interval_days' => 90, 'estimated_duration_minutes' => 240,
-                'tasks' => [
-                    ['description' => 'ตรวจ blower belt ยึดแน่นและไม่สึก', 'task_type' => 'visual', 'requires_photo' => true, 'estimated_minutes' => 10, 'is_critical' => true],
-                    ['description' => 'เปลี่ยน V-belt blower', 'task_type' => 'replacement', 'spare_part_code' => 'VBT-001', 'estimated_minutes' => 30, 'loto_required' => true],
-                    ['description' => 'หล่อลื่นมอเตอร์ blower', 'task_type' => 'lubrication', 'spare_part_code' => 'GRS-001', 'estimated_minutes' => 15],
-                    ['description' => 'ทำความสะอาด heat exchanger', 'task_type' => 'cleaning', 'estimated_minutes' => 60, 'loto_required' => true],
-                    ['description' => 'ตรวจ temperature sensor', 'task_type' => 'measurement', 'expected_value' => '±2', 'unit' => '°C', 'estimated_minutes' => 10],
-                    ['description' => 'ตรวจ air flow', 'task_type' => 'measurement', 'expected_value' => '8-12', 'unit' => 'm/s', 'requires_photo' => true, 'estimated_minutes' => 10],
-                ],
-            ],
-        ];
-
-        foreach ($pmPlans as $p) {
-            $plan = PmPlan::updateOrCreate(
-                ['equipment_id' => $eqMap[$p['equipment']], 'name' => $p['name']],
-                [
-                    'description' => $p['description'],
-                    'frequency_type' => $p['frequency_type'],
-                    'interval_days' => $p['interval_days'] ?? null,
-                    'interval_hours' => $p['interval_hours'] ?? null,
-                    'estimated_duration_minutes' => $p['estimated_duration_minutes'],
-                    'is_active' => true,
-                ]
-            );
-            $plan->taskItems()->delete();
-            foreach ($p['tasks'] as $idx => $t) {
-                PmTaskItem::create([
-                    'pm_plan_id' => $plan->id,
-                    'step_no' => $idx + 1,
-                    'sort_order' => $idx + 1,
-                    'description' => $t['description'],
-                    'task_type' => $t['task_type'],
-                    'expected_value' => $t['expected_value'] ?? null,
-                    'unit' => $t['unit'] ?? null,
-                    'requires_photo' => $t['requires_photo'] ?? false,
-                    'requires_signature' => $t['requires_signature'] ?? false,
-                    'spare_part_id' => isset($t['spare_part_code']) ? ($spMap[$t['spare_part_code']] ?? null) : null,
-                    'estimated_minutes' => $t['estimated_minutes'] ?? null,
-                    'loto_required' => $t['loto_required'] ?? false,
-                    'is_critical' => $t['is_critical'] ?? false,
-                ]);
-            }
-        }
-        $this->command?->info('PM Plans: '.count($pmPlans).' plans seeded');
-
-        // Generate demo WOs for the 2 date-based plans (SHRED runtime-based needs next_due_runtime set)
-        $generator = app(\App\Services\Cmms\PmWorkOrderGenerator::class);
-        foreach (PmPlan::whereIn('equipment_id', [$eqMap['BOIL-001'], $eqMap['DRY-001']])->get() as $plan) {
-            $generator->generate($plan);
-        }
-        $this->command?->info('PM Work Orders: '.\App\Models\PmWorkOrder::count().' demo WOs generated');
 
         // ── 9. Workflow: แจ้งซ่อม 3 ขั้น ────────────────────
         $wfMaint = ApprovalWorkflow::updateOrCreate(
@@ -549,9 +366,7 @@ class NteqPolymerDemoSeeder extends Seeder
                 'visibility_rules' => [['field' => 'priority', 'operator' => 'equals', 'value' => 'emergency']],
                 'validation_rules' => ['min_length' => 10]],
 
-            // ── Section: เครื่องจักร ──
-            ['field_key' => 'equipment_id',       'label_th' => 'เครื่องจักร',        'label_en' => 'Equipment',              'field_type' => 'lookup',    'is_required' => true,  'sort_order' => 5,
-                'options' => ['source' => 'equipment']],
+            // ── Section: เครื่องจักร / ปัญหา ──
             ['field_key' => 'problem_type',       'label_th' => 'ประเภทปัญหา',        'label_en' => 'Problem Type',           'field_type' => 'lookup',    'is_required' => true,  'sort_order' => 6,
                 'options' => ['source' => 'maintenance_problem_type']],
             ['field_key' => 'description',        'label_th' => 'รายละเอียดปัญหา',    'label_en' => 'Problem Description',    'field_type' => 'textarea',  'is_required' => true,  'sort_order' => 7,
@@ -609,7 +424,7 @@ class NteqPolymerDemoSeeder extends Seeder
                 'options' => ['ต้องการ']],
             ['field_key' => 'parts_list',         'label_th' => 'รายการอะไหล่ที่ต้องใช้', 'label_en' => 'Required Parts',     'field_type' => 'table',     'is_required' => false, 'sort_order' => 32, 'col_span' => 2,
                 'options' => ['columns' => [
-                    ['key' => 'spare_part', 'label' => 'อะไหล่',     'type' => 'lookup', 'lookup_source' => 'spare_part'],
+                    ['key' => 'spare_part', 'label' => 'อะไหล่',     'type' => 'text'],
                     ['key' => 'qty',        'label' => 'จำนวน',      'type' => 'number'],
                     ['key' => 'unit',       'label' => 'หน่วย',      'type' => 'text'],
                     ['key' => 'remark',     'label' => 'หมายเหตุ',   'type' => 'text'],
@@ -625,7 +440,7 @@ class NteqPolymerDemoSeeder extends Seeder
 
         // Pre-enable is_searchable on high-signal fields so the user's list filter
         // bar is useful immediately after seeding — no need for admin to tick them.
-        $searchableDefaults = ['document_date', 'priority', 'equipment_id', 'problem_type', 'failure_mode', 'is_recurring', 'production_stopped', 'safety_impact', 'found_date'];
+        $searchableDefaults = ['document_date', 'priority', 'problem_type', 'failure_mode', 'is_recurring', 'production_stopped', 'safety_impact', 'found_date'];
         foreach ($fields as $f) {
             $form->fields()->create([
                 'field_key' => $f['field_key'],

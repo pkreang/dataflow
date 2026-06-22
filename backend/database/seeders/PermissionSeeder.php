@@ -43,18 +43,10 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage_settings', 'module' => 'settings', 'action' => 'manage'],
             ['name' => 'approval.approve', 'module' => 'approval', 'action' => 'approve'],
             ['name' => 'submission.create_for_others', 'module' => 'submission', 'action' => 'create_for_others'],
-            ['name' => 'manage equipment', 'module' => 'equipment', 'action' => 'manage'],
-            ['name' => 'view equipment', 'module' => 'equipment', 'action' => 'read'],
-            ['name' => 'spare_parts.manage', 'module' => 'spare_parts', 'action' => 'manage'],
-            ['name' => 'spare_parts.view', 'module' => 'spare_parts', 'action' => 'read'],
-            ['name' => 'spare_parts.requisition', 'module' => 'spare_parts', 'action' => 'requisition'],
             ['name' => 'manage dashboards', 'module' => 'dashboard', 'action' => 'manage'],
             ['name' => 'view_purchase_requests', 'module' => 'purchase_requests', 'action' => 'read'],
             ['name' => 'view_purchase_orders',   'module' => 'purchase_orders',   'action' => 'read'],
             ['name' => 'purchase_order.create',  'module' => 'purchase_orders',   'action' => 'create'],
-            ['name' => 'pm.view',                'module' => 'pm', 'action' => 'read'],
-            ['name' => 'pm.plan',                'module' => 'pm', 'action' => 'plan'],
-            ['name' => 'pm.execute',             'module' => 'pm', 'action' => 'execute'],
         ];
         foreach ($exactPermissions as $item) {
             Permission::updateOrCreate(

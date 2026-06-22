@@ -14,18 +14,18 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Removes document forms, repair_request / pm_am_plan workflows & instances,
+ * Removes document forms, repair_request workflows & instances,
  * related document types and dashboard widgets, and drops matching sidebar menus.
  */
 class ClearDocumentModuleCommand extends Command
 {
     protected $signature = 'document-module:clear {--force : Skip confirmation}';
 
-    protected $description = 'Purge document forms plus repair/PM data and related navigation menus.';
+    protected $description = 'Purge document forms plus repair data and related navigation menus.';
 
-    private const DOC_TYPES = ['repair_request', 'pm_am_plan'];
+    private const DOC_TYPES = ['repair_request'];
 
-    private const WIDGET_SOURCES = ['repair_requests', 'pm_am_plans'];
+    private const WIDGET_SOURCES = ['repair_requests'];
 
     /** Top-level menus that cascade-delete their children (except id 32 handled separately). */
     private const MENU_ROOT_IDS_TO_DELETE = [10, 16, 17, 60];
@@ -36,7 +36,7 @@ class ClearDocumentModuleCommand extends Command
     public function handle(): int
     {
         if (! $this->option('force')) {
-            if (! $this->confirm('This deletes all document forms, repair & PM/AM approvals/workflows/types, related widgets, and repair/maintenance menus. Continue?')) {
+            if (! $this->confirm('This deletes all document forms, repair approvals/workflows/types, related widgets, and repair menus. Continue?')) {
                 $this->info('Aborted.');
 
                 return self::SUCCESS;
@@ -52,7 +52,7 @@ class ClearDocumentModuleCommand extends Command
             }
 
             $inst = ApprovalInstance::query()->whereIn('document_type', self::DOC_TYPES)->delete();
-            $this->line("Deleted {$inst} approval instance(s) (repair / PM-AM).");
+            $this->line("Deleted {$inst} approval instance(s) (repair).");
 
             $bindings = DB::table('org_unit_workflow_bindings')
                 ->whereIn('document_type', self::DOC_TYPES)

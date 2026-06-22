@@ -23,7 +23,7 @@
     <div x-data="prForm()" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {{-- Left: Form fields --}}
         <div class="card p-5">
-            @include('repair-requests._company_header', ['company' => $company ?? null, 'branch' => $branch ?? null])
+            @include('partials.company-header', ['company' => $company ?? null, 'branch' => $branch ?? null])
             <form id="pr-form" method="POST" action="{{ route('purchase-requests.store') }}" class="space-y-3" novalidate>
                 @csrf
                 @if($form)
