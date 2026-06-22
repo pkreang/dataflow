@@ -82,7 +82,14 @@
         </div>
     @endif
 
+    {{-- Opt out of the global submit-loading handler: this form has its own
+         confirm + signature/required-field guards that preventDefault() the
+         first submit. The global handler runs in the capture phase (before the
+         guard), so it would set the button to "saving" then the guard cancels
+         the submit → button stuck spinning. The real submit goes through
+         confirmProceed()'s requestSubmit() (no submitter button) anyway. --}}
     <form method="POST" action="{{ route('approvals.act', $instance) }}" class="space-y-3" novalidate
+          data-no-submit-loading
           x-ref="actForm" @submit="guardSignature($event)">
         @csrf
         {{-- Carries the chosen action when the form is re-submitted from the
