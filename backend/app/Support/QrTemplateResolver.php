@@ -38,6 +38,9 @@ class QrTemplateResolver
             '{ref_no}' => (string) ($submission->reference_no ?? ('#'.$submission->id)),
             '{id}' => (string) $submission->id,
             '{url}' => route('forms.submission.show', $submission),
+            '{verify_url}' => $submission->verify_token
+                ? route('document.verify', ['token' => $submission->verify_token])
+                : '',
             '{date}' => $dateSource ? $dateSource->format('Y-m-d') : '',
         ];
         $resolved = strtr($template, $tokens);

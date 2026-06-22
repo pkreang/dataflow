@@ -267,7 +267,7 @@ class GenericDemoSeeder extends Seeder
                 'label' => 'QR ตรวจสอบเอกสาร', 'label_en' => 'Verification QR', 'label_th' => 'QR ตรวจสอบเอกสาร',
                 'field_type' => 'qr_code', 'is_required' => false,
                 'sort_order' => $maxSort + 1, 'col_span' => 2,
-                'options' => ['template' => "{ref_no}\n{url}", 'size' => 128, 'label_position' => 'below'],
+                'options' => ['template' => '{verify_url}', 'size' => 128, 'label_position' => 'below'],
             ]
         );
 
