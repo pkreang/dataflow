@@ -107,7 +107,9 @@ class DashboardWidgetDataController extends Controller
      */
     private function prepareContext(Request $request, ReportDashboard $dashboard, ReportDashboardWidget $widget)
     {
-        if ($widget->dashboard_id !== $dashboard->id) {
+        // Cast both sides — PDO อาจคืน id เป็น string หรือ int ต่างกันตาม driver/config
+        // (local vs production MySQL) ทำให้ strict !== พังแล้ว abort(404) ทุก widget
+        if ((int) $widget->dashboard_id !== (int) $dashboard->id) {
             abort(404);
         }
 
