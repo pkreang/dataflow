@@ -50,6 +50,7 @@ class DataSourceRegistry
                     'status' => 'Status',
                     'org_unit_id' => 'Org Unit',
                     'requester_user_id' => 'Requester',
+                    'created_at:month' => 'ตามเดือน (รายเดือน)',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
@@ -201,6 +202,7 @@ class DataSourceRegistry
                     'form_id' => 'Form',
                     'user_id' => 'Requester',
                     'org_unit_id' => 'Org Unit',
+                    'created_at:month' => 'ตามเดือน (รายเดือน)',
                 ],
                 'filter_fields' => [
                     'status' => 'Status',
