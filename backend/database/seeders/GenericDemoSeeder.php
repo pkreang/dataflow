@@ -154,6 +154,9 @@ class GenericDemoSeeder extends Seeder
         $this->seedDashboardDemoData();
         $this->seedExecutiveDashboard();
 
+        // 9. ระบบประเมิน — ใบแจ้งซ่อมปิดงาน + ใบประเมินความพึงพอใจ (ให้ "รายงานประเมิน" มีข้อมูล)
+        $this->call(EvaluationDemoSeeder::class);
+
         $this->printSummary();
     }
 
