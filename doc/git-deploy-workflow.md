@@ -20,7 +20,29 @@
 
 > **สถานะปัจจุบัน (2026-06-22):** งาน demo + deploy tooling อยู่บน `feature/remove-cmms` (นำ main 10 commits, 0 behind, gate เขียว) — **ควร merge → main** แล้ว ff `demo` ตามให้ทัน (ตอนนี้ `demo` ตามหลัง main ~20 commits). main ที่ stale ทำให้สับสนว่าอะไรคือของจริง.
 
-## 2. Deploy (cPanel FTP-only) — quickref
+## 2. หลายลูกค้า (multi-customer) — แยกยังไง
+
+**อย่าแยก git branch ต่อลูกค้า** — จะกลายเป็นภาระ maintain (N branches ต้องตาม main, ทุก bugfix ต้อง cherry-pick, merge conflict บานปลาย).
+
+**โมเดลที่แนะนำ: โค้ดชุดเดียว + instance-per-customer**
+| มิติ | วิธีแยกต่อลูกค้า |
+|------|------------------|
+| โค้ด | **ชุดเดียวจาก `main`** — ลูกค้าทุกรายรันโค้ดเดียวกัน |
+| Deployment | **subdomain + DB + `.env` แยกต่อราย** (เหมือน flow.dataplc.net) |
+| Branding/ตั้งค่า | `.env`: `APP_NAME`, `ORG_VERTICAL`, feature flag; + ข้อมูล **DB-driven** (settings / navigation / RBAC / ฟอร์ม / dashboard) seed/ตั้งต่อราย |
+| โค้ดเฉพาะลูกค้า | ทำเป็น **config / feature flag ใน main** (ทุกคนได้ + อยู่ codebase เดียว) — **ไม่ fork** |
+| track version ต่อราย | **tag** (`acme-prod-2026-06`) หรือ deploy-pointer branch ที่แค่ชี้ commit — ไม่ใช่ feature branch ที่ diverge |
+
+**ข้อควรระวัง — อย่ายัดหลายลูกค้าใน instance/DB เดียว (multi-tenant):** ระบบนี้ `settings`/`navigation_menus`/RBAC (Spatie) เป็น **global ไม่ได้ scope ต่อ company** → ข้อมูล/สิทธิ์/เมนูจะปนข้ามลูกค้า. **instance-per-customer (DB แยก) สะอาดและ isolate กว่า** + deploy ด้วย `build-demo.sh` + `.env` ต่อราย.
+
+```
+main ── โค้ดผลิตภัณฑ์ (ลูกค้าทุกรายดึงจากนี่)
+ ├ feature/*               งานย่อย → merge main
+ └ tags: acme-prod-*, beta-prod-*   ← ลูกค้าไหนรัน release ไหน
+deploy ต่อลูกค้า = subdomain + DB + .env   (ไม่ใช่ branch)
+```
+
+## 3. Deploy (cPanel FTP-only) — quickref
 
 infra ตั้งครั้งเดียวจบแล้ว (subdomain + DB + **PHP 8.4** ผ่าน "Select PHP Version"). รอบถัดไป:
 
@@ -39,7 +61,7 @@ deploy/build-demo.sh demo        # → deploy/dist/dataflow-demo.zip + demo.sql 
 
 > build `demo` พก `storage/framework/{views,cache,sessions}` + `bootstrap/cache` ไปแล้ว (ไม่ต้อง mkdir เองหลัง extract).
 
-## 3. flow.dataplc.net (instance demo ปัจจุบัน)
+## 4. flow.dataplc.net (instance demo ปัจจุบัน)
 
 - **URL**: https://flow.dataplc.net · **DB**: `dataplc_flow` · sessions = file · `ORG_VERTICAL=demo`
 - **Layout = split** (เพราะ subdomain ตั้ง docroot ใหม่ไม่ได้บน host นี้):
@@ -49,7 +71,7 @@ deploy/build-demo.sh demo        # → deploy/dist/dataflow-demo.zip + demo.sql 
 - **PHP**: ต้อง 8.4+ (CloudLinux "Select PHP Version") — MultiPHP API ปิด, `.htaccess` handler ไม่มีผล (mod_lsapi)
 - บัญชี demo: `staff@demo.test` … `hr@demo.test` (+ `admin@example.com`) รหัส `password`
 
-## 4. ของที่ต้องตั้งเพิ่มถ้าจะเปิดจริง
+## 5. ของที่ต้องตั้งเพิ่มถ้าจะเปิดจริง
 - **LINE/Email แจ้งเตือน**: ใส่ `LINE_CHANNEL_ACCESS_TOKEN`/`LINE_CHANNEL_SECRET` หรือ `MAIL_*` ใน `.env` (บน server) + ผู้ใช้ link บัญชี LINE หลัง login
 - **ปิด escape-hatch**: ลบ `DEPLOY_TOKEN` จาก `.env` หลัง demo เสถียร
 - **หมุนรหัส**: เปลี่ยนรหัส cPanel/FTP ถ้าเคยแชร์ออกไป
