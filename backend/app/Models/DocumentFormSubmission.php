@@ -20,6 +20,7 @@ class DocumentFormSubmission extends Model
         'approval_instance_id',
         'parent_submission_id',
         'reference_no',
+        'verify_token',
         'fdata_row_id',
         'deleted_by',
         'assigned_editor_user_ids',
@@ -56,6 +57,13 @@ class DocumentFormSubmission extends Model
      */
     protected static function booted(): void
     {
+        // Non-guessable token for the public document-verification page (/verify/{token}).
+        static::creating(function (self $submission) {
+            if (empty($submission->verify_token)) {
+                $submission->verify_token = \Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(12));
+            }
+        });
+
         static::deleting(function (self $submission) {
             if ($submission->isForceDeleting()) {
                 return;

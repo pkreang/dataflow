@@ -114,6 +114,10 @@ Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'
 Route::get('/reset-password', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
 Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
 
+// Public document verification (scan QR → confirm authenticity, no login)
+Route::get('/verify/{token}', [\App\Http\Controllers\Web\DocumentVerifyController::class, 'show'])
+    ->name('document.verify');
+
 Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
