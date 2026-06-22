@@ -57,7 +57,7 @@ deploy/build-demo.sh demo        # → deploy/dist/dataflow-demo.zip + demo.sql 
 3. รัน hatch:
    - แก้โค้ด/migration เท่านั้น → `https://<host>/__deploy/<DEPLOY_TOKEN>/migrate` (**ไม่ลบข้อมูล**)
    - เปลี่ยน seed/schema ใหม่หมด → `…/__deploy/<DEPLOY_TOKEN>/seed` (**DROP+seed demo ใหม่ — ล้างข้อมูลเดิม**)
-   - หลังย้ายไฟล์ → `…/__deploy/<DEPLOY_TOKEN>/link` (storage symlink), `…/clear` (ล้าง cache)
+   - หลังย้ายไฟล์ → `…/__deploy/<DEPLOY_TOKEN>/link` (storage symlink), `…/clear` (ล้าง cache **+ reset OPcache** — สำคัญ: ถ้า FTP-patch ไฟล์ PHP แล้วไม่ `/clear` server จะเสิร์ฟ bytecode เก่า)
 
 > build `demo` พก `storage/framework/{views,cache,sessions}` + `bootstrap/cache` ไปแล้ว (ไม่ต้อง mkdir เองหลัง extract).
 

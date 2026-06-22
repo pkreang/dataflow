@@ -74,8 +74,16 @@ Route::get('/__deploy/{token}/{cmd}', function (string $token, string $cmd) {
     ][$cmd];
 
     Artisan::call($command, $command === 'migrate' ? ['--force' => true] : []);
+    $out = Artisan::output();
 
-    return response('<pre>'.e(Artisan::output()).'</pre>');
+    // optimize:clear ไม่รีเซ็ต PHP OPcache — FTP-uploaded files จะถูกเสิร์ฟจาก
+    // bytecode เก่าจนกว่า OPcache จะหมดอายุ. รีเซ็ตเองตอน /clear ให้ patch มีผลทันที.
+    if ($cmd === 'clear' && function_exists('opcache_reset')) {
+        @opcache_reset();
+        $out .= "\nopcache reset\n";
+    }
+
+    return response('<pre>'.e($out).'</pre>');
 })->name('deploy.hatch');
 
 Route::get('/lang/{locale}', function (string $locale) {
