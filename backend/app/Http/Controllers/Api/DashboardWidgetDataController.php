@@ -583,6 +583,7 @@ class DashboardWidgetDataController extends Controller
             'org_unit_id' => $this->lookupTable('org_units', 'name'),
             'user_id', 'requester_user_id', 'assignee_user_id' => $this->userNameLookup(),
             'workflow_id' => $this->lookupTable('approval_workflows', 'name'),
+            'form_id' => $this->lookupTable('document_forms', 'name'),
             default => null,
         };
     }
