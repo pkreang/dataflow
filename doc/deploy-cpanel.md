@@ -10,9 +10,9 @@
 
 | เช็ค | ที่ไหน | ต้องได้ |
 |------|--------|---------|
-| PHP version | MultiPHP Manager | **8.2 ขึ้นไป** (Laravel 12 บังคับ — ถ้าไม่มี ทำต่อไม่ได้) |
+| PHP version | MultiPHP Manager **หรือ** "Select PHP Version" (CloudLinux) | **8.4 ขึ้นไปบังคับ** (spatie/laravel-permission + deps require ≥8.4 — 8.2/8.3 รันไม่ได้). host CloudLinux ที่ปิด MultiPHP: ตั้งผ่าน **"Select PHP Version"** (.htaccess handler ใช้ไม่ได้กับ mod_lsapi) |
 | MySQL | MySQL Databases | สร้าง DB + user + grant ALL → จด `dbname / user / pass` |
-| Subdomain | Domains / Subdomains | สร้าง `demo.<domain>` **Document Root = `/home/<user>/dataflow-app/public`** |
+| Subdomain | Domains / Subdomains | สร้าง `demo.<domain>` **Document Root = `/home/<user>/dataflow-app/public`**. ถ้าเปลี่ยน docroot ไม่ได้ ใช้ split layout (ดู `doc/git-deploy-workflow.md`) |
 
 > ทำไมต้อง subdomain ชี้ `…/public`: โค้ด Laravel อยู่นอก web root (ปลอดภัย) และไม่ต้องแก้ `index.php` paths.
 
@@ -93,7 +93,9 @@ phpMyAdmin → เลือก DB ที่สร้างไว้ → **Import
    ```
    ควรได้ output `The [public/storage] link has been connected…`. ถ้า cache เพี้ยน เปิด `…/<DEPLOY_TOKEN>/clear` ด้วย.
 
-> route นี้ปิดสนิทถ้าไม่ตั้ง `DEPLOY_TOKEN` (404). หลัง demo จริงจัง แนะนำลบ `DEPLOY_TOKEN` ออกจาก `.env` เพื่อปิด.
+> escape-hatch รองรับ: `/link` (storage symlink), `/clear` (optimize:clear), `/migrate` (migrate เฉพาะที่ใหม่ — ไม่ลบข้อมูล), **`/seed`** (migrate:fresh + seed demo ใหม่หมด — **DROP ทุกตารางใน DB** ใช้กับ DB demo เท่านั้น). route นี้ปิดสนิทถ้าไม่ตั้ง `DEPLOY_TOKEN` (404). หลัง demo จริงจัง แนะนำลบ `DEPLOY_TOKEN` ออกจาก `.env` เพื่อปิด.
+
+> หมายเหตุ: build `demo` (ตั้งแต่ 2026-06) พก `storage/framework/{views,cache,sessions}` + `bootstrap/cache` (เปล่า) ไปใน zip แล้ว — extract เสร็จไม่ต้อง mkdir เอง (กัน error "Please provide a valid cache path").
 
 ---
 

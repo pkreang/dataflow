@@ -58,6 +58,11 @@ mysqldump -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" \
     --no-tablespaces --default-character-set=utf8mb4 "$BUILD_DB" > "$DIST/demo.sql"
 
 echo "==> [5/5] zip artifact → deploy/dist/dataflow-demo.zip"
+# ให้ artifact พก runtime dirs (ว่าง + .gitkeep) ไปด้วย — กัน "Please provide a valid
+# cache path" บน server (host ที่ extract zip ไม่สร้าง dir เปล่าให้เอง)
+RUNTIME_DIRS="storage/framework/views storage/framework/cache/data storage/framework/sessions storage/app/public bootstrap/cache"
+for d in $RUNTIME_DIRS; do mkdir -p "$d"; touch "$d/.gitkeep"; done
+
 rm -f "$DIST/dataflow-demo.zip"
 zip -rq "$DIST/dataflow-demo.zip" . \
     -x './node_modules/*' './.git/*' './tests/*' './deploy/dist/*' \
@@ -65,6 +70,9 @@ zip -rq "$DIST/dataflow-demo.zip" . \
        './storage/framework/cache/data/*' './storage/framework/sessions/*' \
        './storage/framework/views/*' './public/storage/*' './public/storage' \
        './.env' './.env.bak' './database/database.sqlite'
+
+# explicit-add .gitkeep (zip -g ข้าม -x exclude) → dir โครงสร้างติดไปใน artifact
+for d in $RUNTIME_DIRS; do zip -gq "$DIST/dataflow-demo.zip" "$d/.gitkeep"; done
 
 echo
 echo "เสร็จ → $DIST/"

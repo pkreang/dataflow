@@ -135,6 +135,7 @@ php artisan test --filter ExampleTest               # ตัวอย่าง: 
 | `doc/uat-integration-merge-2026-05-21.md` | Delta UAT checklist สำหรับ merge `integration` → `main` (KPI Cycles, formula field, send-back, RBAC, auto-code, mobile, webhooks) |
 | `doc/rbac-redesign-spec-2026-05-21.md` | Design spec — รื้อ Spatie → Resource×Action model + time-bound + audit + field-level (V1 6 สัปดาห์ + V2 4 สัปดาห์) |
 | `doc/deploy-cpanel.md` | Deploy demo ขึ้น cPanel แบบ FTP-only (build artifact local + import DB) + branch model `demo` (ff จาก main) |
+| `doc/git-deploy-workflow.md` | Git model (main/feature/demo) + redeploy quickref + flow.dataplc.net specifics (split layout, PHP 8.4, hatch /seed) |
 | `backend/README.md` | Seed, demo user, SSO |
 
 **มาตรฐานทีม (เมนู + list + CRUD + audit):** เมื่อตกลงแล้ว ให้สรุปเป็น playbook ไฟล์เดียวใต้ `doc/` (เช่น `doc/menu-permissions-and-forms.md`) แล้วเพิ่ม **หนึ่งแถว** ในตารางนี้ — อย่าให้ไฟล์นี้ยาวเกินจำเป็น
