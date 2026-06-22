@@ -32,7 +32,10 @@ class DocumentFormCalendarController extends Controller
         $user = $request->user();
         $year = (int) $request->input('year', now()->year);
         $month = (int) $request->input('month', now()->month);
-        $formKey = $request->input('form_key', '');
+        // cast เป็น string — ConvertEmptyStringsToNull middleware แปลง form_key=''
+        // (ตัวเลือก "ทุกฟอร์ม") เป็น null ทำให้ check `!== ''` ผ่านแล้ว filter form_key=null
+        // → ไม่ตรงฟอร์มไหน → ปฏิทินว่าง. (string) null === '' → ไม่ filter = ทุกฟอร์ม
+        $formKey = (string) $request->input('form_key', '');
 
         $start = Carbon::create($year, $month, 1)->startOfDay();
         $end = $start->copy()->endOfMonth()->endOfDay();

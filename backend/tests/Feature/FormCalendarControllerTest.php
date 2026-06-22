@@ -69,6 +69,21 @@ class FormCalendarControllerTest extends TestCase
         $this->assertNotContains($otherSub->id, $allIds);
     }
 
+    public function test_empty_form_key_filter_returns_all_forms(): void
+    {
+        // "ทุกฟอร์ม" ส่ง form_key='' → ConvertEmptyStringsToNull แปลงเป็น null.
+        // controller ต้อง cast เป็น string ไม่งั้นจะ filter form_key=null → ปฏิทินว่าง.
+        $employee = $this->makeRegularUser('cal-all-'.uniqid().'@example.test');
+        $sub = $this->makeSubmission($this->makeForm(), $employee);
+
+        $url = route('forms.calendar.events', ['year' => now()->year, 'month' => now()->month]).'&form_key=';
+
+        $resp = $this->actingAsWebSession($employee)->getJson($url)->assertOk();
+
+        $allIds = collect($resp->json('days'))->flatten(1)->pluck('id')->all();
+        $this->assertContains($sub->id, $allIds);
+    }
+
     public function test_smart_date_plots_on_leave_period_not_created_at(): void
     {
         $employee = $this->makeRegularUser('cal-sd-'.uniqid().'@example.test');
