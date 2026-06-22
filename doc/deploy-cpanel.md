@@ -22,7 +22,8 @@
 
 ```bash
 cd backend
-deploy/build-demo.sh factory      # หรือ school  (default: factory)
+deploy/build-demo.sh demo         # บริษัทกลางๆ + 6 eForm workflow ขั้นสูง + dashboard กราฟ (GenericDemoSeeder)
+# deploy/build-demo.sh factory    # หรือ school  (default: factory)
 ```
 
 สคริปต์ทำให้ครบ: `composer install --no-dev` → `npm run build` → seed **build DB แยก** (ไม่แตะ dev DB `dataflow_uat`) → dump → zip. ได้ใน `backend/deploy/dist/`:
@@ -63,6 +64,9 @@ SESSION_DRIVER=database
 CACHE_STORE=database
 QUEUE_CONNECTION=sync
 
+# vertical: demo (บริษัทกลางๆ) — ถ้าไม่ใส่ จะ default=factory ซึ่งก็เป็นคำกลางๆ เหมือนกัน
+ORG_VERTICAL=demo
+
 DEPLOY_TOKEN=<สุ่มยาวๆ เช่น openssl rand -hex 16>
 
 # ตามที่จะโชว์ (ไม่ใส่ก็ได้):
@@ -100,7 +104,7 @@ phpMyAdmin → เลือก DB ที่สร้างไว้ → **Import
 3. เซ็น signature / อัปไฟล์ → แสดงผลกลับ (storage symlink ใช้ได้)
 4. `/quote-request` ส่งคำขอ → ได้เลข RFQ (ถ้า demo รวมฟีเจอร์ RFQ)
 
-demo user: ดู `backend/README.md` (เช่น `somchai@…` ฯลฯ, password `password`).
+demo user (build `demo`): `staff@demo.test` (ผู้ยื่น), `head@` / `manager@` / `director@` / `finance@` / `hr@demo.test` (ผู้อนุมัติ) — รหัสทุกคน `password`. (build `factory`/`school` ดู `backend/README.md`)
 
 ---
 
