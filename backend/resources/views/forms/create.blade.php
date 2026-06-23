@@ -4,7 +4,6 @@
 
 @section('breadcrumb')
     <x-breadcrumb :items="[
-        ['label' => __('common.forms_index_title'), 'url' => route('forms.index')],
         ['label' => __('common.fill_form')],
     ]" />
 @endsection
@@ -14,7 +13,7 @@
 <script>window.__HOLIDAYS__ = @json(app(\App\Support\WorkdayCalculator::class)->activeDates());</script>
 <div style="width:100%;max-width:100%">
     <div class="mb-6">
-        <a href="{{ route('forms.index') }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.back') }}</a>
+        <a href="{{ route('forms.list-by-form', $form->form_key) }}" class="text-sm text-blue-600 hover:text-blue-700">&larr; {{ __('common.back') }}</a>
         <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mt-2">{{ $form->name }}</h2>
         @if($form->description)
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ $form->description }}</p>

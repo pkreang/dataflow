@@ -4,7 +4,6 @@
 
 @section('breadcrumb')
     <x-breadcrumb :items="[
-        ['label' => __('common.forms_index_title'), 'url' => route('forms.index')],
         ['label' => __('common.document_calendar')],
     ]" />
 @endsection

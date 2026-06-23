@@ -37,22 +37,6 @@ class DocumentFormSubmissionController extends Controller
         private readonly ApprovalFlowService $approvalFlow,
     ) {}
 
-    public function index(): View
-    {
-        $userId = (int) (session('user.id') ?? 0);
-        $userOrgUnitId = session('user.org_unit_id') ?? User::find($userId)?->org_unit_id;
-
-        $forms = DocumentForm::query()
-            ->where('is_active', true)
-            ->where('document_type', '!=', 'evaluation') // eval forms triggered via parent submission only
-            ->visibleToUser($userOrgUnitId)
-            ->orderBy('name')
-            ->get()
-            ->groupBy('document_type');
-
-        return view('forms.index', compact('forms'));
-    }
-
     public function listByForm(DocumentForm $documentForm, Request $request, ApproverIdentity $approverIdentity): View
     {
         $userId = (int) (session('user.id') ?? 0);

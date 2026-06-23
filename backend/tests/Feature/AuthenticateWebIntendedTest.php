@@ -20,9 +20,9 @@ class AuthenticateWebIntendedTest extends TestCase
 
     public function test_plain_page_request_without_session_redirects_to_login_and_sets_intended(): void
     {
-        $response = $this->get('/forms');
+        $response = $this->get('/dashboard');
 
         $response->assertRedirect(route('login'));
-        $this->assertSame(url('/forms'), session('intended'));
+        $this->assertSame(url('/dashboard'), session('intended'));
     }
 }
