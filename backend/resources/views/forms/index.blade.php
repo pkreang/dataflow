@@ -14,10 +14,6 @@
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ __('common.forms_index_title') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ __('common.forms_index_desc') }}</p>
         </div>
-        <a href="{{ route('forms.my-submissions') }}"
-           class="btn-secondary">
-            {{ __('common.my_submissions') }}
-        </a>
     </div>
 
     @if($forms->isEmpty())

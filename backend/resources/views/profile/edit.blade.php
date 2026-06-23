@@ -65,11 +65,11 @@
     <div class="card p-4">
         <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">{{ __('common.quick_access') }}</h3>
         <div class="grid grid-cols-3 gap-2">
-            <a href="{{ route('forms.my-submissions') }}" class="flex flex-col items-center justify-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition">
+            <a href="{{ route('forms.index') }}" class="flex flex-col items-center justify-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition">
                 <span class="text-2xl font-bold text-amber-500">{{ $quickStats['draft'] }}</span>
                 <span class="text-xs text-slate-600 dark:text-slate-400 mt-1">{{ __('common.my_drafts') }}</span>
             </a>
-            <a href="{{ route('forms.my-submissions') }}" class="flex flex-col items-center justify-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition">
+            <a href="{{ route('forms.index') }}" class="flex flex-col items-center justify-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition">
                 <span class="text-2xl font-bold text-blue-500">{{ $quickStats['submitted'] }}</span>
                 <span class="text-xs text-slate-600 dark:text-slate-400 mt-1">{{ __('common.my_submissions_count') }}</span>
             </a>
