@@ -498,6 +498,8 @@ return [
     'workflow_no_org_head' => "Submitter's org unit has no head assigned. Please configure it in Org Chart settings.",
     'workflow_no_org_parent' => "Submitter's org unit has no parent unit, or the parent has no head assigned.",
     'workflow_no_org_unit_at_level' => 'No org unit found at the specified level, or that unit has no head assigned.',
+    'workflow_amount_required' => 'Please enter the amount and click "Save draft" before submitting (the amount determines the approver).',
+    'workflow_amount_no_range' => 'The amount is outside the configured approver ranges. Please check the amount or the workflow settings.',
     'workflow_escalation_days' => 'Remind after (days)',
     'workflow_escalation_days_hint' => 'Send a reminder notification to the approver if no action is taken within this many days. Leave blank to disable.',
     'workflow_clone' => 'Clone',
