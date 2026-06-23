@@ -664,9 +664,17 @@ class DocumentFormSubmissionController extends Controller
                 orgUnitId: $submission->org_unit_id,
             );
         } catch (RuntimeException $e) {
-            $message = $e->getMessage() === 'requester_pick_invalid_approver'
-                ? __('common.requester_pick_invalid_approver')
-                : $e->getMessage();
+            $raw = $e->getMessage();
+            // Map known routing failures to friendly localized messages instead of
+            // surfacing the raw English exception text (formKey is interpolated, so
+            // match by prefix). Amount routing fails when the user submits before
+            // filling/saving the amount field that drives approver selection.
+            $message = match (true) {
+                $raw === 'requester_pick_invalid_approver' => __('common.requester_pick_invalid_approver'),
+                str_starts_with($raw, 'Amount is required for amount-based') => __('common.workflow_amount_required'),
+                str_starts_with($raw, 'No matching amount range') => __('common.workflow_amount_no_range'),
+                default => $raw,
+            };
 
             return redirect()->back()->withErrors(['submit' => $message]);
         }

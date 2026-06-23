@@ -8,6 +8,7 @@ use App\Models\DocumentForm;
 use App\Models\DocumentFormField;
 use App\Models\DocumentFormSubmission;
 use App\Models\DocumentFormWorkflowPolicy;
+use App\Models\DocumentFormWorkflowRange;
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithSettingsAuth;
@@ -81,6 +82,52 @@ class ApprovalOverridePickerTest extends TestCase
 
         $response->assertDontSee('picked_approvers[1]', false);
         $response->assertSee('submitForm.submit()', false);
+    }
+
+    public function test_edit_draft_renders_for_amount_policy_with_no_amount_yet(): void
+    {
+        // Regression: a fresh draft for an amount-based policy has no amount in
+        // its payload. editDraft() previews the workflow with amount=null, which
+        // made resolveWorkflowId() throw "Amount is required" → 500 on the create
+        // page. previewWorkflow() must degrade gracefully (catch → null).
+        Setting::set('approval.allow_requester_override', true);
+        $user = $this->makeRegularUser('amt-'.uniqid().'@example.test');
+
+        $form = DocumentForm::factory()->create([
+            'form_key' => 'amt_'.uniqid(),
+            'document_type' => 'amt_test_'.uniqid(),
+            'is_active' => true,
+        ]);
+        DocumentFormField::query()->create([
+            'form_id' => $form->id, 'field_key' => 'grand_total', 'label' => 'Total',
+            'field_type' => 'currency', 'is_required' => true, 'sort_order' => 1, 'editable_by' => ['requester'],
+        ]);
+
+        $workflow = ApprovalWorkflow::query()->create([
+            'name' => 'AMT WF '.uniqid(), 'document_type' => $form->document_type, 'is_active' => true,
+        ]);
+        ApprovalWorkflowStage::query()->create([
+            'workflow_id' => $workflow->id, 'step_no' => 1, 'name' => 'Step 1',
+            'approver_type' => 'user', 'approver_ref' => (string) $user->id,
+            'min_approvals' => 1, 'is_active' => true,
+        ]);
+        $policy = DocumentFormWorkflowPolicy::query()->create([
+            'form_id' => $form->id, 'workflow_id' => $workflow->id,
+            'use_amount_condition' => true, 'amount_field_key' => 'grand_total',
+        ]);
+        DocumentFormWorkflowRange::query()->create([
+            'policy_id' => $policy->id, 'min_amount' => 0, 'max_amount' => null,
+            'workflow_id' => $workflow->id, 'sort_order' => 1,
+        ]);
+
+        $submission = DocumentFormSubmission::query()->create([
+            'form_id' => $form->id, 'user_id' => $user->id,
+            'payload' => [], 'status' => 'draft', // no amount yet
+        ]);
+
+        $this->actingAsWebSession($user)
+            ->get(route('forms.draft.edit', $submission))
+            ->assertOk();
     }
 
     /** @return array{0: DocumentFormSubmission, 1: \App\Models\User, 2: \App\Models\User} */

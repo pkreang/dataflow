@@ -196,7 +196,15 @@ class ApprovalFlowService
         }
 
         $routingMode = $this->routingMode($documentType);
-        $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $formKey, $amount, $routingMode, 0, [], $orgUnitId);
+        // Preview must never throw — a fresh draft for an amount-based policy has
+        // no amount yet (resolveWorkflowId would throw "Amount is required"), and
+        // the edit page only needs a best-effort preview. Degrade to null and let
+        // the org-unit binding fallback / null return handle it gracefully.
+        try {
+            $resolvedWorkflowId = $this->resolveWorkflowId($documentType, $formKey, $amount, $routingMode, 0, [], $orgUnitId);
+        } catch (RuntimeException) {
+            $resolvedWorkflowId = null;
+        }
 
         if ($resolvedWorkflowId === null) {
             $resolvedWorkflowId = $this->resolveOrgUnitBindingWorkflowId($documentType, $orgUnitId);

@@ -498,6 +498,8 @@ return [
     'workflow_no_org_head' => 'org unit ของผู้ยื่นยังไม่มีหัวหน้า — กรุณาตั้งค่าที่โครงสร้างองค์กรก่อน',
     'workflow_no_org_parent' => 'org unit ของผู้ยื่นไม่มี parent unit หรือ parent ไม่มีหัวหน้า',
     'workflow_no_org_unit_at_level' => 'ไม่พบ org unit ที่ระดับที่กำหนด หรือ unit นั้นไม่มีหัวหน้า',
+    'workflow_amount_required' => 'กรุณากรอกยอดเงินและกด "บันทึกร่าง" ก่อนยื่น (ยอดเงินใช้กำหนดผู้อนุมัติ)',
+    'workflow_amount_no_range' => 'ยอดเงินไม่อยู่ในช่วงที่กำหนดผู้อนุมัติ กรุณาตรวจสอบยอดเงินหรือการตั้งค่า workflow',
     'workflow_escalation_days' => 'แจ้งเตือนหลัง (วัน)',
     'workflow_escalation_days_hint' => 'ส่ง reminder ไปหา approver ถ้าไม่มีการดำเนินการภายในจำนวนวันที่กำหนด ปล่อยว่างเพื่อปิดใช้งาน',
     'workflow_clone' => 'คัดลอก',
