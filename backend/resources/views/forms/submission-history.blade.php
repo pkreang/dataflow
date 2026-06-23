@@ -4,7 +4,6 @@
 
 @section('breadcrumb')
     <x-breadcrumb :items="[
-        ['label' => __('common.forms_index_title'), 'url' => route('forms.index')],
         ['label' => $submission->form->name, 'url' => route('forms.list-by-form', $submission->form)],
         ['label' => $submission->reference_no ?: ('#'.$submission->id), 'url' => route('forms.submission.show', $submission)],
         ['label' => __('common.submission_history_title')],

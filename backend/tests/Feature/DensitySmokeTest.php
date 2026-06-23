@@ -21,7 +21,6 @@ class DensitySmokeTest extends TestCase
 
     private const PAGES_TO_CHECK = [
         'dashboard',
-        'forms.index',
         'profile.edit',
     ];
 

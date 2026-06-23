@@ -155,8 +155,7 @@ Route::middleware(['auth.web', 'password.enforced', 'menu.permission'])->group(f
         ->parameters(['my-reports' => 'dashboard'])
         ->except(['show']);
 
-    // Document Form Submissions (user-facing)
-    Route::get('/forms', [DocumentFormSubmissionController::class, 'index'])->name('forms.index');
+    // Document Form Submissions (user-facing) — เข้าฟอร์มผ่าน sidebar → list-by-form (ไม่มีหน้ารวม /forms แล้ว)
     Route::get('/forms/calendar', [\App\Http\Controllers\Web\DocumentFormCalendarController::class, 'index'])->name('forms.calendar');
     Route::get('/forms/calendar/events', [\App\Http\Controllers\Web\DocumentFormCalendarController::class, 'events'])->name('forms.calendar.events');
     Route::get('/forms/drafts/{submission}', [DocumentFormSubmissionController::class, 'editDraft'])->name('forms.draft.edit');
