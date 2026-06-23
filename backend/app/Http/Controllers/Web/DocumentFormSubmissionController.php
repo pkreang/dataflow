@@ -53,25 +53,6 @@ class DocumentFormSubmissionController extends Controller
         return view('forms.index', compact('forms'));
     }
 
-    public function mySubmissions(): View
-    {
-        $userId = (int) (session('user.id') ?? 0);
-
-        // Owner sees their own submissions; assigned editors also see drafts
-        // they were granted edit access to so they can find and complete them.
-        $submissions = DocumentFormSubmission::query()
-            ->where(function ($q) use ($userId) {
-                $q->where('user_id', $userId)
-                    ->orWhereJsonContains('assigned_editor_user_ids', $userId);
-            })
-            ->with(['form', 'instance'])
-            ->latest()
-            ->get()
-            ->groupBy(fn ($s) => $s->form?->name ?? '—');
-
-        return view('forms.my-submissions', compact('submissions'));
-    }
-
     public function listByForm(DocumentForm $documentForm, Request $request, ApproverIdentity $approverIdentity): View
     {
         $userId = (int) (session('user.id') ?? 0);
@@ -497,10 +478,11 @@ class DocumentFormSubmissionController extends Controller
             $this->schemaService->deleteRow($submission->form, $submission->fdata_row_id);
         }
 
+        $form = $submission->form;
         SubmissionActivityLog::record($submission->id, (int) session('user.id'), 'cancelled', ['reference_no' => $submission->reference_no]);
         $submission->delete();
 
-        return redirect()->route('forms.my-submissions')->with('success', __('common.deleted'));
+        return redirect()->route('forms.list-by-form', $form)->with('success', __('common.deleted'));
     }
 
     /**

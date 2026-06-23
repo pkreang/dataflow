@@ -172,17 +172,19 @@ class OnBehalfSubmissionTest extends TestCase
         $this->assertSame('draft', $second->fresh()->status);
     }
 
-    public function test_both_see_submission_in_my_submissions(): void
+    public function test_both_see_submission_in_form_list(): void
     {
         [$creator, $owner, $form] = $this->makeOnBehalfActors();
 
         $submission = $this->makeOnBehalfDraft($form, $owner, $creator, ['title' => 'OBH-VISIBLE']);
 
+        // หน้ารวม my-submissions ถูกตัดออกแล้ว — owner (user_id) + creator
+        // (assigned_editor) ต้องยังเห็นใบในรายการของฟอร์มนั้น (list-by-form)
         foreach ([$owner, $creator] as $viewer) {
             $this->actingAsWebSession($viewer)
-                ->get(route('forms.my-submissions'))
+                ->get(route('forms.list-by-form', $form))
                 ->assertOk()
-                ->assertSee($form->name);
+                ->assertSee('#'.$submission->id);
         }
     }
 
